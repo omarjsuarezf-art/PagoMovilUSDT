@@ -19,8 +19,8 @@ app.use('/public', express.static(publicPath));
 // ==========================================
 // CONFIGURACIÓN DE DESTINOS PERSONALES (.ENV)
 // ==========================================
-const PAYPAL_RECEIVER_EMAIL = process.env.PAYPAL_RECEIVER_EMAIL;
-const BINANCE_COMMISSION_WALLET = process.env.BINANCE_COMMISSION_WALLET;
+const PAYPAL_RECEIVER_EMAIL = process.env.PAYPAL_RECEIVER_EMAIL || 'pagos@mipasarela.com';
+const BINANCE_COMMISSION_WALLET = process.env.BINANCE_COMMISSION_WALLET || 'Binance Pay / Wallet ID';
 
 // ==========================================
 // LÍMITES Y COMISIONES
