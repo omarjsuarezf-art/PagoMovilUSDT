@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pago Móvil USDT - Enviar Pago</title>
+    <!-- Tailwind CSS para un diseño limpio y rápido -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Librería para generar códigos QR en el navegador -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <!-- SDK Oficial de PayPal (Modo Sandbox con tu Client ID) -->
+    <script src="https://www.paypal.com/sdk/js?client-id=ARfixGuD3WDciynMoGwx6v05Amd5aAEU12-F1UbTga81ebryQrDJty-bP-iRSbxgK-JVa5IaT9j6DFp&currency=USD"></script>
+
+    <!-- Configuración del Manifiesto y Logotipo para Móviles/PWA -->
+    <link rel="manifest" href="./manifest.json">
+    <link rel="icon" type="image/png" href="./logo.png">
+    <link rel="apple-touch-icon" href="./logo.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+</head>
+<body class="bg-slate-100 flex justify-center items-center h-screen">
+
+    <!-- Contenedor principal estilo tarjeta móvil -->
+    <div class="w-full max-w-md bg-white h-full md:h-auto md:rounded-2xl shadow-lg p-6 flex flex-col justify-between relative">
+        
+        <!-- Cabecera -->
+        <div>
+            <div class="flex justify-between items-center mb-6">
+                <h1 class="text-xl font-bold text-slate-800">💸 Pago Móvil USDT</h1>
+                <span class="text-xs bg-emerald-100 text-emerald-800 font-semibold px-2.5 py-1 rounded-full">Activo</span>
+            </div>
+
+            <!-- Saldo actual del usuario -->
+            <div class="bg-slate-900 text-white p-4 rounded-xl mb-6 shadow-md">
+                <p class="text-xs text-slate-400">Saldo Disponible</p>
+                <h2 class="text-3xl font-extrabold tracking-tight">USDT 125.50</h2>
+            </div>
+
+            <!-- Formulario de Pago -->
+            <form id="formPago" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Teléfono o Alias del Comercio</label>
+                    <div class="flex gap-2">
+                        <input type="tel" id="inputComercio" placeholder="0412-1234567" class="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none text-lg">
+                        <!-- Botón para generar/mostrar QR del comercio -->
+                        <button type="button" onclick="toggleQRModal()" class="bg-slate-200 hover:bg-slate-300 px-4 rounded-xl text-slate-700 font-medium text-sm flex items-center justify-center transition">
+                            📷 QR
+                        </button>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Monto a Enviar</label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 pl-4 flex items-center text-slate-400 font-bold">$</span>
+                        <input type="number" id="inputMonto" step="0.01" placeholder="0.00" class="w-full pl-8 pr-16 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none text-xl font-bold">
+                        <span class="absolute inset-y-0 right-0 pr-4 flex items-center text-xs font-semibold text-slate-500">USDT</span>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <!-- Botones de acción final (Pago Móvil nativo + PayPal integrado) -->
+        <div class="mt-6">
+            <button type="button" id="btnEnviarPago" onclick="enviarPagoMovil()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-4 rounded-xl shadow-lg transition duration-200 text-center mb-3">
+                Enviar Pago al Instante (Nativo)
+            </button>
+
+            <!-- Contenedor donde PayPal inyectará su botón oficial -->
+            <div id="paypal-button-container"></div>
+
+            <p id="mensajeEstado" class="text-center text-xs text-slate-500 mt-3">Comisión de red mínima integrada de forma transparente.</p>
+        </div>
+
+        <!-- Modal / Contenedor Dinámico para el Código QR del Comercio -->
+        <div id="modalQR" class="hidden absolute inset-0 bg-white bg-opacity-95 rounded-2xl p-6 flex flex-col justify-center items-center z-10">
+            <h3 class="text-lg font-bold text-slate-800 mb-2">QR del Comercio</h3>
+            <p class="text-xs text-slate-500 mb-4 text-center">Escanea este código para transferir directamente al establecimiento (Cero Terceros).</p>
+            
+            <!-- Contenedor donde se dibuja el QR -->
+            <div id="codigoQRGenerado" class="p-3 bg-white border border-slate-200 rounded-xl shadow-md mb-4"></div>
+            
+            <button type="button" onclick="toggleQRModal()" class="bg-slate-800 hover:bg-slate-900 text-white font-medium px-6 py-2 rounded-xl text-sm transition">
+                Cerrar QR
+            </button>
+        </div>
+
+    </div>
+
+    <!-- Script de lógica QR, Conexión con el Servidor y Botones de PayPal -->
+    <script>
+        let qrGenerado = false;
+
+        function toggleQRModal() {
+            const modal = document.getElementById('modalQR');
+            modal.classList.toggle('hidden');
+
+            if (!modal.classList.contains('hidden') && !qrGenerado) {
+                generarQRDinamico();
+            }
+        }
+
+        function generarQRDinamico() {
+            const comercioActivo = {
+                id: "MERCHANT-VE-8842",
+                nombre: "Comercio Afiliado C.A.",
+                telefono: "04121234567",
+                rif: "J-50123456-7"
+            };
+
+            document.getElementById('inputComercio').value = comercioActivo.telefono;
+
+            const payloadQR = JSON.stringify({
+                version: "1.0",
+                type: "pago_movil_usdt",
+                merchantId: comercioActivo.id,
+                name: comercioActivo.nombre,
+                phone: comercioActivo.telefono,
+                rif: comercioActivo.rif
+            });
+
+            document.getElementById("codigoQRGenerado").innerHTML = "";
+            new QRCode(document.getElementById("codigoQRGenerado"), {
+                text: payloadQR,
+                width: 180,
+                height: 180,
+                colorDark: "#0f172a",
+                colorLight: "#ffffff",
+                correctLevel: QRCode.CorrectLevel.H
+            });
+
+            qrGenerado = true;
+        }
+
+        // Función original para pago interno
+        async function enviarPagoMovil() {
+            const telefonoComercio = document.getElementById('inputComercio').value.trim();
+            const montoUSDT = parseFloat(document.getElementById('inputMonto').value);
+            const mensajeEstado = document.getElementById('mensajeEstado');
+            const btn = document.getElementById('btnEnviarPago');
+
+            if (!telefonoComercio || isNaN(montoUSDT) || montoUSDT <= 0) {
+                alert("Por favor, ingresa un teléfono y un monto válido mayor a cero.");
+                return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = "Procesando pago...";
+            mensajeEstado.textContent = "Conectando con la pasarela USDT...";
+            mensajeEstado.className = "text-center text-xs text-amber-600 mt-3 font-semibold";
+
+            try {
+                const respuesta = await fetch('/api/enviar-pago', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ telefonoComercio, montoUSDT })
+                });
+
+                const resultado = await respuesta.json();
+
+                if (resultado.success) {
+                    mensajeEstado.textContent = resultado.message;
+                    mensajeEstado.className = "text-center text-xs text-emerald-600 mt-3 font-bold";
+                    alert("¡Transacción completada exitosamente!");
+                } else {
+                    mensajeEstado.textContent = "Error: " + (resultado.message || "No se pudo procesar");
+                    mensajeEstado.className = "text-center text-xs text-rose-600 mt-3 font-bold";
+                }
+            } catch (error) {
+                console.error("Error de red:", error);
+                mensajeEstado.textContent = "Error de conexión con el servidor.";
+                mensajeEstado.className = "text-center text-xs text-rose-600 mt-3 font-bold";
+            } finally {
+                btn.disabled = false;
+                btn.textContent = "Enviar Pago al Instante (Nativo)";
+            }
+        }
+
+        // Renderizado del Botón Oficial de PayPal conectado al Backend
+        paypal.Buttons({
+            createOrder: async (data, actions) => {
+                const montoInput = document.getElementById('inputMonto').value;
+                const montoAEnviar = !isNaN(montoInput) && montoInput > 0 ? montoInput : "10.00";
+
+                try {
+                    const response = await fetch('/api/paypal/crear-orden', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ amount: montoAEnviar })
+                    });
+                    const order = await response.json();
+                    return order.id; // Retorna el ID de orden que creó Node.js
+                } catch (error) {
+                    console.error("Error creando la orden de PayPal:", error);
+                    alert("No se pudo conectar con el servidor para crear la orden de PayPal.");
+                }
+            },
+            onApprove: async (data, actions) => {
+                try {
+                    const response = await fetch(`/api/paypal/capturar-orden/${data.orderID}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' }
+                    });
+                    const details = await response.json();
+                    alert(`¡Pago con PayPal completado con éxito por ${details.payer?.name?.given_name || 'Usuario'}!`);
+                } catch (error) {
+                    console.error("Error capturando el pago:", error);
+                    alert("El pago se aprobó pero hubo un error al capturarlo en el servidor.");
+                }
+            }
+        }).render('#paypal-button-container');
+    </script>
+
+</body>
+</html>

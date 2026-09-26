@@ -1,0 +1,53 @@
+<!-- Pantalla de Historial de Movimientos -->
+<div class="w-full max-w-md bg-white p-6 rounded-2xl shadow-lg">
+    <div class="flex justify-between items-center mb-6">
+        <h2 class="text-xl font-bold text-slate-800">📊 Movimientos Recientes</h2>
+        <span class="text-xs bg-slate-100 text-slate-700 font-semibold px-2.5 py-1 rounded-full">En Vivo</span>
+    </div>
+
+    <!-- Lista de transacciones (Simulada visualmente) -->
+    <div class="space-y-3">
+        
+        <!-- Item de Pago Recibido (Comercio) -->
+        <div class="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-100">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 font-bold">
+                    ⬇️
+                </div>
+                <div>
+                    <p class="text-sm font-bold text-slate-800">Pago de 0412-5551234</p>
+                    <p class="text-xs text-slate-400">Hoy, 03:15 p.m.</p>
+                </div>
+            </div>
+            <div class="text-right">
+                <span class="text-sm font-extrabold text-emerald-600">+15.00 USDT</span>
+                <p class="text-[10px] text-slate-400">Comisión aplicada</p>
+            </div>
+        </div>
+
+        <!-- Item de Recarga Exitosa -->
+        <div class="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-100">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold">
+                    📥
+                </div>
+                <div>
+                    <p class="text-sm font-bold text-slate-800">Recarga Red Polygon</p>
+                    <p class="text-xs text-slate-400">Ayer, 10:20 a.m.</p>
+                </div>
+            </div>
+            <div class="text-right">
+                <span class="text-sm font-extrabold text-blue-600">+50.00 USDT</span>
+                <p class="text-[10px] text-slate-400">Acreditado</p>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Botón de actualización -->
+    <div class="mt-6">
+        <button type="button" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-3 rounded-xl transition duration-200 text-sm">
+            Actualizar Movimientos
+        </button>
+    </div>
+</div>
