@@ -4,12 +4,55 @@ const path = require('path');
 const fs = require('fs');
 const { Client, LocalAuth } = require('whatsapp-web.js');
 const qrcode = require('qrcode-terminal');
+const rateLimit = require('express-rate-limit');
+const sqlite3 = require('sqlite3').verbose();
 
 const app = express();
 
 // Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// ==========================================
+// CONFIGURACIÓN DE BASE DE DATOS (SQLITE)
+// ==========================================
+const dbPath = path.resolve(__dirname, 'monedero.db');
+const db = new sqlite3.Database(dbPath, (err) => {
+    if (err) {
+        console.error('Error al abrir la base de datos SQLite:', err.message);
+    } else {
+        console.log('Conectado a la base de datos SQLite exitosamente.');
+        db.run(`CREATE TABLE IF NOT EXISTS transacciones (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            referencia TEXT,
+            monto TEXT,
+            telefonoEmisor TEXT,
+            telefonoDestino TEXT,
+            fechaHora TEXT
+        )`);
+    }
+});
+
+// ==========================================
+// CONFIGURACIÓN DE RATE LIMITING (SEGURIDAD)
+// ==========================================
+const limiterPagos = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutos
+    max: 5, // Máximo 5 intentos por IP en ese tiempo para pagos/códigos
+    message: { 
+        success: false, 
+        message: 'Demasiadas solicitudes desde esta IP, por seguridad intente de nuevo más tarde.' 
+    },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+
+const limiterGeneral = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 100 // Límite general para otras peticiones
+});
+
+app.use(limiterGeneral);
 
 // Servidor de archivos estáticos con ruta absoluta
 const publicPath = path.resolve(__dirname, 'frontend', 'public');
@@ -38,6 +81,16 @@ function calcularComisionComercio(montoVenta) {
         return COMISION_MINIMA_COMERCIO; 
     }
     return Number(comisionCalculada.toFixed(2)); 
+}
+
+// Helper para formatear número a formato internacional de WhatsApp
+function formatearNumeroWhatsapp(numero) {
+    if (!numero) return null;
+    let numLimpio = numero.toString().trim().replace(/\D/g, ''); 
+    if (numLimpio.startsWith('0')) {
+        numLimpio = numLimpio.substring(1);
+    }
+    return numLimpio.startsWith('58') ? `${numLimpio}@c.us` : `58${numLimpio}@c.us`;
 }
 
 // ==========================================
@@ -110,20 +163,34 @@ app.get('/logo.png', (req, res) => {
     }
 });
 
-// APIs
-app.post('/api/enviar-codigo', async (req, res) => {
+// ==========================================
+// APIs Y RUTAS DE TRANSACCIONES
+// ==========================================
+
+// Consultar Historial de Transacciones por Teléfono
+app.get('/api/historial/:telefono', (req, res) => {
+    const telefono = req.params.telefono;
+    db.all(
+        `SELECT * FROM transacciones WHERE telefonoEmisor = ? OR telefonoDestino = ? ORDER BY id DESC`,
+        [telefono, telefono],
+        (err, rows) => {
+            if (err) {
+                console.error("Error consultando historial:", err.message);
+                return res.status(500).json({ success: false, message: 'Error al consultar historial en la base de datos' });
+            }
+            res.json({ success: true, historial: rows });
+        }
+    );
+});
+
+app.post('/api/enviar-codigo', limiterPagos, async (req, res) => {
     const { telefono } = req.body;
     try {
         const codigoVerificacion = Math.floor(100000 + Math.random() * 900000);
-        let numeroLimpio = telefono ? telefono.trim() : '';
-        if (numeroLimpio.startsWith('0')) {
-            numeroLimpio = numeroLimpio.substring(1);
-        }
-        
-        let chatId = numeroLimpio.startsWith('58') ? `${numeroLimpio}@c.us` : `58${numeroLimpio}@c.us`;
+        let chatId = formatearNumeroWhatsapp(telefono);
         const mensaje = `Tu código de acceso a Monedero es: *${codigoVerificacion}*`;
 
-        if (telefono) {
+        if (chatId) {
             await client.sendMessage(chatId, mensaje);
         }
         res.json({ success: true, message: '¡Código enviado con éxito por WhatsApp!', codigoMock: codigoVerificacion });
@@ -142,10 +209,16 @@ app.post('/api/registrar-metodos', (req, res) => {
     });
 });
 
-app.post('/api/enviar-pago', async (req, res) => {
+app.post('/api/enviar-pago', limiterPagos, async (req, res) => {
     try {
         const monto = req.body.montoUSDT || req.body.monto || req.body.amount || req.body.cantidad || req.body.valor;
-        const telefono = req.body.telefonoComercio || req.body.telefono || req.body.phone || req.body.nroTelefono;
+        
+        // Teléfono del Destinatario (Comercio / Persona que recibe)
+        const telefonoDestino = req.body.telefonoComercio || req.body.telefono || req.body.phone || req.body.nroTelefono;
+        
+        // Teléfono del Emisor (Pagador)
+        const telefonoEmisor = req.body.telefonoEmisor || req.body.telefonoPagador || req.body.telefonoUsuario;
+
         const esComercio = req.body.esComercio || false; 
         
         if (!monto) {
@@ -155,6 +228,11 @@ app.post('/api/enviar-pago', async (req, res) => {
                 recibido: req.body 
             });
         }
+
+        // Generar Referencia Única de Transacción y Marca de Tiempo
+        const numeroReferencia = 'REF-' + Math.floor(100000 + Math.random() * 900000);
+        const ahora = new Date();
+        const fechaHora = ahora.toLocaleString('es-VE', { timeZone: 'America/Caracas' });
 
         let comisionAplicada = 0;
         let destinoComision = '';
@@ -167,26 +245,62 @@ app.post('/api/enviar-pago', async (req, res) => {
             destinoComision = `PayPal (${PAYPAL_RECEIVER_EMAIL})`;
         }
 
-        if (telefono) {
+        // Guardar transacción en la base de datos SQLite de forma permanente
+        db.run(
+            `INSERT INTO transacciones (referencia, monto, telefonoEmisor, telefonoDestino, fechaHora) VALUES (?, ?, ?, ?, ?)`,
+            [numeroReferencia, monto, telefonoEmisor || 'N/D', telefonoDestino || 'N/D', fechaHora],
+            (err) => {
+                if (err) console.error("Error guardando transacción en DB:", err.message);
+            }
+        );
+
+        // 1. Notificación al DESTINATARIO (Quien recibe el dinero)
+        if (telefonoDestino) {
             try {
-                let numeroLimpio = telefono.toString().trim();
-                if (numeroLimpio.startsWith('0')) {
-                    numeroLimpio = numeroLimpio.substring(1);
+                let chatIdDestino = formatearNumeroWhatsapp(telefonoDestino);
+                if (chatIdDestino) {
+                    const mensajeDestino = `¡PAGO RECIBIDO! 🟢\n\n` +
+                        `📌 *Referencia:* ${numeroReferencia}\n` +
+                        `💵 *Monto:* $${monto} USDT\n` +
+                        `📅 *Fecha y Hora:* ${fechaHora}\n\n` +
+                        `Abono verificado y acreditado exitosamente.`;
+                    await client.sendMessage(chatIdDestino, mensajeDestino);
                 }
-                let chatId = numeroLimpio.startsWith('58') ? `${numeroLimpio}@c.us` : `58${numeroLimpio}@c.us`;
-                const mensajeNotificacion = `¡Pago procesado exitosamente por un monto de $${monto}!`;
-                await client.sendMessage(chatId, mensajeNotificacion);
             } catch (wppError) {
-                console.error('No se pudo enviar la notificación por WhatsApp:', wppError);
+                console.error('No se pudo enviar la notificación al destinatario:', wppError);
+            }
+        }
+
+        // 2. Notificación al EMISOR (Quien envía el dinero)
+        if (telefonoEmisor) {
+            try {
+                let chatIdEmisor = formatearNumeroWhatsapp(telefonoEmisor);
+                if (chatIdEmisor) {
+                    const mensajeEmisor = `¡PAGO ENVIADO! 🔴\n\n` +
+                        `📌 *Referencia:* ${numeroReferencia}\n` +
+                        `💵 *Monto:* $${monto} USDT\n` +
+                        `📅 *Fecha y Hora:* ${fechaHora}\n` +
+                        `👤 *Destinatario:* ${telefonoDestino || 'Registrado'}\n\n` +
+                        `Operación procesada con éxito.`;
+                    await client.sendMessage(chatIdEmisor, mensajeEmisor);
+                }
+            } catch (wppError) {
+                console.error('No se pudo enviar la notificación al emisor:', wppError);
             }
         }
 
         res.json({ 
             success: true, 
-            message: '¡Pago enviado y procesado con éxito!',
+            message: '¡Pago enviado, registrado y procesado con éxito!',
+            referencia: numeroReferencia,
+            fechaHora: fechaHora,
             montoProcesado: monto,
             comisionPlataforma: comisionAplicada,
-            destinoComision: destinoComision
+            destinoComision: destinoComision,
+            notificacionesEnviadas: {
+                destinatario: !!telefonoDestino,
+                emisor: !!telefonoEmisor
+            }
         });
 
     } catch (error) {

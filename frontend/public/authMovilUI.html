@@ -16,7 +16,7 @@
 <body class="bg-slate-950 flex justify-center items-center min-h-screen text-slate-100 p-4">
 
     <!-- Contenedor principal estilo tarjeta móvil -->
-    <div class="w-full max-w-md bg-slate-900 rounded-3xl shadow-2xl p-6 border border-slate-800 flex flex-col justify-between">
+    <div class="w-full max-w-md bg-slate-900/90 rounded-3xl shadow-2xl p-6 border border-slate-800 flex flex-col justify-between backdrop-blur-md">
         
         <!-- ================= VISTA 1: ACCESO Y REGISTRO ================= -->
         <div id="vistaAuth" class="space-y-6">
@@ -25,12 +25,19 @@
                 <p class="text-xs text-slate-400 mt-1">Acceso instantáneo y titularidad estricta</p>
             </div>
 
+            <!-- Pasos del registro y titularidad -->
+            <div class="grid grid-cols-3 gap-2 text-center text-xs">
+                <div class="bg-sky-500/10 border border-sky-500/30 text-sky-300 font-medium py-2 rounded-xl">1. Teléfono</div>
+                <div class="bg-slate-800/60 border border-slate-700/60 text-slate-400 py-2 rounded-xl">2. Cédula</div>
+                <div class="bg-slate-800/60 border border-slate-700/60 text-slate-400 py-2 rounded-xl">3. Método Propio</div>
+            </div>
+
             <!-- Sección de WhatsApp -->
-            <div class="bg-slate-800/50 p-4 rounded-2xl border border-slate-700/50 space-y-3">
+            <div class="bg-slate-800/40 p-4 rounded-2xl border border-slate-700/40 space-y-3">
                 <h2 class="text-sm font-semibold text-slate-200">Acceso por WhatsApp</h2>
                 <div>
                     <label class="block text-xs font-medium text-slate-400 mb-1">Número de Teléfono</label>
-                    <input type="text" id="telefono" placeholder="Ej: 04123400436" class="w-full px-4 py-2.5 bg-slate-950 border border-slate-700 rounded-xl focus:ring-2 focus:ring-sky-500 focus:outline-none text-sm text-white">
+                    <input type="text" id="telefono" placeholder="Ej: 04123400436" class="w-full px-4 py-2.5 bg-slate-950/80 border border-slate-700 rounded-xl focus:ring-2 focus:ring-sky-500 focus:outline-none text-sm text-white">
                 </div>
                 <button onclick="enviarCodigoWhatsApp()" class="w-full bg-sky-600 hover:bg-sky-500 text-white font-bold py-2.5 rounded-xl text-sm transition duration-200 shadow-md">
                     Enviar Código por WhatsApp
@@ -38,20 +45,20 @@
             </div>
 
             <!-- Botón simulado para saltar al panel -->
-            <button onclick="cambiarVista('vistaPanel')" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs py-2 rounded-lg transition">
+            <button onclick="entrarAlPanelDemo()" class="w-full bg-slate-800/80 hover:bg-slate-700 text-slate-300 text-xs py-2 rounded-lg transition border border-slate-700/50">
                 ⚡ [Demo] Ir al Panel de Pagos Directo
             </button>
 
             <!-- Sección de Métodos (Cero Terceros) -->
-            <div class="bg-slate-800/50 p-4 rounded-2xl border border-slate-700/50 space-y-3">
+            <div class="bg-slate-800/40 p-4 rounded-2xl border border-slate-700/40 space-y-3">
                 <h2 class="text-sm font-semibold text-slate-200">Vincular Método (Cero Terceros)</h2>
                 <div>
                     <label class="block text-xs font-medium text-slate-400 mb-1">Cédula del Titular</label>
-                    <input type="text" id="cedulaTitular" placeholder="V12345678" class="w-full px-4 py-2 bg-slate-950 border border-slate-700 rounded-xl focus:ring-2 focus:ring-sky-500 focus:outline-none text-sm text-white">
+                    <input type="text" id="cedulaTitular" placeholder="V12345678" class="w-full px-4 py-2 bg-slate-950/80 border border-slate-700 rounded-xl focus:ring-2 focus:ring-sky-500 focus:outline-none text-sm text-white">
                 </div>
                 <div>
                     <label class="block text-xs font-medium text-slate-400 mb-1">Método Internacional</label>
-                    <select id="metodoSelect" class="w-full px-4 py-2 bg-slate-950 border border-slate-700 rounded-xl focus:ring-2 focus:ring-sky-500 focus:outline-none text-sm text-white">
+                    <select id="metodoSelect" class="w-full px-4 py-2 bg-slate-950/80 border border-slate-700 rounded-xl focus:ring-2 focus:ring-sky-500 focus:outline-none text-sm text-white">
                         <option value="binance">Binance Pay (Email o ID)</option>
                         <option value="zinli">Zinli (Correo)</option>
                         <option value="zelle">Zelle (Correo / Tel)</option>
@@ -60,7 +67,7 @@
                 </div>
                 <div>
                     <label class="block text-xs font-medium text-slate-400 mb-1">Cuenta / Correo de Destino</label>
-                    <input type="text" id="cuentaDestino" placeholder="tucuenta@correo.com" class="w-full px-4 py-2 bg-slate-950 border border-slate-700 rounded-xl focus:ring-2 focus:ring-sky-500 focus:outline-none text-sm text-white">
+                    <input type="text" id="cuentaDestino" placeholder="tucuenta@correo.com" class="w-full px-4 py-2 bg-slate-950/80 border border-slate-700 rounded-xl focus:ring-2 focus:ring-sky-500 focus:outline-none text-sm text-white">
                 </div>
                 <button onclick="registrarMetodoPago()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2.5 rounded-xl text-sm transition duration-200 shadow-md">
                     Vincular de Forma Segura
@@ -86,9 +93,16 @@
                 </div>
 
                 <!-- Saldo actual del usuario en USDT -->
-                <div class="bg-gradient-to-r from-emerald-900/50 to-slate-900 border border-emerald-500/30 p-4 rounded-2xl mb-6 shadow-inner">
+                <div class="bg-gradient-to-r from-emerald-950/40 to-slate-900 border border-emerald-500/20 p-4 rounded-2xl mb-6 shadow-inner">
                     <p class="text-xs text-emerald-400 font-medium">Saldo Disponible</p>
-                    <h2 class="text-3xl font-extrabold tracking-tight text-white mt-1">USDT 125.50</h2>
+                    <h2 class="text-3xl font-extrabold tracking-tight text-white mt-1">USDT 0.00</h2>
+                </div>
+
+                <!-- Pasos de Operación -->
+                <div class="mb-6 grid grid-cols-3 gap-2 text-center text-xs">
+                    <div id="paso1Badge" class="bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 font-semibold py-2 rounded-xl">1. Datos</div>
+                    <div id="paso2Badge" class="bg-slate-800/60 border border-slate-700 text-slate-400 py-2 rounded-xl">2. Autorizar</div>
+                    <div id="paso3Badge" class="bg-slate-800/60 border border-slate-700 text-slate-400 py-2 rounded-xl">3. Liquidado</div>
                 </div>
 
                 <!-- Formulario de Envío a Comercio -->
@@ -96,8 +110,7 @@
                     <div>
                         <label class="block text-xs font-medium text-slate-400 mb-1">Teléfono o Alias del Comercio</label>
                         <div class="flex gap-2">
-                            <input type="tel" id="telefonoComercio" placeholder="0412-1234567" class="w-full px-4 py-3 bg-slate-950 border border-slate-700 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none text-base text-white">
-                            <!-- Botón para escanear QR -->
+                            <input type="tel" id="telefonoComercio" placeholder="0412-1234567" class="w-full px-4 py-3 bg-slate-950/80 border border-slate-700 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none text-base text-white">
                             <button type="button" onclick="alert('Abriendo cámara para escanear QR del comercio...')" class="bg-slate-800 hover:bg-slate-700 px-4 rounded-xl text-slate-200 font-medium text-xs flex items-center justify-center border border-slate-700">
                                 📷 QR
                             </button>
@@ -108,29 +121,62 @@
                         <label class="block text-xs font-medium text-slate-400 mb-1">Monto a Enviar</label>
                         <div class="relative">
                             <span class="absolute inset-y-0 left-0 pl-4 flex items-center text-slate-500 font-bold">$</span>
-                            <input type="number" id="montoEnvio" step="0.01" placeholder="0.00" class="w-full pl-8 pr-16 py-3 bg-slate-950 border border-slate-700 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none text-xl font-bold text-white">
+                            <input type="number" id="montoEnvio" step="0.01" placeholder="0.00" class="w-full pl-8 pr-16 py-3 bg-slate-950/80 border border-slate-700 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none text-xl font-bold text-white">
                             <span class="absolute inset-y-0 right-0 pr-4 flex items-center text-xs font-semibold text-slate-400">USDT</span>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Botón de acción final de pago conectado al backend -->
+            <!-- Botón de acción final de pago -->
             <div class="mt-6 space-y-3">
                 <button type="button" onclick="enviarPagoComercio()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3.5 rounded-xl shadow-lg transition duration-200 text-center text-sm">
-                    Enviar Pago al Instante
+                    Enviar Pago al Instante (Nativo)
                 </button>
-                <p class="text-center text-[10px] text-slate-500">Comisión de red integrada de forma transparente para la plataforma.</p>
+                <p class="text-center text-[10px] text-slate-500">Comisión de red mínima integrada de forma transparente.</p>
+            </div>
+
+            <!-- Historial Reciente de Transacciones -->
+            <div class="mt-6 pt-4 border-t border-slate-800">
+                <div class="flex justify-between items-center mb-3">
+                    <h3 class="text-xs font-semibold text-slate-300 uppercase tracking-wider">Historial Reciente</h3>
+                    <button onclick="cargarHistorial()" class="text-[10px] text-emerald-400 hover:underline">Actualizar</button>
+                </div>
+                <div class="bg-slate-950/60 border border-slate-800 rounded-xl overflow-hidden text-xs max-h-40 overflow-y-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="border-b border-slate-800 text-slate-400 text-[10px] sticky top-0 bg-slate-950">
+                                <th class="p-2">Ref / ID</th>
+                                <th class="p-2">Destino</th>
+                                <th class="p-2">Monto</th>
+                                <th class="p-2">Estado</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tablaHistorial">
+                            <tr>
+                                <td colspan="4" class="p-4 text-center text-slate-500 text-[11px]">No hay transacciones registradas aún.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
 
     </div>
 
     <script>
+        let usuarioActual = '';
+
         function cambiarVista(vistaId) {
             document.getElementById('vistaAuth').classList.add('hidden');
             document.getElementById('vistaPanel').classList.add('hidden');
             document.getElementById(vistaId).classList.remove('hidden');
+        }
+
+        function entrarAlPanelDemo() {
+            usuarioActual = document.getElementById('telefono').value || '04123400436';
+            cambiarVista('vistaPanel');
+            cargarHistorial();
         }
 
         async function enviarCodigoWhatsApp() {
@@ -139,6 +185,8 @@
                 alert('Por favor ingresa un número de teléfono.');
                 return;
             }
+
+            usuarioActual = telefono;
 
             try {
                 const response = await fetch('/api/enviar-codigo', {
@@ -149,6 +197,8 @@
                 const data = await response.json();
                 if (data.success) {
                     alert(data.message);
+                    cambiarVista('vistaPanel');
+                    cargarHistorial();
                 } else {
                     alert('Error al enviar el código.');
                 }
@@ -202,17 +252,47 @@
                 const response = await fetch('/api/enviar-pago', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ telefonoComercio, montoUSDT })
+                    body: JSON.stringify({ 
+                        telefonoComercio, 
+                        montoUSDT, 
+                        telefonoEmisor: usuarioActual || '04123400436' 
+                    })
                 });
                 const data = await response.json();
                 alert(data.message);
 
                 if (data.success) {
                     document.getElementById('montoEnvio').value = '';
+                    document.getElementById('telefonoComercio').value = '';
+                    cargarHistorial(); // Refrescar la tabla al instante
                 }
             } catch (error) {
                 console.error('Error:', error);
                 alert('Hubo un error de conexión al intentar procesar el pago.');
+            }
+        }
+
+        async function cargarHistorial() {
+            const telConsulta = usuarioActual || '04123400436';
+            try {
+                const response = await fetch(`/api/historial/${telConsulta}`);
+                const data = await response.json();
+                const tbody = document.getElementById('tablaHistorial');
+
+                if (data.success && data.historial && data.historial.length > 0) {
+                    tbody.innerHTML = data.historial.map(tx => `
+                        <tr class="border-b border-slate-900 hover:bg-slate-900/40">
+                            <td class="p-2 font-mono text-[10px] text-sky-400">${tx.referencia}</td>
+                            <td class="p-2 text-slate-300">${tx.telefonoDestino}</td>
+                            <td class="p-2 font-semibold text-emerald-400">$${tx.monto}</td>
+                            <td class="p-2 text-[10px]"><span class="bg-emerald-950 text-emerald-300 px-1.5 py-0.5 rounded border border-emerald-800">Éxito</span></td>
+                        </tr>
+                    `).join('');
+                } else {
+                    tbody.innerHTML = `<tr><td colspan="4" class="p-4 text-center text-slate-500 text-[11px]">No hay transacciones registradas aún.</td></tr>`;
+                }
+            } catch (error) {
+                console.error('Error cargando historial:', error);
             }
         }
     </script>

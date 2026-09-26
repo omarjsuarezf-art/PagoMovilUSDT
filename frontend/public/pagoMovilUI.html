@@ -17,10 +17,10 @@
     <link rel="apple-touch-icon" href="./logo.png">
     <meta name="apple-mobile-web-app-capable" content="yes">
 </head>
-<body class="bg-slate-100 flex justify-center items-center h-screen">
+<body class="bg-slate-100 flex justify-center items-center min-h-screen py-6">
 
-    <!-- Contenedor principal estilo tarjeta móvil -->
-    <div class="w-full max-w-md bg-white h-full md:h-auto md:rounded-2xl shadow-lg p-6 flex flex-col justify-between relative">
+    <!-- Contenedor principal estilo tarjeta móvil ampliada para historial y pasos -->
+    <div class="w-full max-w-xl bg-white rounded-2xl shadow-lg p-6 flex flex-col justify-between relative mx-4">
         
         <!-- Cabecera -->
         <div>
@@ -33,6 +33,22 @@
             <div class="bg-slate-900 text-white p-4 rounded-xl mb-6 shadow-md">
                 <p class="text-xs text-slate-400">Saldo Disponible</p>
                 <h2 class="text-3xl font-extrabold tracking-tight">USDT 125.50</h2>
+            </div>
+
+            <!-- NUEVO: Pasos Visuales del Proceso -->
+            <div class="mb-6 bg-slate-50 border border-slate-200 rounded-xl p-4">
+                <h3 class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Pasos de Operación</h3>
+                <div class="grid grid-cols-3 gap-2 text-center">
+                    <div id="step-1" class="p-2 rounded-lg bg-emerald-100 text-emerald-800 text-xs font-semibold border border-emerald-300">
+                        1. Datos
+                    </div>
+                    <div id="step-2" class="p-2 rounded-lg bg-slate-200 text-slate-600 text-xs font-semibold">
+                        2. Autorizar
+                    </div>
+                    <div id="step-3" class="p-2 rounded-lg bg-slate-200 text-slate-600 text-xs font-semibold">
+                        3. Liquidado
+                    </div>
+                </div>
             </div>
 
             <!-- Formulario de Pago -->
@@ -71,6 +87,31 @@
             <p id="mensajeEstado" class="text-center text-xs text-slate-500 mt-3">Comisión de red mínima integrada de forma transparente.</p>
         </div>
 
+        <!-- NUEVO: Sección de Historial de Transacciones -->
+        <div class="mt-8 border-t border-slate-200 pt-6">
+            <div class="flex justify-between items-center mb-3">
+                <h3 class="text-sm font-bold text-slate-800 uppercase tracking-wide">Historial Reciente</h3>
+                <button onclick="cargarHistorial()" class="text-xs text-emerald-600 hover:underline font-semibold">Actualizar</button>
+            </div>
+            <div class="overflow-x-auto max-h-48 border border-slate-200 rounded-xl">
+                <table class="w-full text-left border-collapse text-xs">
+                    <thead class="bg-slate-100 text-slate-700 sticky top-0">
+                        <tr>
+                            <th class="p-2.5 border-b">Ref / ID</th>
+                            <th class="p-2.5 border-b">Destino</th>
+                            <th class="p-2.5 border-b">Monto</th>
+                            <th class="p-2.5 border-b">Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tablaHistorialBody" class="divide-y divide-slate-100 text-slate-600">
+                        <tr>
+                            <td colspan="4" class="p-4 text-center text-slate-400">Cargando transacciones...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
         <!-- Modal / Contenedor Dinámico para el Código QR del Comercio -->
         <div id="modalQR" class="hidden absolute inset-0 bg-white bg-opacity-95 rounded-2xl p-6 flex flex-col justify-center items-center z-10">
             <h3 class="text-lg font-bold text-slate-800 mb-2">QR del Comercio</h3>
@@ -86,9 +127,24 @@
 
     </div>
 
-    <!-- Script de lógica QR, Conexión con el Servidor y Botones de PayPal -->
+    <!-- Script de lógica QR, Pasos, Historial y Conexión con el Servidor -->
     <script>
         let qrGenerado = false;
+        const telefonoUsuarioActual = "04121234567"; // Teléfono de prueba o sesión activa
+
+        document.addEventListener("DOMContentLoaded", () => {
+            cargarHistorial();
+        });
+
+        function actualizarPasos(pasoActivo) {
+            const s1 = document.getElementById('step-1');
+            const s2 = document.getElementById('step-2');
+            const s3 = document.getElementById('step-3');
+
+            s1.className = "p-2 rounded-lg text-xs font-semibold " + (pasoActivo >= 1 ? "bg-emerald-100 text-emerald-800 border border-emerald-300" : "bg-slate-200 text-slate-600");
+            s2.className = "p-2 rounded-lg text-xs font-semibold " + (pasoActivo >= 2 ? "bg-emerald-100 text-emerald-800 border border-emerald-300" : "bg-slate-200 text-slate-600");
+            s3.className = "p-2 rounded-lg text-xs font-semibold " + (pasoActivo >= 3 ? "bg-emerald-100 text-emerald-800 border border-emerald-300" : "bg-slate-200 text-slate-600");
+        }
 
         function toggleQRModal() {
             const modal = document.getElementById('modalQR');
@@ -131,6 +187,34 @@
             qrGenerado = true;
         }
 
+        // Función para cargar el historial desde la API del backend
+        async function cargarHistorial() {
+            const tbody = document.getElementById('tablaHistorialBody');
+            try {
+                const response = await fetch(`/api/historial/${telefonoUsuarioActual}`);
+                const data = await response.json();
+
+                if (data.success && data.transacciones && data.transacciones.length > 0) {
+                    tbody.innerHTML = "";
+                    data.transacciones.forEach(tx => {
+                        tbody.innerHTML += `
+                            <tr class="hover:bg-slate-50">
+                                <td class="p-2.5 font-mono text-slate-500">${tx.referencia || tx.id}</td>
+                                <td class="p-2.5 font-medium text-slate-700">${tx.telefonoComercio || 'Comercio'}</td>
+                                <td class="p-2.5 font-bold text-emerald-600">$${parseFloat(tx.montoUSDT).toFixed(2)}</td>
+                                <td class="p-2.5"><span class="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full text-[10px] font-bold">Completado</span></td>
+                            </tr>
+                        `;
+                    });
+                } else {
+                    tbody.innerHTML = `<tr><td colspan="4" class="p-4 text-center text-slate-400">No hay transacciones registradas aún.</td></tr>`;
+                }
+            } catch (error) {
+                console.error("Error al cargar historial:", error);
+                tbody.innerHTML = `<tr><td colspan="4" class="p-4 text-center text-rose-500">Error cargando historial de la base de datos.</td></tr>`;
+            }
+        }
+
         // Función original para pago interno
         async function enviarPagoMovil() {
             const telefonoComercio = document.getElementById('inputComercio').value.trim();
@@ -139,10 +223,11 @@
             const btn = document.getElementById('btnEnviarPago');
 
             if (!telefonoComercio || isNaN(montoUSDT) || montoUSDT <= 0) {
-                alert("Por favor, ingresa un teléfono y un monto válido mayor a cero.");
+                alert("Por favor, ingresa un teléfono y um monto válido mayor a cero.");
                 return;
             }
 
+            actualizarPasos(2);
             btn.disabled = true;
             btn.textContent = "Procesando pago...";
             mensajeEstado.textContent = "Conectando con la pasarela USDT...";
@@ -158,26 +243,32 @@
                 const resultado = await respuesta.json();
 
                 if (resultado.success) {
+                    actualizarPasos(3);
                     mensajeEstado.textContent = resultado.message;
                     mensajeEstado.className = "text-center text-xs text-emerald-600 mt-3 font-bold";
                     alert("¡Transacción completada exitosamente!");
+                    cargarHistorial(); // Refresca la tabla automáticamente
                 } else {
+                    actualizarPasos(1);
                     mensajeEstado.textContent = "Error: " + (resultado.message || "No se pudo procesar");
                     mensajeEstado.className = "text-center text-xs text-rose-600 mt-3 font-bold";
                 }
             } catch (error) {
                 console.error("Error de red:", error);
+                actualizarPasos(1);
                 mensajeEstado.textContent = "Error de conexión con el servidor.";
                 mensajeEstado.className = "text-center text-xs text-rose-600 mt-3 font-bold";
             } finally {
                 btn.disabled = false;
                 btn.textContent = "Enviar Pago al Instante (Nativo)";
+                setTimeout(() => actualizarPasos(1), 4000);
             }
         }
 
         // Renderizado del Botón Oficial de PayPal conectado al Backend
         paypal.Buttons({
             createOrder: async (data, actions) => {
+                actualizarPasos(2);
                 const montoInput = document.getElementById('inputMonto').value;
                 const montoAEnviar = !isNaN(montoInput) && montoInput > 0 ? montoInput : "10.00";
 
@@ -188,9 +279,10 @@
                         body: JSON.stringify({ amount: montoAEnviar })
                     });
                     const order = await response.json();
-                    return order.id; // Retorna el ID de orden que creó Node.js
+                    return order.id; 
                 } catch (error) {
                     console.error("Error creando la orden de PayPal:", error);
+                    actualizarPasos(1);
                     alert("No se pudo conectar con el servidor para crear la orden de PayPal.");
                 }
             },
@@ -198,13 +290,18 @@
                 try {
                     const response = await fetch(`/api/paypal/capturar-orden/${data.orderID}`, {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' }
-                    });
+                        headers: { 'Content-Type': 'application/json' }}
+                    );
                     const details = await response.json();
+                    actualizarPasos(3);
                     alert(`¡Pago con PayPal completado con éxito por ${details.payer?.name?.given_name || 'Usuario'}!`);
+                    cargarHistorial();
                 } catch (error) {
                     console.error("Error capturando el pago:", error);
+                    actualizarPasos(1);
                     alert("El pago se aprobó pero hubo un error al capturarlo en el servidor.");
+                } finally {
+                    setTimeout(() => actualizarPasos(1), 4000);
                 }
             }
         }).render('#paypal-button-container');
