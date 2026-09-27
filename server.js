@@ -5,7 +5,7 @@ const fs = require('fs');
 const { Client, LocalAuth } = require('whatsapp-web.js');
 const qrcode = require('qrcode-terminal');
 const rateLimit = require('express-rate-limit');
-const sqlite3 = require('sqlite3').verbose();
+const Database = require('better-sqlite3');
 
 const app = express();
 
@@ -17,35 +17,37 @@ app.use(express.urlencoded({ extended: true }));
 // CONFIGURACIÓN DE BASE DE DATOS (SQLITE)
 // ==========================================
 const dbPath = path.resolve(__dirname, 'monedero.db');
-const db = new sqlite3.Database(dbPath, (err) => {
-    if (err) {
-        console.error('Error al abrir la base de datos SQLite:', err.message);
-    } else {
-        console.log('Conectado a la base de datos SQLite exitosamente.');
-        db.run(`CREATE TABLE IF NOT EXISTS transacciones (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            referencia TEXT,
-            monto TEXT,
-            telefonoEmisor TEXT,
-            telefonoDestino TEXT,
-            fechaHora TEXT
-        )`);
+const db = new Database(dbPath);
 
-        db.run(`CREATE TABLE IF NOT EXISTS usuarios (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            telefono TEXT UNIQUE,
-            pinSeguridad TEXT,
-            accountType TEXT DEFAULT 'natural',
-            dailyLimit REAL DEFAULT 1000.00,
-            upgradedAt TEXT
-        )`, () => {
-            // Asegurarse por las malas de que la columna pinSeguridad exista si la tabla ya era vieja
-            db.run(`ALTER TABLE usuarios ADD COLUMN pinSeguridad TEXT`, (alterErr) => {
-                // Si ya existe ignoramos el error con elegancia
-            });
-        });
-    }
-});
+// Inicializar tablas
+db.exec(`
+    CREATE TABLE IF NOT EXISTS transacciones (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        referencia TEXT,
+        monto TEXT,
+        telefonoEmisor TEXT,
+        telefonoDestino TEXT,
+        fechaHora TEXT
+    );
+
+    CREATE TABLE IF NOT EXISTS usuarios (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        telefono TEXT UNIQUE,
+        pinSeguridad TEXT,
+        accountType TEXT DEFAULT 'natural',
+        dailyLimit REAL DEFAULT 1000.00,
+        upgradedAt TEXT
+    );
+`);
+
+// Asegurarse por las malas de que la columna pinSeguridad exista si la tabla ya era vieja
+try {
+    db.exec(`ALTER TABLE usuarios ADD COLUMN pinSeguridad TEXT`);
+} catch (e) {
+    // Si ya existe ignoramos el error con elegancia
+}
+
+console.log('Conectado a la base de datos SQLite exitosamente.');
 
 // ==========================================
 // CONFIGURACIÓN DE RATE LIMITING (SEGURIDAD)
@@ -181,21 +183,19 @@ app.get('/logo.png', (req, res) => {
 // ==========================================
 
 app.get('/api/historial/:telefono', (req, res) => {
-    const telefono = req.params.telefono;
-    db.all(
-        `SELECT * FROM transacciones WHERE telefonoEmisor = ? OR telefonoDestino = ? ORDER BY id DESC`,
-        [telefono, telefono],
-        (err, rows) => {
-            if (err) {
-                console.error("Error consultando historial:", err.message);
-                return res.status(500).json({ success: false, message: 'Error al consultar historial en la base de datos' });
-            }
-            res.json({ success: true, transacciones: rows, historial: rows });
-        }
-    );
+    try {
+        const telefono = req.params.telefono;
+        const rows = db.prepare(
+            `SELECT * FROM transacciones WHERE telefonoEmisor = ? OR telefonoDestino = ? ORDER BY id DESC`
+        ).all(telefono, telefono);
+        res.json({ success: true, transacciones: rows, historial: rows });
+    } catch (err) {
+        console.error("Error consultando historial:", err.message);
+        return res.status(500).json({ success: false, message: 'Error al consultar historial en la base de datos' });
+    }
 });
 
-// Registro de usuario, guardado de PIN y envío de código WhatsApp (Corregido con UPSERT robusto)
+// Registro de usuario, guardado de PIN y envío de código WhatsApp
 app.post('/api/enviar-codigo', limiterPagos, async (req, res) => {
     const { telefono, pinSeguridad } = req.body;
     
@@ -203,33 +203,25 @@ app.post('/api/enviar-codigo', limiterPagos, async (req, res) => {
         return res.status(400).json({ success: false, message: 'El teléfono y el PIN de seguridad son obligatorios.' });
     }
 
-    // Inserción segura o actualización usando SQLite UPSERT o validación directa
-    db.run(
-        `INSERT INTO usuarios (telefono, pinSeguridad, accountType) VALUES (?, ?, 'natural')
-         ON CONFLICT(telefono) DO UPDATE SET pinSeguridad = ?`,
-        [telefono, pinSeguridad, pinSeguridad],
-        async (err) => {
-            if (err) {
-                console.error("Error guardando/actualizando usuario en DB:", err.message);
-                return res.status(500).json({ success: false, message: 'Error interno al guardar el usuario.' });
-            }
+    try {
+        db.prepare(
+            `INSERT INTO usuarios (telefono, pinSeguridad, accountType) VALUES (?, ?, 'natural')
+             ON CONFLICT(telefono) DO UPDATE SET pinSeguridad = ?`
+        ).run(telefono, pinSeguridad, pinSeguridad);
 
-            try {
-                const codigoVerificacion = Math.floor(100000 + Math.random() * 900000);
-                let chatId = formatearNumeroWhatsapp(telefono);
-                
-                const mensaje = `¡Registro Exitoso en Monedero USDT! 🟢\n\nTu línea ha sido validada correctamente y tu PIN de seguridad de 4 dígitos ha quedado configurado.\n\n🔑 *Tu PIN configurado:* ${pinSeguridad}\n🔢 *Código de verificación:* *${codigoVerificacion}*`;
+        const codigoVerificacion = Math.floor(100000 + Math.random() * 900000);
+        let chatId = formatearNumeroWhatsapp(telefono);
+        
+        const mensaje = `¡Registro Exitoso en Monedero USDT! 🟢\n\nTu línea ha sido validada correctamente y tu PIN de seguridad de 4 dígitos ha quedado configurado.\n\n🔑 *Tu PIN configurado:* ${pinSeguridad}\n🔢 *Código de verificación:* *${codigoVerificacion}*`;
 
-                if (chatId) {
-                    await client.sendMessage(chatId, mensaje);
-                }
-                res.json({ success: true, message: '¡Código enviado por WhatsApp con éxito y PIN configurado!', codigoMock: codigoVerificacion });
-            } catch (error) {
-                console.error("Error al enviar WhatsApp:", error);
-                res.status(500).json({ success: false, message: 'Hubo un error al enviar el WhatsApp' });
-            }
+        if (chatId) {
+            await client.sendMessage(chatId, mensaje);
         }
-    );
+        res.json({ success: true, message: '¡Código enviado por WhatsApp con éxito y PIN configurado!', codigoMock: codigoVerificacion });
+    } catch (error) {
+        console.error("Error guardando/actualizando usuario o enviando WhatsApp:", error);
+        res.status(500).json({ success: false, message: 'Error interno al registrar el usuario o enviar el WhatsApp.' });
+    }
 });
 
 app.post('/api/recuperar-pin', limiterPagos, async (req, res) => {
@@ -239,32 +231,29 @@ app.post('/api/recuperar-pin', limiterPagos, async (req, res) => {
         return res.status(400).json({ success: false, message: 'Indica tu número de teléfono y un nuevo PIN válido de 4 dígitos.' });
     }
 
-    db.get(`SELECT * FROM usuarios WHERE telefono = ?`, [telefono], async (err, user) => {
-        if (err) {
-            return res.status(500).json({ success: false, message: 'Error consultando la base de datos.' });
-        }
+    try {
+        const user = db.prepare(`SELECT * FROM usuarios WHERE telefono = ?`).get(telefono);
 
         if (!user) {
             return res.status(404).json({ success: false, message: 'El número de teléfono no está registrado en el sistema.' });
         }
 
-        db.run(`UPDATE usuarios SET pinSeguridad = ? WHERE telefono = ?`, [nuevoPin, telefono], async (updateErr) => {
-            if (updateErr) {
-                return res.status(500).json({ success: false, message: 'Error al actualizar el PIN.' });
-            }
+        db.prepare(`UPDATE usuarios SET pinSeguridad = ? WHERE telefono = ?`).run(nuevoPin, telefono);
 
-            try {
-                let chatId = formatearNumeroWhatsapp(telefono);
-                if (chatId) {
-                    await client.sendMessage(chatId, `🔐 *Seguridad Monedero:* Tu PIN de 4 dígitos ha sido restablecido exitosamente.`);
-                }
-            } catch (wppErr) {
-                console.error("Error enviando aviso de cambio de PIN:", wppErr);
+        try {
+            let chatId = formatearNumeroWhatsapp(telefono);
+            if (chatId) {
+                await client.sendMessage(chatId, `🔐 *Seguridad Monedero:* Tu PIN de 4 dígitos ha sido restablecido exitosamente.`);
             }
+        } catch (wppErr) {
+            console.error("Error enviando aviso de cambio de PIN:", wppErr);
+        }
 
-            res.json({ success: true, message: '¡PIN de seguridad actualizado con éxito!' });
-        });
-    });
+        res.json({ success: true, message: '¡PIN de seguridad actualizado con éxito!' });
+    } catch (err) {
+        console.error("Error en recuperar-pin:", err);
+        return res.status(500).json({ success: false, message: 'Error consultando o actualizando la base de datos.' });
+    }
 });
 
 app.post('/api/registrar-metodos', (req, res) => {
@@ -283,13 +272,11 @@ app.post('/api/upgrade-account', async (req, res) => {
         return res.status(400).json({ success: false, message: "Falta el identificador del usuario." });
     }
 
-    db.get(`SELECT * FROM usuarios WHERE id = ? OR telefono = ?`, [identificador, identificador], (err, user) => {
-        if (err) {
-            return res.status(500).json({ success: false, message: "Error interno en la base de datos." });
-        }
+    try {
+        let user = db.prepare(`SELECT * FROM usuarios WHERE id = ? OR telefono = ?`).get(identificador, identificador);
 
         if (!user) {
-            db.run(`INSERT INTO usuarios (telefono, accountType) VALUES (?, 'natural')`, [identificador], () => {});
+            db.prepare(`INSERT INTO usuarios (telefono, accountType) VALUES (?, 'natural')`).run(identificador);
         }
 
         if (!paymentReference) {
@@ -297,21 +284,19 @@ app.post('/api/upgrade-account', async (req, res) => {
         }
 
         const fechaActual = new Date().toISOString();
-        db.run(
-            `UPDATE usuarios SET accountType = 'commercial', dailyLimit = NULL, upgradedAt = ? WHERE id = ? OR telefono = ?`,
-            [fechaActual, identificador, identificador],
-            (updateErr) => {
-                if (updateErr) {
-                    return res.status(500).json({ success: false, message: "Error al actualizar el perfil." });
-                }
-                return res.status(200).json({
-                    success: true,
-                    message: "¡Bienvenido al nivel comercial! Perfil actualizado con éxito.",
-                    qrCode: `QR-COMERCIAL-${identificador}`
-                });
-            }
-        );
-    });
+        db.prepare(
+            `UPDATE usuarios SET accountType = 'commercial', dailyLimit = NULL, upgradedAt = ? WHERE id = ? OR telefono = ?`
+        ).run(fechaActual, identificador, identificador);
+
+        return res.status(200).json({
+            success: true,
+            message: "¡Bienvenido al nivel comercial! Perfil actualizado con éxito.",
+            qrCode: `QR-COMERCIAL-${identificador}`
+        });
+    } catch (err) {
+        console.error("Error en upgrade-account:", err);
+        return res.status(500).json({ success: false, message: "Error interno en la base de datos." });
+    }
 });
 
 app.post('/api/enviar-pago', limiterPagos, async (req, res) => {
@@ -330,67 +315,63 @@ app.post('/api/enviar-pago', limiterPagos, async (req, res) => {
             return res.status(400).json({ success: false, message: 'Falta el teléfono del emisor para validar el PIN.' });
         }
 
-        db.get(`SELECT * FROM usuarios WHERE telefono = ?`, [telefonoEmisor], async (err, usuario) => {
-            if (err) {
-                return res.status(500).json({ success: false, message: 'Error interno al verificar el usuario.' });
-            }
+        const usuario = db.prepare(`SELECT * FROM usuarios WHERE telefono = ?`).get(telefonoEmisor);
 
-            if (!usuario) {
-                return res.status(401).json({ success: false, message: '❌ Usuario emisor no registrado en el sistema. Registra tu línea primero.' });
-            }
+        if (!usuario) {
+            return res.status(401).json({ success: false, message: '❌ Usuario emisor no registrado en el sistema. Registra tu línea primero.' });
+        }
 
-            if (usuario.pinSeguridad && usuario.pinSeguridad !== pinSeguridad) {
-                return res.status(401).json({ success: false, message: '❌ PIN de seguridad incorrecto. Transacción rechazada.' });
-            }
+        if (usuario.pinSeguridad && usuario.pinSeguridad !== pinSeguridad) {
+            return res.status(401).json({ success: false, message: '❌ PIN de seguridad incorrecto. Transacción rechazada.' });
+        }
 
-            const numeroReferencia = 'REF-' + Math.floor(100000 + Math.random() * 900000);
-            const ahora = new Date();
-            const fechaHora = ahora.toLocaleString('es-VE', { timeZone: 'America/Caracas' });
+        const numeroReferencia = 'REF-' + Math.floor(100000 + Math.random() * 900000);
+        const ahora = new Date();
+        const fechaHora = ahora.toLocaleString('es-VE', { timeZone: 'America/Caracas' });
 
-            let comisionAplicada = esComercio ? calcularComisionComercio(monto) : COMISION_FIJA_USUARIO;
-            let destinoComision = esComercio ? `Binance Wallet (${BINANCE_COMMISSION_WALLET})` : `PayPal (${PAYPAL_RECEIVER_EMAIL})`;
+        let comisionAplicada = esComercio ? calcularComisionComercio(monto) : COMISION_FIJA_USUARIO;
+        let destinoComision = esComercio ? `Binance Wallet (${BINANCE_COMMISSION_WALLET})` : `PayPal (${PAYPAL_RECEIVER_EMAIL})`;
 
-            db.run(
-                `INSERT INTO transacciones (referencia, monto, telefonoEmisor, telefonoDestino, fechaHora) VALUES (?, ?, ?, ?, ?)`,
-                [numeroReferencia, monto, telefonoEmisor, telefonoDestino, fechaHora],
-                (dbErr) => {
-                    if (dbErr) console.error("Error guardando transacción en DB:", dbErr.message);
+        try {
+            db.prepare(
+                `INSERT INTO transacciones (referencia, monto, telefonoEmisor, telefonoDestino, fechaHora) VALUES (?, ?, ?, ?, ?)`
+            ).run(numeroReferencia, monto, telefonoEmisor, telefonoDestino, fechaHora);
+        } catch (dbErr) {
+            console.error("Error guardando transacción en DB:", dbErr.message);
+        }
+
+        if (telefonoDestino) {
+            try {
+                let chatIdDestino = formatearNumeroWhatsapp(telefonoDestino);
+                if (chatIdDestino) {
+                    const mensajeDestino = `¡PAGO RECIBIDO! 🟢\n\n📌 *Referencia:* ${numeroReferencia}\n💵 *Monto:* $${monto} USDT\n📅 *Fecha y Hora:* ${fechaHora}\n\nAbono verificado y acreditado exitosamente.`;
+                    await client.sendMessage(chatIdDestino, mensajeDestino);
                 }
-            );
-
-            if (telefonoDestino) {
-                try {
-                    let chatIdDestino = formatearNumeroWhatsapp(telefonoDestino);
-                    if (chatIdDestino) {
-                        const mensajeDestino = `¡PAGO RECIBIDO! 🟢\n\n📌 *Referencia:* ${numeroReferencia}\n💵 *Monto:* $${monto} USDT\n📅 *Fecha y Hora:* ${fechaHora}\n\nAbono verificado y acreditado exitosamente.`;
-                        await client.sendMessage(chatIdDestino, mensajeDestino);
-                    }
-                } catch (wppError) {
-                    console.error('No se pudo enviar la notificación al destinatario:', wppError);
-                }
+            } catch (wppError) {
+                console.error('No se pudo enviar la notificación al destinatario:', wppError);
             }
+        }
 
-            if (telefonoEmisor) {
-                try {
-                    let chatIdEmisor = formatearNumeroWhatsapp(telefonoEmisor);
-                    if (chatIdEmisor) {
-                        const mensajeEmisor = `¡PAGO ENVIADO! 🔴\n\n📌 *Referencia:* ${numeroReferencia}\n💵 *Monto:* $${monto} USDT\n📅 *Fecha y Hora:* ${fechaHora}\n👤 *Destinatario:* ${telefonoDestino}\n\nOperación procesada con éxito.`;
-                        await client.sendMessage(chatIdEmisor, mensajeEmisor);
-                    }
-                } catch (wppError) {
-                    console.error('No se pudo enviar la notificación al emisor:', wppError);
+        if (telefonoEmisor) {
+            try {
+                let chatIdEmisor = formatearNumeroWhatsapp(telefonoEmisor);
+                if (chatIdEmisor) {
+                    const mensajeEmisor = `¡PAGO ENVIADO! 🔴\n\n📌 *Referencia:* ${numeroReferencia}\n💵 *Monto:* $${monto} USDT\n📅 *Fecha y Hora:* ${fechaHora}\n👤 *Destinatario:* ${telefonoDestino}\n\nOperación procesada con éxito.`;
+                    await client.sendMessage(chatIdEmisor, mensajeEmisor);
                 }
+            } catch (wppError) {
+                console.error('No se pudo enviar la notificación al emisor:', wppError);
             }
+        }
 
-            return res.json({ 
-                success: true, 
-                message: `¡Pago de $${monto} USDT procesado y liquidado con éxito! Ref: ${numeroReferencia}`,
-                referencia: numeroReferencia,
-                fechaHora: fechaHora,
-                montoProcesado: monto,
-                comisionPlataforma: comisionAplicada,
-                destinoComision: destinoComision
-            });
+        return res.json({ 
+            success: true, 
+            message: `¡Pago de $${monto} USDT procesado y liquidado con éxito! Ref: ${numeroReferencia}`,
+            referencia: numeroReferencia,
+            fechaHora: fechaHora,
+            montoProcesado: monto,
+            comisionPlataforma: comisionAplicada,
+            destinoComision: destinoComision
         });
 
     } catch (error) {
