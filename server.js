@@ -130,10 +130,19 @@ async function getPayPalAccessToken() {
     return data.access_token;
 }
 
+// Cliente de WhatsApp configurado para Render (Linux sandboxing)
 const client = new Client({
     authStrategy: new LocalAuth(),
     puppeteer: {
-        args: ['--no-sandbox', '--disable-setuid-sandbox']
+        args: [
+            '--no-sandbox',
+            '--disable-setuid-sandbox',
+            '--disable-dev-shm-usage',
+            '--disable-accelerated-2d-canvas',
+            '--no-first-run',
+            '--no-zygote',
+            '--disable-gpu'
+        ]
     }
 });
 
@@ -198,7 +207,6 @@ app.get('/api/historial/:telefono', (req, res) => {
     }
 });
 
-// Registro de usuario, guardado de PIN y envío de código WhatsApp
 app.post('/api/enviar-codigo', limiterPagos, async (req, res) => {
     const { telefono, pinSeguridad } = req.body;
     
