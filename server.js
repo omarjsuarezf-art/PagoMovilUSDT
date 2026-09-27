@@ -130,7 +130,7 @@ async function getPayPalAccessToken() {
     return data.access_token;
 }
 
-// Cliente de WhatsApp configurado para Render (Linux sandboxing)
+// Cliente de WhatsApp configurado con flags de Linux para Render
 const client = new Client({
     authStrategy: new LocalAuth(),
     puppeteer: {
