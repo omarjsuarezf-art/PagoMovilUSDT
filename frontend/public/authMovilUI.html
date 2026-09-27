@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pasarela Segura - Pago Móvil y USDT</title>
+    <title>Pago Móvil USDT - Completa tu registro</title>
     <!-- Tailwind CSS para un diseño limpio y moderno -->
     <script src="https://cdn.tailwindcss.com"></script>
 
@@ -16,37 +16,48 @@
 <body class="bg-slate-950 flex justify-center items-center min-h-screen text-slate-100 p-4">
 
     <!-- Contenedor principal estilo tarjeta móvil -->
-    <div class="w-full max-w-md bg-slate-900/90 rounded-3xl shadow-2xl p-6 border border-slate-800 flex flex-col justify-between backdrop-blur-md">
+    <div class="w-full max-w-md bg-slate-900/90 rounded-3xl shadow-2xl p-6 border border-slate-800 flex flex-col justify-between backdrop-blur-md relative">
         
         <!-- ================= VISTA 1: ACCESO Y REGISTRO ================= -->
         <div id="vistaAuth" class="space-y-6">
             <div class="text-center">
-                <h1 class="text-2xl font-black text-sky-400 tracking-tight">🚀 Pasarela Segura</h1>
-                <p class="text-xs text-slate-400 mt-1">Acceso instantáneo y titularidad estricta</p>
+                <h1 class="text-2xl font-black text-sky-400 tracking-tight">💳 Pago Móvil USDT</h1>
+                <p class="text-xs text-slate-400 mt-1">Completa tu registro y titularidad estricta</p>
+                <!-- Texto guía de los pasos -->
+                <p class="text-[11px] text-sky-300/80 font-medium mt-1">Sigue estos 3 pasos:</p>
             </div>
 
-            <!-- Pasos del registro y titularidad -->
+            <!-- Pasos del registro convertidos en indicador visual no interactivo -->
             <div class="grid grid-cols-3 gap-2 text-center text-xs">
-                <div class="bg-sky-500/10 border border-sky-500/30 text-sky-300 font-medium py-2 rounded-xl">1. Teléfono</div>
-                <div class="bg-slate-800/60 border border-slate-700/60 text-slate-400 py-2 rounded-xl">2. Cédula</div>
-                <div class="bg-slate-800/60 border border-slate-700/60 text-slate-400 py-2 rounded-xl">3. Método Propio</div>
+                <div class="bg-slate-950/40 border border-slate-800 text-slate-300 py-1.5 rounded-xl cursor-default">1. Teléfono</div>
+                <div class="bg-slate-950/40 border border-slate-800 text-slate-400 py-1.5 rounded-xl cursor-default">2. Cédula</div>
+                <div class="bg-slate-950/40 border border-slate-800 text-slate-400 py-1.5 rounded-xl cursor-default">3. Método Propio</div>
             </div>
 
-            <!-- Sección de WhatsApp -->
+            <!-- Sección de WhatsApp y PIN de Seguridad -->
             <div class="bg-slate-800/40 p-4 rounded-2xl border border-slate-700/40 space-y-3">
-                <h2 class="text-sm font-semibold text-slate-200">Acceso por WhatsApp</h2>
+                <h2 class="text-sm font-semibold text-slate-200">Acceso y Seguridad</h2>
                 <div>
                     <label class="block text-xs font-medium text-slate-400 mb-1">Número de Teléfono</label>
                     <input type="text" id="telefono" placeholder="Ej: 04123400436" class="w-full px-4 py-2.5 bg-slate-950/80 border border-slate-700 rounded-xl focus:ring-2 focus:ring-sky-500 focus:outline-none text-sm text-white">
                 </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-400 mb-1">Crea tu PIN de Seguridad (4 Dígitos)</label>
+                    <input type="password" id="pinRegistro" maxlength="4" placeholder="••••" class="w-full px-4 py-2.5 bg-slate-950/80 border border-slate-700 rounded-xl focus:ring-2 focus:ring-sky-500 focus:outline-none text-sm text-white font-mono tracking-widest text-center">
+                    <p class="text-[10px] text-slate-400 mt-1">Este PIN te lo pedirá cada vez que vayas a enviar fondos.</p>
+                </div>
                 <button onclick="enviarCodigoWhatsApp()" class="w-full bg-sky-600 hover:bg-sky-500 text-white font-bold py-2.5 rounded-xl text-sm transition duration-200 shadow-md">
-                    Enviar Código por WhatsApp
+                    Registrar y Enviar Código WhatsApp
                 </button>
+                <!-- Mensaje aclaratorio para los despistados -->
+                <p class="text-[11px] text-slate-400 text-center leading-relaxed mt-2">
+                    💬 Te llegará un código de verificación por WhatsApp <span class="text-sky-300 font-medium">sólo para validar que el teléfono es tuyo</span>.
+                </p>
             </div>
 
-            <!-- Botón simulado para saltar al panel -->
-            <button onclick="entrarAlPanelDemo()" class="w-full bg-slate-800/80 hover:bg-slate-700 text-slate-300 text-xs py-2 rounded-lg transition border border-slate-700/50">
-                ⚡ [Demo] Ir al Panel de Pagos Directo
+            <!-- Botón profesional para continuar -->
+            <button onclick="entrarAlPanelDemo()" class="w-full bg-slate-800/80 hover:bg-slate-700 text-slate-300 text-xs py-2.5 rounded-xl transition border border-slate-700/50 font-medium flex items-center justify-center gap-2">
+                <span>➡️</span> Continuar al Panel de Pagos
             </button>
 
             <!-- Sección de Métodos (Cero Terceros) -->
@@ -63,11 +74,16 @@
                         <option value="zinli">Zinli (Correo)</option>
                         <option value="zelle">Zelle (Correo / Tel)</option>
                         <option value="paypal">PayPal (Correo)</option>
+                        <option value="otra_billetera">🌐 Otra Billetera o Exchange (USDT)</option>
                     </select>
+                    <!-- Texto aclaratorio para que sepan que cualquier plataforma sirve -->
+                    <p class="text-[10px] text-slate-400 mt-1.5 leading-tight">
+                        💡 Sirve <span class="text-sky-300 font-medium">cualquier billetera, exchange o plataforma</span> donde tengas tus fondos o USDT.
+                    </p>
                 </div>
                 <div>
                     <label class="block text-xs font-medium text-slate-400 mb-1">Cuenta / Correo de Destino</label>
-                    <input type="text" id="cuentaDestino" placeholder="tucuenta@correo.com" class="w-full px-4 py-2 bg-slate-950/80 border border-slate-700 rounded-xl focus:ring-2 focus:ring-sky-500 focus:outline-none text-sm text-white">
+                    <input type="text" id="cuentaDestino" placeholder="tucuenta@correo.com o Wallet" class="w-full px-4 py-2 bg-slate-950/80 border border-slate-700 rounded-xl focus:ring-2 focus:ring-sky-500 focus:outline-none text-sm text-white">
                 </div>
                 <button onclick="registrarMetodoPago()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2.5 rounded-xl text-sm transition duration-200 shadow-md">
                     Vincular de Forma Segura
@@ -98,11 +114,22 @@
                     <h2 class="text-3xl font-extrabold tracking-tight text-white mt-1">USDT 0.00</h2>
                 </div>
 
-                <!-- Pasos de Operación -->
+                <!-- BOTÓN AMARILLO DE CUENTA COMERCIAL -->
+                <div class="mb-6">
+                    <button onclick="actualizarCuentaComercial()" class="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold py-3 px-4 rounded-2xl text-xs flex items-center justify-between shadow-lg transition duration-200 border border-amber-400">
+                        <span class="flex items-center gap-2">
+                            <span class="text-base">⚡</span>
+                            <span>Actualizar a Cuenta Comercial ($1000+ / Emprendedor)</span>
+                        </span>
+                        <span class="bg-slate-950/20 px-2 py-1 rounded-lg text-[10px]">Activar</span>
+                    </button>
+                </div>
+
+                <!-- Pasos de Operación (Estáticos y sin interactividad) -->
                 <div class="mb-6 grid grid-cols-3 gap-2 text-center text-xs">
-                    <div id="paso1Badge" class="bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 font-semibold py-2 rounded-xl">1. Datos</div>
-                    <div id="paso2Badge" class="bg-slate-800/60 border border-slate-700 text-slate-400 py-2 rounded-xl">2. Autorizar</div>
-                    <div id="paso3Badge" class="bg-slate-800/60 border border-slate-700 text-slate-400 py-2 rounded-xl">3. Liquidado</div>
+                    <div id="paso1Badge" class="bg-slate-950/40 border border-slate-800 text-slate-300 py-2 rounded-xl cursor-default">1. Datos</div>
+                    <div id="paso2Badge" class="bg-slate-950/40 border border-slate-800 text-slate-400 py-2 rounded-xl cursor-default">2. Autorizar</div>
+                    <div id="paso3Badge" class="bg-slate-950/40 border border-slate-800 text-slate-400 py-2 rounded-xl cursor-default">3. Liquidado</div>
                 </div>
 
                 <!-- Formulario de Envío a Comercio -->
@@ -130,7 +157,7 @@
 
             <!-- Botón de acción final de pago -->
             <div class="mt-6 space-y-3">
-                <button type="button" onclick="enviarPagoComercio()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3.5 rounded-xl shadow-lg transition duration-200 text-center text-sm">
+                <button type="button" onclick="abrirModalPin()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3.5 rounded-xl shadow-lg transition duration-200 text-center text-sm">
                     Enviar Pago al Instante (Nativo)
                 </button>
                 <p class="text-center text-[10px] text-slate-500">Comisión de red mínima integrada de forma transparente.</p>
@@ -164,6 +191,26 @@
 
     </div>
 
+    <!-- ================= MODAL DE PIN DE SEGURIDAD (4 DÍGITOS) ================= -->
+    <div id="modalPin" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50">
+        <div class="w-full max-w-xs bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl space-y-4 text-center">
+            <div class="text-3xl">🔒</div>
+            <h3 class="text-sm font-bold text-slate-100">Confirma tu PIN de Seguridad</h3>
+            <p class="text-xs text-slate-400">Introduce tu PIN de 4 dígitos para autorizar el envío de fondos.</p>
+            
+            <input type="password" id="pinSeguridad" maxlength="4" placeholder="••••" class="w-full text-center tracking-widest text-2xl py-2.5 bg-slate-950 border border-slate-700 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none text-white font-mono">
+            
+            <div class="grid grid-cols-2 gap-2 pt-2">
+                <button onclick="cerrarModalPin()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium py-2.5 rounded-xl text-xs transition">
+                    Cancelar
+                </button>
+                <button onclick="ejecutarPagoConPin()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2.5 rounded-xl text-xs transition">
+                    Confirmar
+                </button>
+            </div>
+        </div>
+    </div>
+
     <script>
         let usuarioActual = '';
 
@@ -174,33 +221,56 @@
         }
 
         function entrarAlPanelDemo() {
-            usuarioActual = document.getElementById('telefono').value || '04123400436';
+            const telefonoInput = document.getElementById('telefono').value.trim();
+            if (!telefonoInput) {
+                alert('Por favor introduce tu número de teléfono arriba primero.');
+                return;
+            }
+            usuarioActual = telefonoInput;
+            localStorage.setItem('telefonoEmisor', telefonoInput);
             cambiarVista('vistaPanel');
             cargarHistorial();
         }
 
+        async function actualizarCuentaComercial() {
+            const telefono = usuarioActual || localStorage.getItem('telefonoEmisor') || document.getElementById('telefono').value || '04123400436';
+            try {
+                const response = await fetch('/api/upgrade-account', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ telefono, paymentReference: 'REF-COMERCIAL-DIRECTA' })
+                });
+                const data = await response.json();
+                alert(data.message);
+            } catch (error) {
+                console.error('Error:', error);
+                alert('No se pudo procesar la actualización comercial.');
+            }
+        }
+
         async function enviarCodigoWhatsApp() {
-            const telefono = document.getElementById('telefono').value;
-            if (!telefono) {
-                alert('Por favor ingresa un número de teléfono.');
+            const telefono = document.getElementById('telefono').value.trim();
+            const pinRegistro = document.getElementById('pinRegistro').value.trim();
+
+            if (!telefono || !pinRegistro || pinRegistro.length !== 4) {
+                alert('Por favor ingresa tu número y un PIN válido de 4 dígitos.');
                 return;
             }
 
             usuarioActual = telefono;
+            localStorage.setItem('telefonoEmisor', telefono);
 
             try {
                 const response = await fetch('/api/enviar-codigo', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ telefono })
+                    body: JSON.stringify({ telefono, pinSeguridad: pinRegistro })
                 });
                 const data = await response.json();
                 if (data.success) {
                     alert(data.message);
-                    cambiarVista('vistaPanel');
-                    cargarHistorial();
                 } else {
-                    alert('Error al enviar el código.');
+                    alert('Error al registrar el PIN y enviar el código.');
                 }
             } catch (error) {
                 console.error('Error:', error);
@@ -209,9 +279,9 @@
         }
 
         async function registrarMetodoPago() {
-            const cedulaTitular = document.getElementById('cedulaTitular').value;
+            const cedulaTitular = document.getElementById('cedulaTitular').value.trim();
             const metodo = document.getElementById('metodoSelect').value;
-            const cuentaDestino = document.getElementById('cuentaDestino').value;
+            const cuentaDestino = document.getElementById('cuentaDestino').value.trim();
             const alerta = document.getElementById('alertaRespuesta');
 
             if (!cedulaTitular || !cuentaDestino) {
@@ -239,12 +309,39 @@
             }
         }
 
-        async function enviarPagoComercio() {
-            const telefonoComercio = document.getElementById('telefonoComercio').value;
-            const montoUSDT = document.getElementById('montoEnvio').value;
+        function abrirModalPin() {
+            const telefonoComercio = document.getElementById('telefonoComercio').value.trim();
+            const montoUSDT = document.getElementById('montoEnvio').value.trim();
 
             if (!telefonoComercio || !montoUSDT) {
                 alert('Por favor ingresa el teléfono/alias del comercio y el monto a enviar.');
+                return;
+            }
+
+            document.getElementById('pinSeguridad').value = '';
+            document.getElementById('modalPin').classList.remove('hidden');
+        }
+
+        function cerrarModalPin() {
+            document.getElementById('modalPin').classList.add('hidden');
+        }
+
+        async function ejecutarPagoConPin() {
+            const pin = document.getElementById('pinSeguridad').value.trim();
+            if (pin.length !== 4) {
+                alert('Por favor introduce un PIN válido de 4 dígitos.');
+                return;
+            }
+
+            cerrarModalPin();
+
+            const telefonoComercio = document.getElementById('telefonoComercio').value.trim();
+            const montoUSDT = document.getElementById('montoEnvio').value.trim();
+            const telefonoEmisorFinal = usuarioActual || localStorage.getItem('telefonoEmisor') || document.getElementById('telefono').value.trim();
+
+            if (!telefonoEmisorFinal) {
+                alert('Error: No se detecta el teléfono del emisor. Vuelve a iniciar sesión.');
+                cambiarVista('vistaAuth');
                 return;
             }
 
@@ -255,7 +352,8 @@
                     body: JSON.stringify({ 
                         telefonoComercio, 
                         montoUSDT, 
-                        telefonoEmisor: usuarioActual || '04123400436' 
+                        telefonoEmisor: telefonoEmisorFinal,
+                        pinSeguridad: pin 
                     })
                 });
                 const data = await response.json();
@@ -264,7 +362,7 @@
                 if (data.success) {
                     document.getElementById('montoEnvio').value = '';
                     document.getElementById('telefonoComercio').value = '';
-                    cargarHistorial(); // Refrescar la tabla al instante
+                    cargarHistorial(); 
                 }
             } catch (error) {
                 console.error('Error:', error);
@@ -273,7 +371,7 @@
         }
 
         async function cargarHistorial() {
-            const telConsulta = usuarioActual || '04123400436';
+            const telConsulta = usuarioActual || localStorage.getItem('telefonoEmisor') || document.getElementById('telefono').value.trim() || '04123400436';
             try {
                 const response = await fetch(`/api/historial/${telConsulta}`);
                 const data = await response.json();

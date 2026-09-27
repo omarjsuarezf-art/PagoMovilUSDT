@@ -3,49 +3,52 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pago Móvil USDT - Enviar Pago</title>
-    <!-- Tailwind CSS para un diseño limpio y rápido -->
+    <title>Panel de Pagos - Pago Móvil USDT</title>
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Librería para generar códigos QR en el navegador -->
+    <!-- Librería para códigos QR -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-    <!-- SDK Oficial de PayPal (Modo Sandbox con tu Client ID) -->
+    <!-- SDK Oficial de PayPal -->
     <script src="https://www.paypal.com/sdk/js?client-id=ARfixGuD3WDciynMoGwx6v05Amd5aAEU12-F1UbTga81ebryQrDJty-bP-iRSbxgK-JVa5IaT9j6DFp&currency=USD"></script>
 
-    <!-- Configuración del Manifiesto y Logotipo para Móviles/PWA -->
     <link rel="manifest" href="./manifest.json">
     <link rel="icon" type="image/png" href="./logo.png">
     <link rel="apple-touch-icon" href="./logo.png">
     <meta name="apple-mobile-web-app-capable" content="yes">
 </head>
-<body class="bg-slate-100 flex justify-center items-center min-h-screen py-6">
+<body class="bg-slate-950 flex justify-center items-center min-h-screen py-6 text-slate-100">
 
-    <!-- Contenedor principal estilo tarjeta móvil ampliada para historial y pasos -->
-    <div class="w-full max-w-xl bg-white rounded-2xl shadow-lg p-6 flex flex-col justify-between relative mx-4">
+    <!-- Contenedor principal oscuro idéntico a tus capturas -->
+    <div class="w-full max-w-xl bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl p-6 flex flex-col justify-between relative mx-4">
         
         <!-- Cabecera -->
         <div>
             <div class="flex justify-between items-center mb-6">
-                <h1 class="text-xl font-bold text-slate-800">💸 Pago Móvil USDT</h1>
-                <span class="text-xs bg-emerald-100 text-emerald-800 font-semibold px-2.5 py-1 rounded-full">Activo</span>
+                <div>
+                    <h1 class="text-xl font-bold text-white flex items-center gap-2">💸 Panel de Pagos</h1>
+                    <p class="text-xs text-slate-400">Comercios y Pago Móvil</p>
+                </div>
+                <button onclick="window.location.href='/'" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold px-3 py-1.5 rounded-lg border border-slate-700 transition">
+                    Cerrar Sesión
+                </button>
             </div>
 
             <!-- Saldo actual del usuario -->
-            <div class="bg-slate-900 text-white p-4 rounded-xl mb-6 shadow-md">
+            <div class="bg-slate-950 border border-slate-800 text-white p-4 rounded-xl mb-6 shadow-inner">
                 <p class="text-xs text-slate-400">Saldo Disponible</p>
-                <h2 class="text-3xl font-extrabold tracking-tight">USDT 125.50</h2>
+                <h2 class="text-3xl font-extrabold tracking-tight text-emerald-400">USDT 0.00</h2>
             </div>
 
-            <!-- NUEVO: Pasos Visuales del Proceso -->
-            <div class="mb-6 bg-slate-50 border border-slate-200 rounded-xl p-4">
-                <h3 class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Pasos de Operación</h3>
+            <!-- Pasos Visuales del Proceso -->
+            <div class="mb-6 bg-slate-950 border border-slate-800 rounded-xl p-4">
                 <div class="grid grid-cols-3 gap-2 text-center">
-                    <div id="step-1" class="p-2 rounded-lg bg-emerald-100 text-emerald-800 text-xs font-semibold border border-emerald-300">
+                    <div id="step-1" class="p-2 rounded-lg bg-emerald-950 text-emerald-400 text-xs font-semibold border border-emerald-800">
                         1. Datos
                     </div>
-                    <div id="step-2" class="p-2 rounded-lg bg-slate-200 text-slate-600 text-xs font-semibold">
+                    <div id="step-2" class="p-2 rounded-lg bg-slate-800 text-slate-400 text-xs font-semibold">
                         2. Autorizar
                     </div>
-                    <div id="step-3" class="p-2 rounded-lg bg-slate-200 text-slate-600 text-xs font-semibold">
+                    <div id="step-3" class="p-2 rounded-lg bg-slate-800 text-slate-400 text-xs font-semibold">
                         3. Liquidado
                     </div>
                 </div>
@@ -54,83 +57,107 @@
             <!-- Formulario de Pago -->
             <form id="formPago" class="space-y-4">
                 <div>
-                    <label class="block text-sm font-medium text-slate-700 mb-1">Teléfono o Alias del Comercio</label>
+                    <label class="block text-sm font-medium text-slate-300 mb-1">Teléfono o Alias del Comercio</label>
                     <div class="flex gap-2">
-                        <input type="tel" id="inputComercio" placeholder="0412-1234567" class="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none text-lg">
-                        <!-- Botón para generar/mostrar QR del comercio -->
-                        <button type="button" onclick="toggleQRModal()" class="bg-slate-200 hover:bg-slate-300 px-4 rounded-xl text-slate-700 font-medium text-sm flex items-center justify-center transition">
+                        <input type="tel" id="inputComercio" placeholder="0412-1234567" class="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none text-lg text-white">
+                        <button type="button" onclick="toggleQRModal()" class="bg-slate-800 hover:bg-slate-700 px-4 rounded-xl text-slate-200 font-medium text-sm flex items-center justify-center transition border border-slate-700">
                             📷 QR
                         </button>
                     </div>
                 </div>
 
                 <div>
-                    <label class="block text-sm font-medium text-slate-700 mb-1">Monto a Enviar</label>
+                    <label class="block text-sm font-medium text-slate-300 mb-1">Monto a Enviar</label>
                     <div class="relative">
-                        <span class="absolute inset-y-0 left-0 pl-4 flex items-center text-slate-400 font-bold">$</span>
-                        <input type="number" id="inputMonto" step="0.01" placeholder="0.00" class="w-full pl-8 pr-16 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none text-xl font-bold">
-                        <span class="absolute inset-y-0 right-0 pr-4 flex items-center text-xs font-semibold text-slate-500">USDT</span>
+                        <span class="absolute inset-y-0 left-0 pl-4 flex items-center text-slate-500 font-bold">$</span>
+                        <input type="number" id="inputMonto" step="0.01" placeholder="0.00" class="w-full pl-8 pr-16 py-3 bg-slate-950 border border-slate-800 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none text-xl font-bold text-white">
+                        <span class="absolute inset-y-0 right-0 pr-4 flex items-center text-xs font-semibold text-slate-400">USDT</span>
                     </div>
                 </div>
             </form>
         </div>
 
-        <!-- Botones de acción final (Pago Móvil nativo + PayPal integrado) -->
+        <!-- Botones de acción final -->
         <div class="mt-6">
-            <button type="button" id="btnEnviarPago" onclick="enviarPagoMovil()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-4 rounded-xl shadow-lg transition duration-200 text-center mb-3">
+            <button type="button" id="btnEnviarPago" onclick="enviarPagoMovil()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-4 rounded-xl shadow-lg transition duration-200 text-center mb-3">
                 Enviar Pago al Instante (Nativo)
             </button>
 
-            <!-- Contenedor donde PayPal inyectará su botón oficial -->
-            <div id="paypal-button-container"></div>
+            <!-- Contenedor PayPal -->
+            <div id="paypal-button-container" class="mb-3"></div>
+
+            <!-- BOTÓN DE ACTUALIZACIÓN A CUENTA COMERCIAL -->
+            <button type="button" onclick="abrirModalUpgrade()" class="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold py-3 rounded-xl shadow transition duration-200 text-center text-sm flex items-center justify-center gap-2">
+                ⭐ Actualizar a Cuenta Comercial ($1,000+ / Emprendedor)
+            </button>
 
             <p id="mensajeEstado" class="text-center text-xs text-slate-500 mt-3">Comisión de red mínima integrada de forma transparente.</p>
         </div>
 
-        <!-- NUEVO: Sección de Historial de Transacciones -->
-        <div class="mt-8 border-t border-slate-200 pt-6">
+        <!-- Sección de Historial -->
+        <div class="mt-8 border-t border-slate-800 pt-6">
             <div class="flex justify-between items-center mb-3">
-                <h3 class="text-sm font-bold text-slate-800 uppercase tracking-wide">Historial Reciente</h3>
-                <button onclick="cargarHistorial()" class="text-xs text-emerald-600 hover:underline font-semibold">Actualizar</button>
+                <h3 class="text-sm font-bold text-slate-300 uppercase tracking-wide">Historial Reciente</h3>
+                <button onclick="cargarHistorial()" class="text-xs text-emerald-400 hover:underline font-semibold">Actualizar</button>
             </div>
-            <div class="overflow-x-auto max-h-48 border border-slate-200 rounded-xl">
+            <div class="overflow-x-auto max-h-48 border border-slate-800 rounded-xl bg-slate-950">
                 <table class="w-full text-left border-collapse text-xs">
-                    <thead class="bg-slate-100 text-slate-700 sticky top-0">
+                    <thead class="bg-slate-900 text-slate-400 sticky top-0">
                         <tr>
-                            <th class="p-2.5 border-b">Ref / ID</th>
-                            <th class="p-2.5 border-b">Destino</th>
-                            <th class="p-2.5 border-b">Monto</th>
-                            <th class="p-2.5 border-b">Estado</th>
+                            <th class="p-2.5 border-b border-slate-800">Ref / ID</th>
+                            <th class="p-2.5 border-b border-slate-800">Destino</th>
+                            <th class="p-2.5 border-b border-slate-800">Monto</th>
+                            <th class="p-2.5 border-b border-slate-800">Estado</th>
                         </tr>
                     </thead>
-                    <tbody id="tablaHistorialBody" class="divide-y divide-slate-100 text-slate-600">
+                    <tbody id="tablaHistorialBody" class="divide-y divide-slate-800 text-slate-300">
                         <tr>
-                            <td colspan="4" class="p-4 text-center text-slate-400">Cargando transacciones...</td>
+                            <td colspan="4" class="p-4 text-center text-slate-500">Cargando transacciones...</td>
                         </tr>
                     </tbody>
                 </table>
             </div>
         </div>
 
-        <!-- Modal / Contenedor Dinámico para el Código QR del Comercio -->
-        <div id="modalQR" class="hidden absolute inset-0 bg-white bg-opacity-95 rounded-2xl p-6 flex flex-col justify-center items-center z-10">
-            <h3 class="text-lg font-bold text-slate-800 mb-2">QR del Comercio</h3>
-            <p class="text-xs text-slate-500 mb-4 text-center">Escanea este código para transferir directamente al establecimiento (Cero Terceros).</p>
-            
-            <!-- Contenedor donde se dibuja el QR -->
-            <div id="codigoQRGenerado" class="p-3 bg-white border border-slate-200 rounded-xl shadow-md mb-4"></div>
-            
-            <button type="button" onclick="toggleQRModal()" class="bg-slate-800 hover:bg-slate-900 text-white font-medium px-6 py-2 rounded-xl text-sm transition">
+        <!-- Modal QR -->
+        <div id="modalQR" class="hidden absolute inset-0 bg-slate-950 bg-opacity-95 rounded-2xl p-6 flex flex-col justify-center items-center z-10">
+            <h3 class="text-lg font-bold text-white mb-2">QR del Comercio</h3>
+            <p class="text-xs text-slate-400 mb-4 text-center">Escanea este código para transferir directamente al establecimiento.</p>
+            <div id="codigoQRGenerado" class="p-3 bg-white border border-slate-800 rounded-xl shadow-md mb-4"></div>
+            <button type="button" onclick="toggleQRModal()" class="bg-slate-800 hover:bg-slate-700 text-white font-medium px-6 py-2 rounded-xl text-sm transition">
                 Cerrar QR
             </button>
         </div>
 
+        <!-- MODAL: Actualización a Cuenta Comercial -->
+        <div id="modalUpgrade" class="hidden absolute inset-0 bg-slate-950 bg-opacity-95 rounded-2xl p-6 flex flex-col justify-center items-center z-20 text-white">
+            <h3 class="text-lg font-bold mb-2 text-amber-400">🚀 Nivel Emprendedor (Comercial)</h3>
+            <p class="text-xs text-slate-300 mb-4 text-center">Supera el límite de $1,000 diarios pagando tu tarifa de migración instantánea.</p>
+            
+            <div class="w-full space-y-3">
+                <div>
+                    <label class="block text-xs text-slate-300 mb-1">Tu Teléfono Registrado</label>
+                    <input type="text" id="upgradeTelefono" value="04121234567" class="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-sm text-white focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs text-slate-300 mb-1">Referencia de Pago de la Penalización</label>
+                    <input type="text" id="upgradeRef" placeholder="Ej: REF-994821" class="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-sm text-white focus:outline-none">
+                </div>
+                <button type="button" onclick="ejecutarUpgradeComercial()" class="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold py-3 rounded-xl text-sm transition mt-2">
+                    Validar y Desbloquear Cuenta Comercial
+                </button>
+                <button type="button" onclick="cerrarModalUpgrade()" class="w-full bg-slate-800 hover:bg-slate-700 text-white font-medium py-2 rounded-xl text-xs transition">
+                    Cancelar
+                </button>
+            </div>
+        </div>
+
     </div>
 
-    <!-- Script de lógica QR, Pasos, Historial y Conexión con el Servidor -->
+    <!-- Script de lógica -->
     <script>
         let qrGenerado = false;
-        const telefonoUsuarioActual = "04121234567"; // Teléfono de prueba o sesión activa
+        const telefonoUsuarioActual = "04121234567";
 
         document.addEventListener("DOMContentLoaded", () => {
             cargarHistorial();
@@ -141,17 +168,55 @@
             const s2 = document.getElementById('step-2');
             const s3 = document.getElementById('step-3');
 
-            s1.className = "p-2 rounded-lg text-xs font-semibold " + (pasoActivo >= 1 ? "bg-emerald-100 text-emerald-800 border border-emerald-300" : "bg-slate-200 text-slate-600");
-            s2.className = "p-2 rounded-lg text-xs font-semibold " + (pasoActivo >= 2 ? "bg-emerald-100 text-emerald-800 border border-emerald-300" : "bg-slate-200 text-slate-600");
-            s3.className = "p-2 rounded-lg text-xs font-semibold " + (pasoActivo >= 3 ? "bg-emerald-100 text-emerald-800 border border-emerald-300" : "bg-slate-200 text-slate-600");
+            s1.className = "p-2 rounded-lg text-xs font-semibold " + (pasoActivo >= 1 ? "bg-emerald-950 text-emerald-400 border border-emerald-800" : "bg-slate-800 text-slate-400");
+            s2.className = "p-2 rounded-lg text-xs font-semibold " + (pasoActivo >= 2 ? "bg-emerald-950 text-emerald-400 border border-emerald-800" : "bg-slate-800 text-slate-400");
+            s3.className = "p-2 rounded-lg text-xs font-semibold " + (pasoActivo >= 3 ? "bg-emerald-950 text-emerald-400 border border-emerald-800" : "bg-slate-800 text-slate-400");
         }
 
         function toggleQRModal() {
             const modal = document.getElementById('modalQR');
             modal.classList.toggle('hidden');
-
             if (!modal.classList.contains('hidden') && !qrGenerado) {
                 generarQRDinamico();
+            }
+        }
+
+        function abrirModalUpgrade() {
+            document.getElementById('modalUpgrade').classList.remove('hidden');
+        }
+
+        function cerrarModalUpgrade() {
+            document.getElementById('modalUpgrade').classList.add('hidden');
+        }
+
+        async function ejecutarUpgradeComercial() {
+            const telefono = document.getElementById('upgradeTelefono').value.trim();
+            const paymentReference = document.getElementById('upgradeRef').value.trim();
+
+            if (!telefono || !paymentReference) {
+                alert("Por favor, ingresa tu teléfono y la referencia del pago.");
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/upgrade-account', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ telefono, paymentReference })
+                });
+
+                const resultado = await response.json();
+
+                if (resultado.success) {
+                    alert(resultado.message);
+                    cerrarModalUpgrade();
+                    location.reload();
+                } else {
+                    alert("Aviso: " + resultado.message);
+                }
+            } catch (error) {
+                console.error("Error al procesar actualización:", error);
+                alert("Error de conexión al procesar la actualización comercial.");
             }
         }
 
@@ -187,7 +252,6 @@
             qrGenerado = true;
         }
 
-        // Función para cargar el historial desde la API del backend
         async function cargarHistorial() {
             const tbody = document.getElementById('tablaHistorialBody');
             try {
@@ -198,16 +262,16 @@
                     tbody.innerHTML = "";
                     data.transacciones.forEach(tx => {
                         tbody.innerHTML += `
-                            <tr class="hover:bg-slate-50">
-                                <td class="p-2.5 font-mono text-slate-500">${tx.referencia || tx.id}</td>
-                                <td class="p-2.5 font-medium text-slate-700">${tx.telefonoComercio || 'Comercio'}</td>
-                                <td class="p-2.5 font-bold text-emerald-600">$${parseFloat(tx.montoUSDT).toFixed(2)}</td>
-                                <td class="p-2.5"><span class="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full text-[10px] font-bold">Completado</span></td>
+                            <tr class="hover:bg-slate-900">
+                                <td class="p-2.5 font-mono text-slate-400">${tx.referencia || tx.id}</td>
+                                <td class="p-2.5 font-medium text-slate-300">${tx.telefonoComercio || 'Comercio'}</td>
+                                <td class="p-2.5 font-bold text-emerald-400">$${parseFloat(tx.montoUSDT).toFixed(2)}</td>
+                                <td class="p-2.5"><span class="bg-emerald-950 text-emerald-400 border border-emerald-800 px-2 py-0.5 rounded-full text-[10px] font-bold">Completado</span></td>
                             </tr>
                         `;
                     });
                 } else {
-                    tbody.innerHTML = `<tr><td colspan="4" class="p-4 text-center text-slate-400">No hay transacciones registradas aún.</td></tr>`;
+                    tbody.innerHTML = `<tr><td colspan="4" class="p-4 text-center text-slate-500">No hay transacciones registradas aún.</td></tr>`;
                 }
             } catch (error) {
                 console.error("Error al cargar historial:", error);
@@ -215,7 +279,6 @@
             }
         }
 
-        // Función original para pago interno
         async function enviarPagoMovil() {
             const telefonoComercio = document.getElementById('inputComercio').value.trim();
             const montoUSDT = parseFloat(document.getElementById('inputMonto').value);
@@ -223,7 +286,7 @@
             const btn = document.getElementById('btnEnviarPago');
 
             if (!telefonoComercio || isNaN(montoUSDT) || montoUSDT <= 0) {
-                alert("Por favor, ingresa un teléfono y um monto válido mayor a cero.");
+                alert("Por favor, ingresa un teléfono y un monto válido mayor a cero.");
                 return;
             }
 
@@ -231,7 +294,7 @@
             btn.disabled = true;
             btn.textContent = "Procesando pago...";
             mensajeEstado.textContent = "Conectando con la pasarela USDT...";
-            mensajeEstado.className = "text-center text-xs text-amber-600 mt-3 font-semibold";
+            mensajeEstado.className = "text-center text-xs text-amber-400 mt-3 font-semibold";
 
             try {
                 const respuesta = await fetch('/api/enviar-pago', {
@@ -245,19 +308,19 @@
                 if (resultado.success) {
                     actualizarPasos(3);
                     mensajeEstado.textContent = resultado.message;
-                    mensajeEstado.className = "text-center text-xs text-emerald-600 mt-3 font-bold";
+                    mensajeEstado.className = "text-center text-xs text-emerald-400 mt-3 font-bold";
                     alert("¡Transacción completada exitosamente!");
-                    cargarHistorial(); // Refresca la tabla automáticamente
+                    cargarHistorial();
                 } else {
                     actualizarPasos(1);
                     mensajeEstado.textContent = "Error: " + (resultado.message || "No se pudo procesar");
-                    mensajeEstado.className = "text-center text-xs text-rose-600 mt-3 font-bold";
+                    mensajeEstado.className = "text-center text-xs text-rose-400 mt-3 font-bold";
                 }
             } catch (error) {
                 console.error("Error de red:", error);
                 actualizarPasos(1);
                 mensajeEstado.textContent = "Error de conexión con el servidor.";
-                mensajeEstado.className = "text-center text-xs text-rose-600 mt-3 font-bold";
+                mensajeEstado.className = "text-center text-xs text-rose-400 mt-3 font-bold";
             } finally {
                 btn.disabled = false;
                 btn.textContent = "Enviar Pago al Instante (Nativo)";
@@ -265,7 +328,6 @@
             }
         }
 
-        // Renderizado del Botón Oficial de PayPal conectado al Backend
         paypal.Buttons({
             createOrder: async (data, actions) => {
                 actualizarPasos(2);
@@ -290,8 +352,8 @@
                 try {
                     const response = await fetch(`/api/paypal/capturar-orden/${data.orderID}`, {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' }}
-                    );
+                        headers: { 'Content-Type': 'application/json' }
+                    });
                     const details = await response.json();
                     actualizarPasos(3);
                     alert(`¡Pago con PayPal completado con éxito por ${details.payer?.name?.given_name || 'Usuario'}!`);

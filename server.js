@@ -30,6 +30,20 @@ const db = new sqlite3.Database(dbPath, (err) => {
             telefonoDestino TEXT,
             fechaHora TEXT
         )`);
+
+        db.run(`CREATE TABLE IF NOT EXISTS usuarios (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            telefono TEXT UNIQUE,
+            pinSeguridad TEXT,
+            accountType TEXT DEFAULT 'natural',
+            dailyLimit REAL DEFAULT 1000.00,
+            upgradedAt TEXT
+        )`, () => {
+            // Asegurarse por las malas de que la columna pinSeguridad exista si la tabla ya era vieja
+            db.run(`ALTER TABLE usuarios ADD COLUMN pinSeguridad TEXT`, (alterErr) => {
+                // Si ya existe ignoramos el error con elegancia
+            });
+        });
     }
 });
 
@@ -37,8 +51,8 @@ const db = new sqlite3.Database(dbPath, (err) => {
 // CONFIGURACIÓN DE RATE LIMITING (SEGURIDAD)
 // ==========================================
 const limiterPagos = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutos
-    max: 5, // Máximo 5 intentos por IP en ese tiempo para pagos/códigos
+    windowMs: 15 * 60 * 1000, 
+    max: 10, 
     message: { 
         success: false, 
         message: 'Demasiadas solicitudes desde esta IP, por seguridad intente de nuevo más tarde.' 
@@ -49,12 +63,11 @@ const limiterPagos = rateLimit({
 
 const limiterGeneral = rateLimit({
     windowMs: 15 * 60 * 1000,
-    max: 100 // Límite general para otras peticiones
+    max: 100 
 });
 
 app.use(limiterGeneral);
 
-// Servidor de archivos estáticos con ruta absoluta
 const publicPath = path.resolve(__dirname, 'frontend', 'public');
 app.use(express.static(publicPath));
 app.use('/public', express.static(publicPath));
@@ -83,7 +96,6 @@ function calcularComisionComercio(montoVenta) {
     return Number(comisionCalculada.toFixed(2)); 
 }
 
-// Helper para formatear número a formato internacional de WhatsApp
 function formatearNumeroWhatsapp(numero) {
     if (!numero) return null;
     let numLimpio = numero.toString().trim().replace(/\D/g, ''); 
@@ -131,7 +143,9 @@ client.on('ready', () => {
 
 client.initialize();
 
-// Rutas de Páginas
+// ==========================================
+// RUTAS DE PÁGINAS
+// ==========================================
 app.get('/', (req, res) => {
     res.sendFile(path.join(publicPath, 'authMovilUI.html'));
 });
@@ -140,7 +154,6 @@ app.get('/panel', (req, res) => {
     res.sendFile(path.join(publicPath, 'pagoMovilUI.html'));
 });
 
-// Rutas de assets dinámicas
 app.get('/manifest.json', (req, res) => {
     try {
         const archivos = fs.readdirSync(publicPath);
@@ -164,10 +177,9 @@ app.get('/logo.png', (req, res) => {
 });
 
 // ==========================================
-// APIs Y RUTAS DE TRANSACCIONES
+// APIS Y RUTAS DE TRANSACCIONES
 // ==========================================
 
-// Consultar Historial de Transacciones por Teléfono
 app.get('/api/historial/:telefono', (req, res) => {
     const telefono = req.params.telefono;
     db.all(
@@ -178,214 +190,212 @@ app.get('/api/historial/:telefono', (req, res) => {
                 console.error("Error consultando historial:", err.message);
                 return res.status(500).json({ success: false, message: 'Error al consultar historial en la base de datos' });
             }
-            res.json({ success: true, historial: rows });
+            res.json({ success: true, transacciones: rows, historial: rows });
         }
     );
 });
 
+// Registro de usuario, guardado de PIN y envío de código WhatsApp (Corregido con UPSERT robusto)
 app.post('/api/enviar-codigo', limiterPagos, async (req, res) => {
-    const { telefono } = req.body;
-    try {
-        const codigoVerificacion = Math.floor(100000 + Math.random() * 900000);
-        let chatId = formatearNumeroWhatsapp(telefono);
-        const mensaje = `Tu código de acceso a Monedero es: *${codigoVerificacion}*`;
-
-        if (chatId) {
-            await client.sendMessage(chatId, mensaje);
-        }
-        res.json({ success: true, message: '¡Código enviado con éxito por WhatsApp!', codigoMock: codigoVerificacion });
-    } catch (error) {
-        console.error("Error al enviar WhatsApp:", error);
-        res.status(500).json({ success: false, message: 'Hubo un error al enviar el WhatsApp' });
+    const { telefono, pinSeguridad } = req.body;
+    
+    if (!telefono || !pinSeguridad) {
+        return res.status(400).json({ success: false, message: 'El teléfono y el PIN de seguridad son obligatorios.' });
     }
+
+    // Inserción segura o actualización usando SQLite UPSERT o validación directa
+    db.run(
+        `INSERT INTO usuarios (telefono, pinSeguridad, accountType) VALUES (?, ?, 'natural')
+         ON CONFLICT(telefono) DO UPDATE SET pinSeguridad = ?`,
+        [telefono, pinSeguridad, pinSeguridad],
+        async (err) => {
+            if (err) {
+                console.error("Error guardando/actualizando usuario en DB:", err.message);
+                return res.status(500).json({ success: false, message: 'Error interno al guardar el usuario.' });
+            }
+
+            try {
+                const codigoVerificacion = Math.floor(100000 + Math.random() * 900000);
+                let chatId = formatearNumeroWhatsapp(telefono);
+                
+                const mensaje = `¡Registro Exitoso en Monedero USDT! 🟢\n\nTu línea ha sido validada correctamente y tu PIN de seguridad de 4 dígitos ha quedado configurado.\n\n🔑 *Tu PIN configurado:* ${pinSeguridad}\n🔢 *Código de verificación:* *${codigoVerificacion}*`;
+
+                if (chatId) {
+                    await client.sendMessage(chatId, mensaje);
+                }
+                res.json({ success: true, message: '¡Código enviado por WhatsApp con éxito y PIN configurado!', codigoMock: codigoVerificacion });
+            } catch (error) {
+                console.error("Error al enviar WhatsApp:", error);
+                res.status(500).json({ success: false, message: 'Hubo un error al enviar el WhatsApp' });
+            }
+        }
+    );
+});
+
+app.post('/api/recuperar-pin', limiterPagos, async (req, res) => {
+    const { telefono, nuevoPin } = req.body;
+
+    if (!telefono || !nuevoPin || nuevoPin.length !== 4) {
+        return res.status(400).json({ success: false, message: 'Indica tu número de teléfono y un nuevo PIN válido de 4 dígitos.' });
+    }
+
+    db.get(`SELECT * FROM usuarios WHERE telefono = ?`, [telefono], async (err, user) => {
+        if (err) {
+            return res.status(500).json({ success: false, message: 'Error consultando la base de datos.' });
+        }
+
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'El número de teléfono no está registrado en el sistema.' });
+        }
+
+        db.run(`UPDATE usuarios SET pinSeguridad = ? WHERE telefono = ?`, [nuevoPin, telefono], async (updateErr) => {
+            if (updateErr) {
+                return res.status(500).json({ success: false, message: 'Error al actualizar el PIN.' });
+            }
+
+            try {
+                let chatId = formatearNumeroWhatsapp(telefono);
+                if (chatId) {
+                    await client.sendMessage(chatId, `🔐 *Seguridad Monedero:* Tu PIN de 4 dígitos ha sido restablecido exitosamente.`);
+                }
+            } catch (wppErr) {
+                console.error("Error enviando aviso de cambio de PIN:", wppErr);
+            }
+
+            res.json({ success: true, message: '¡PIN de seguridad actualizado con éxito!' });
+        });
+    });
 });
 
 app.post('/api/registrar-metodos', (req, res) => {
     const { cedulaTitular, metodo, cuentaDestino } = req.body;
-    console.log(`Método registrado exitosamente -> Cédula: ${cedulaTitular || 'N/D'}, Método: ${metodo || 'N/D'}, Cuenta: ${cuentaDestino || 'N/D'}`);
     res.json({ 
         success: true, 
         message: '¡Método vinculado de forma segura con éxito!' 
     });
 });
 
+app.post('/api/upgrade-account', async (req, res) => {
+    const { userId, telefono, paymentReference } = req.body;
+    const identificador = userId || telefono;
+
+    if (!identificador) {
+        return res.status(400).json({ success: false, message: "Falta el identificador del usuario." });
+    }
+
+    db.get(`SELECT * FROM usuarios WHERE id = ? OR telefono = ?`, [identificador, identificador], (err, user) => {
+        if (err) {
+            return res.status(500).json({ success: false, message: "Error interno en la base de datos." });
+        }
+
+        if (!user) {
+            db.run(`INSERT INTO usuarios (telefono, accountType) VALUES (?, 'natural')`, [identificador], () => {});
+        }
+
+        if (!paymentReference) {
+            return res.status(400).json({ success: false, message: "Paga la tarifa de actualización para liberar tus fondos." });
+        }
+
+        const fechaActual = new Date().toISOString();
+        db.run(
+            `UPDATE usuarios SET accountType = 'commercial', dailyLimit = NULL, upgradedAt = ? WHERE id = ? OR telefono = ?`,
+            [fechaActual, identificador, identificador],
+            (updateErr) => {
+                if (updateErr) {
+                    return res.status(500).json({ success: false, message: "Error al actualizar el perfil." });
+                }
+                return res.status(200).json({
+                    success: true,
+                    message: "¡Bienvenido al nivel comercial! Perfil actualizado con éxito.",
+                    qrCode: `QR-COMERCIAL-${identificador}`
+                });
+            }
+        );
+    });
+});
+
 app.post('/api/enviar-pago', limiterPagos, async (req, res) => {
     try {
         const monto = req.body.montoUSDT || req.body.monto || req.body.amount || req.body.cantidad || req.body.valor;
-        
-        // Teléfono del Destinatario (Comercio / Persona que recibe)
         const telefonoDestino = req.body.telefonoComercio || req.body.telefono || req.body.phone || req.body.nroTelefono;
-        
-        // Teléfono del Emisor (Pagador)
         const telefonoEmisor = req.body.telefonoEmisor || req.body.telefonoPagador || req.body.telefonoUsuario;
-
+        const pinSeguridad = req.body.pinSeguridad;
         const esComercio = req.body.esComercio || false; 
         
-        if (!monto) {
-            return res.status(400).json({ 
-                success: false, 
-                message: 'El monto es obligatorio para procesar el pago',
-                recibido: req.body 
+        if (!monto || !telefonoDestino) {
+            return res.status(400).json({ success: false, message: 'El monto y el teléfono de destino son obligatorios' });
+        }
+
+        if (!telefonoEmisor) {
+            return res.status(400).json({ success: false, message: 'Falta el teléfono del emisor para validar el PIN.' });
+        }
+
+        db.get(`SELECT * FROM usuarios WHERE telefono = ?`, [telefonoEmisor], async (err, usuario) => {
+            if (err) {
+                return res.status(500).json({ success: false, message: 'Error interno al verificar el usuario.' });
+            }
+
+            if (!usuario) {
+                return res.status(401).json({ success: false, message: '❌ Usuario emisor no registrado en el sistema. Registra tu línea primero.' });
+            }
+
+            if (usuario.pinSeguridad && usuario.pinSeguridad !== pinSeguridad) {
+                return res.status(401).json({ success: false, message: '❌ PIN de seguridad incorrecto. Transacción rechazada.' });
+            }
+
+            const numeroReferencia = 'REF-' + Math.floor(100000 + Math.random() * 900000);
+            const ahora = new Date();
+            const fechaHora = ahora.toLocaleString('es-VE', { timeZone: 'America/Caracas' });
+
+            let comisionAplicada = esComercio ? calcularComisionComercio(monto) : COMISION_FIJA_USUARIO;
+            let destinoComision = esComercio ? `Binance Wallet (${BINANCE_COMMISSION_WALLET})` : `PayPal (${PAYPAL_RECEIVER_EMAIL})`;
+
+            db.run(
+                `INSERT INTO transacciones (referencia, monto, telefonoEmisor, telefonoDestino, fechaHora) VALUES (?, ?, ?, ?, ?)`,
+                [numeroReferencia, monto, telefonoEmisor, telefonoDestino, fechaHora],
+                (dbErr) => {
+                    if (dbErr) console.error("Error guardando transacción en DB:", dbErr.message);
+                }
+            );
+
+            if (telefonoDestino) {
+                try {
+                    let chatIdDestino = formatearNumeroWhatsapp(telefonoDestino);
+                    if (chatIdDestino) {
+                        const mensajeDestino = `¡PAGO RECIBIDO! 🟢\n\n📌 *Referencia:* ${numeroReferencia}\n💵 *Monto:* $${monto} USDT\n📅 *Fecha y Hora:* ${fechaHora}\n\nAbono verificado y acreditado exitosamente.`;
+                        await client.sendMessage(chatIdDestino, mensajeDestino);
+                    }
+                } catch (wppError) {
+                    console.error('No se pudo enviar la notificación al destinatario:', wppError);
+                }
+            }
+
+            if (telefonoEmisor) {
+                try {
+                    let chatIdEmisor = formatearNumeroWhatsapp(telefonoEmisor);
+                    if (chatIdEmisor) {
+                        const mensajeEmisor = `¡PAGO ENVIADO! 🔴\n\n📌 *Referencia:* ${numeroReferencia}\n💵 *Monto:* $${monto} USDT\n📅 *Fecha y Hora:* ${fechaHora}\n👤 *Destinatario:* ${telefonoDestino}\n\nOperación procesada con éxito.`;
+                        await client.sendMessage(chatIdEmisor, mensajeEmisor);
+                    }
+                } catch (wppError) {
+                    console.error('No se pudo enviar la notificación al emisor:', wppError);
+                }
+            }
+
+            return res.json({ 
+                success: true, 
+                message: `¡Pago de $${monto} USDT procesado y liquidado con éxito! Ref: ${numeroReferencia}`,
+                referencia: numeroReferencia,
+                fechaHora: fechaHora,
+                montoProcesado: monto,
+                comisionPlataforma: comisionAplicada,
+                destinoComision: destinoComision
             });
-        }
-
-        // Generar Referencia Única de Transacción y Marca de Tiempo
-        const numeroReferencia = 'REF-' + Math.floor(100000 + Math.random() * 900000);
-        const ahora = new Date();
-        const fechaHora = ahora.toLocaleString('es-VE', { timeZone: 'America/Caracas' });
-
-        let comisionAplicada = 0;
-        let destinoComision = '';
-
-        if (esComercio) {
-            comisionAplicada = calcularComisionComercio(monto);
-            destinoComision = `Binance Wallet (${BINANCE_COMMISSION_WALLET})`;
-        } else {
-            comisionAplicada = COMISION_FIJA_USUARIO;
-            destinoComision = `PayPal (${PAYPAL_RECEIVER_EMAIL})`;
-        }
-
-        // Guardar transacción en la base de datos SQLite de forma permanente
-        db.run(
-            `INSERT INTO transacciones (referencia, monto, telefonoEmisor, telefonoDestino, fechaHora) VALUES (?, ?, ?, ?, ?)`,
-            [numeroReferencia, monto, telefonoEmisor || 'N/D', telefonoDestino || 'N/D', fechaHora],
-            (err) => {
-                if (err) console.error("Error guardando transacción en DB:", err.message);
-            }
-        );
-
-        // 1. Notificación al DESTINATARIO (Quien recibe el dinero)
-        if (telefonoDestino) {
-            try {
-                let chatIdDestino = formatearNumeroWhatsapp(telefonoDestino);
-                if (chatIdDestino) {
-                    const mensajeDestino = `¡PAGO RECIBIDO! 🟢\n\n` +
-                        `📌 *Referencia:* ${numeroReferencia}\n` +
-                        `💵 *Monto:* $${monto} USDT\n` +
-                        `📅 *Fecha y Hora:* ${fechaHora}\n\n` +
-                        `Abono verificado y acreditado exitosamente.`;
-                    await client.sendMessage(chatIdDestino, mensajeDestino);
-                }
-            } catch (wppError) {
-                console.error('No se pudo enviar la notificación al destinatario:', wppError);
-            }
-        }
-
-        // 2. Notificación al EMISOR (Quien envía el dinero)
-        if (telefonoEmisor) {
-            try {
-                let chatIdEmisor = formatearNumeroWhatsapp(telefonoEmisor);
-                if (chatIdEmisor) {
-                    const mensajeEmisor = `¡PAGO ENVIADO! 🔴\n\n` +
-                        `📌 *Referencia:* ${numeroReferencia}\n` +
-                        `💵 *Monto:* $${monto} USDT\n` +
-                        `📅 *Fecha y Hora:* ${fechaHora}\n` +
-                        `👤 *Destinatario:* ${telefonoDestino || 'Registrado'}\n\n` +
-                        `Operación procesada con éxito.`;
-                    await client.sendMessage(chatIdEmisor, mensajeEmisor);
-                }
-            } catch (wppError) {
-                console.error('No se pudo enviar la notificación al emisor:', wppError);
-            }
-        }
-
-        res.json({ 
-            success: true, 
-            message: '¡Pago enviado, registrado y procesado con éxito!',
-            referencia: numeroReferencia,
-            fechaHora: fechaHora,
-            montoProcesado: monto,
-            comisionPlataforma: comisionAplicada,
-            destinoComision: destinoComision,
-            notificacionesEnviadas: {
-                destinatario: !!telefonoDestino,
-                emisor: !!telefonoEmisor
-            }
         });
 
     } catch (error) {
         console.error('Error crítico al procesar el pago:', error);
         res.status(500).json({ success: false, message: 'Error interno al procesar el pago' });
-    }
-});
-
-app.post('/api/paypal/crear-orden', async (req, res) => {
-    try {
-        const { amount } = req.body;
-        const monto = amount || "10.00";
-
-        if (parseFloat(monto) < MIN_DEPOSITO) {
-            return res.status(400).json({ success: false, message: `El depósito mínimo es de $${MIN_DEPOSITO}` });
-        }
-
-        const comisionPayPal = Number((monto * 0.054 + 0.30).toFixed(2));
-        const montoTotalConComision = Number((parseFloat(monto) + comisionPayPal + COMISION_FIJA_USUARIO).toFixed(2));
-        const accessToken = await getPayPalAccessToken();
-
-        const response = await fetch(`${PAYPAL_API}/v2/checkout/orders`, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${accessToken}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                intent: 'CAPTURE',
-                purchase_units: [{
-                    amount: {
-                        currency_code: 'USD',
-                        value: montoTotalConComision.toString(),
-                        breakdown: {
-                            item_total: { currency_code: 'USD', value: parseFloat(monto).toFixed(2) },
-                            handling: { currency_code: 'USD', value: (comisionPayPal + COMISION_FIJA_USUARIO).toString() }
-                        }
-                    },
-                    description: 'Recarga / Pago en plataforma Monedero (Destino: ' + PAYPAL_RECEIVER_EMAIL + ')'
-                }]
-            })
-        });
-
-        const orderData = await response.json();
-        if (orderData.id) {
-            res.json({ 
-                success: true, 
-                id: orderData.id, 
-                montoBase: monto,
-                comision: comisionPayPal,
-                gananciaPlataforma: COMISION_FIJA_USUARIO,
-                total: montoTotalConComision,
-                receptorPayPal: PAYPAL_RECEIVER_EMAIL
-            });
-        } else {
-            res.status(500).json({ success: false, message: 'No se pudo crear la orden en PayPal', details: orderData });
-        }
-    } catch (error) {
-        console.error('Error creando orden de PayPal:', error);
-        res.status(500).json({ success: false, message: 'Error interno al procesar PayPal' });
-    }
-});
-
-app.post('/api/paypal/capturar-orden', async (req, res) => {
-    try {
-        const { orderID } = req.body;
-        const accessToken = await getPayPalAccessToken();
-
-        const response = await fetch(`${PAYPAL_API}/v2/checkout/orders/${orderID}/capture`, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${accessToken}`,
-                'Content-Type': 'application/json'
-            }
-        });
-
-        const captureData = await response.json();
-        if (captureData.status === 'COMPLETED') {
-            res.json({ success: true, message: '¡Pago con PayPal capturado con éxito!', data: captureData });
-        } else {
-            res.status(400).json({ success: false, message: 'El pago no se pudo completar', details: captureData });
-        }
-    } catch (error) {
-        console.error('Error capturando orden de PayPal:', error);
-        res.status(500).json({ success: false, message: 'Error interno al capturar la orden' });
     }
 });
 
