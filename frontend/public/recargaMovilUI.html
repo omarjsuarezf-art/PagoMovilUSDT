@@ -1,27 +1,142 @@
-<!-- Pantalla de Recarga de USDT -->
-<div class="w-full max-w-md bg-white p-6 rounded-2xl shadow-lg">
-    <div class="flex justify-between items-center mb-6">
-        <h2 class="text-xl font-bold text-slate-800">📥 Recargar Saldo</h2>
-        <span class="text-xs bg-blue-100 text-blue-800 font-semibold px-2.5 py-1 rounded-full">Red Polygon / USDT</span>
-    </div>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recarga USDT y Términos</title>
+    <!-- Carga de Tailwind CSS para estilos -->
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen flex items-center justify-center p-4">
 
-    <!-- Instrucciones claras -->
-    <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 mb-6">
-        <p class="text-xs text-slate-600 mb-2 font-medium">Escanea o copia la dirección de tu monedero para recibir fondos al instante:</p>
-        <div class="bg-white p-3 rounded-lg border border-slate-300 text-xs font-mono text-slate-700 break-all select-all">
-            0x71C...39A2 (Red Polygon)
+    <!-- Contenedor Principal (Ampliado ligeramente para acomodar la información) -->
+    <div class="w-full max-w-xl bg-slate-800 p-6 md:p-8 rounded-2xl shadow-2xl border border-slate-700 space-y-6">
+        
+        <!-- Cabecera -->
+        <div class="flex justify-between items-center border-b border-slate-700/60 pb-4">
+            <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                <span>📥</span> Recarga Segura de Saldo
+            </h2>
+            <span class="text-xs bg-blue-950 text-blue-400 border border-blue-800 font-semibold px-3 py-1 rounded-full">
+                Red Polygon / USDT
+            </span>
+        </div>
+
+        <!-- Panel Informativo y Advertencia Estricta de Red -->
+        <div class="space-y-3">
+            <div class="bg-slate-900/90 p-4 rounded-xl border border-slate-700 text-xs text-slate-300 space-y-2">
+                <p class="font-semibold text-blue-400 flex items-center gap-1.5">
+                    <span>⚡</span> Instrucciones del Sistema:
+                </p>
+                <p class="text-slate-400 leading-relaxed">
+                    Realice su transferencia de USDT y reporte el comprobante con su número de teléfono y hash único para una acreditación rápida.
+                </p>
+            </div>
+
+            <!-- Alerta de Red Polygon y Riesgos -->
+            <div class="bg-rose-950/30 border border-rose-800/50 p-4 rounded-xl text-xs text-rose-200 space-y-2">
+                <p class="font-bold text-rose-400 flex items-center gap-1.5">
+                    <span>⚠️</span> Advertencia Estricta de Red y Descargo:
+                </p>
+                <ul class="list-disc list-inside space-y-1 text-rose-300/90 leading-relaxed">
+                    <li><strong>Red Exclusiva Polygon (MATIC):</strong> Cualquier envío fuera de esta red (Ethereum, Tron, BSC, etc.) causará la <strong>pérdida permanente e irreversible</strong> de los fondos, sin derecho a reembolso.</li>
+                    <li><strong>Errores de Dirección:</strong> La plataforma no asume responsabilidad por fondos enviados a cuentas incorrectas o ajenas por descuido del usuario. Verifique rigurosamente.</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Dirección de Monedero Oficial -->
+        <div class="bg-slate-900/80 p-4 rounded-xl border border-slate-700/80">
+            <p class="text-xs text-slate-400 mb-2 font-medium">
+                Dirección oficial de recepción (Copia con un clic):
+            </p>
+            <div id="walletAddress" class="bg-slate-950 p-3 rounded-lg border border-slate-800 text-xs font-mono text-blue-400 break-all select-all font-semibold cursor-pointer hover:border-blue-500 transition" onclick="copiarDireccion()">
+                0x0950Cd97BD1417Dc513716d3a75D470a33599Bff
+            </div>
+            <p class="text-[10px] text-slate-500 mt-1.5 text-right">Haz clic en la dirección para copiar</p>
+        </div>
+
+        <!-- Formulario para reportar o verificar recarga -->
+        <form id="formRecarga" class="space-y-4 pt-2 border-t border-slate-700/60">
+            <div>
+                <label class="block text-sm font-medium text-slate-300 mb-1">Número de Teléfono</label>
+                <input type="text" id="phoneNumber" placeholder="Ej: 04141234567" class="w-full px-4 py-3 bg-slate-900 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent focus:outline-none text-sm transition" required>
+            </div>
+            
+            <div>
+                <label class="block text-sm font-medium text-slate-300 mb-1">Monto Enviado (USDT)</label>
+                <input type="number" id="amount" step="0.01" min="0.01" placeholder="Ej: 10.50" class="w-full px-4 py-3 bg-slate-900 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent focus:outline-none text-sm transition" required>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-slate-300 mb-1">Hash de la Transferencia (TXID)</label>
+                <input type="text" id="txHash" placeholder="Pega el hash de la transacción aquí..." class="w-full px-4 py-3 bg-slate-900 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent focus:outline-none text-sm transition" required>
+            </div>
+
+            <button type="submit" id="btnRecargar" class="w-full bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white font-bold py-4 rounded-xl shadow-lg transition duration-200 mt-2">
+                Verificar y Acreditar Saldo
+            </button>
+        </form>
+        
+        <!-- Contenedor para notificaciones -->
+        <div id="mensajeNotificacion" class="mt-4 p-3 rounded-xl text-sm text-center hidden"></div>
+        
+        <!-- Footer de Derechos -->
+        <div class="text-center text-[11px] text-slate-500 pt-2 border-t border-slate-700/40">
+            © 2026 Pasarela Segura Pago Móvil & USDT. Todos los derechos reservados.
         </div>
     </div>
 
-    <!-- Formulario para reportar o verificar recarga -->
-    <form class="space-y-4">
-        <div>
-            <label class="block text-sm font-medium text-slate-700 mb-1">Hash de la Transferencia (TXID)</label>
-            <input type="text" placeholder="Pega el hash de la transacción aquí..." class="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm">
-        </div>
+    <script>
+    function copiarDireccion() {
+        const text = document.getElementById('walletAddress').innerText.trim();
+        navigator.clipboard.writeText(text);
+        alert('¡Dirección copiada al portapapeles!');
+    }
 
-        <button type="button" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl shadow-md transition duration-200">
-            Verificar y Acreditar Saldo
-        </button>
-    </form>
-</div>
+    document.getElementById('formRecarga').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const btn = document.getElementById('btnRecargar');
+        const mensajeDiv = document.getElementById('mensajeNotificacion');
+        const payload = {
+            phoneNumber: document.getElementById('phoneNumber').value.trim(),
+            amount: document.getElementById('amount').value.trim(),
+            txHash: document.getElementById('txHash').value.trim()
+        };
+
+        btn.disabled = true;
+        btn.innerHTML = 'Procesando...';
+        mensajeDiv.classList.add('hidden');
+        mensajeDiv.className = 'mt-4 p-3 rounded-xl text-sm text-center hidden';
+
+        try {
+            const response = await fetch('/api/recargar', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            
+            const result = await response.json();
+            
+            mensajeDiv.classList.remove('hidden');
+            if (result.success) {
+                mensajeDiv.classList.add('bg-emerald-950/80', 'text-emerald-300', 'border', 'border-emerald-600/50');
+                mensajeDiv.innerHTML = `✅ ${result.message}`;
+                document.getElementById('formRecarga').reset();
+            } else {
+                mensajeDiv.classList.add('bg-rose-950/80', 'text-rose-300', 'border', 'border-rose-600/50');
+                mensajeDiv.innerHTML = `❌ ${result.error || result.message}`;
+            }
+        } catch (error) {
+            mensajeDiv.classList.remove('hidden');
+            mensajeDiv.classList.add('bg-rose-950/80', 'text-rose-300', 'border', 'border-rose-600/50');
+            mensajeDiv.innerHTML = '❌ Error de red. Intenta nuevamente.';
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = 'Verificar y Acreditar Saldo';
+        }
+    });
+    </script>
+</body>
+</html>
