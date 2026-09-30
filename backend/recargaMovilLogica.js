@@ -1,7 +1,8 @@
+// Módulo de Recarga de Saldo en USDT
 const express = require('express');
 const router = express.Router();
 
-// Módulo de Recarga de Saldo en USDT
+// Función para procesar una recarga de saldo en USDT usando números de teléfono
 async function procesarRecargaUSDT(phoneNumber, amount, txHash, clientDb) {
     const trx = await clientDb.transaction();
 
@@ -26,24 +27,25 @@ async function procesarRecargaUSDT(phoneNumber, amount, txHash, clientDb) {
             throw new Error("El número de teléfono no está registrado en la plataforma.");
         }
 
-        // 3. Sumar el monto recargado al saldo actual del usuario
+        // 3. Sumar el monto recargado al saldo actual del usuario (convertido a número de forma segura)
+        const montoNumerico = Number(amount);
         await trx('wallets')
             .where('id', wallet.id)
-            .increment('usdt_balance', amount);
+            .increment('usdt_balance', montoNumerico);
 
         // 4. Guardar el registro de la recarga en la base de datos
         await trx('transactions').insert({
             sender_phone: "EXTERNO_DEPOSITO",
             receiver_phone: phoneNumber,
-            amount: amount,
-            fee_collected: 0, // Las recargas suelen ser libres de comisión para incentivar el uso
+            amount: montoNumerico,
+            fee_collected: 0, // Recargas libres de comisión
             status: 'completed',
             reference_hash: txHash,
             timestamp: new Date()
         });
 
         await trx.commit();
-        return { success: true, message: `¡Recarga exitosa de ${amount} USDT acreditada!` };
+        return { success: true, message: `¡Recarga exitosa de ${montoNumerico} USDT acreditada!` };
 
     } catch (error) {
         await trx.rollback();
@@ -51,10 +53,15 @@ async function procesarRecargaUSDT(phoneNumber, amount, txHash, clientDb) {
     }
 }
 
-// Ruta POST para procesar la recarga
+// Ruta POST para procesar la recarga (ajustada para recibir los datos de manera limpia)
 router.post('/recargar', async (req, res) => {
     try {
         const { phoneNumber, amount, txHash } = req.body;
+        
+        if (!phoneNumber || !amount || !txHash) {
+            return res.status(400).json({ success: false, error: "Faltan datos obligatorios para procesar la recarga." });
+        }
+
         const resultado = await procesarRecargaUSDT(phoneNumber, amount, txHash, req.db);
         res.json(resultado);
     } catch (err) {

@@ -1,3 +1,4 @@
+// Módulo de Pago Móvil en USDT
 const express = require('express');
 const router = express.Router();
 
@@ -24,7 +25,7 @@ async function realizarPagoMovil(senderPhone, receiverPhone, amount, clientDb) {
     }
 
     // 3. Verificar si el emisor tiene suficiente saldo en USDT
-    if (senderWallet.usdt_balance < amount) {
+    if (Number(senderWallet.usdt_balance) < Number(amount)) {
       throw new Error("Saldo insuficiente en USDT.");
     }
 
@@ -41,8 +42,8 @@ async function realizarPagoMovil(senderPhone, receiverPhone, amount, clientDb) {
 
     // 5. Calcular la comisión para ti como creador (ej: 0.6%)
     const feePercentage = 0.006; 
-    const feeAmount = amount * feePercentage;
-    const netAmountToReceiver = amount - feeAmount;
+    const feeAmount = Number(amount) * feePercentage;
+    const netAmountToReceiver = Number(amount) - feeAmount;
 
     // 6. Descontar el total del saldo del emisor
     await trx('wallets')
@@ -75,12 +76,11 @@ async function realizarPagoMovil(senderPhone, receiverPhone, amount, clientDb) {
   }
 }
 
-// Ruta POST para ejecutar el pago móvil
-router.post('/enviar', async (req, res) => {
+// Ruta POST ajustada a /enviar-pago para empalmar con el frontend
+router.post('/enviar-pago', async (req, res) => {
     try {
-        const { senderPhone, receiverPhone, amount } = req.body;
-        // Asumiendo que req.db es tu instancia de base de datos inyectada por middleware
-        const resultado = await realizarPagoMovil(senderPhone, receiverPhone, amount, req.db);
+        const { telefonoEmisor, telefonoComercio, montoUSDT } = req.body;
+        const resultado = await realizarPagoMovil(telefonoEmisor, telefonoComercio, montoUSDT, req.db);
         res.json(resultado);
     } catch (err) {
         res.status(500).json({ success: false, error: "Error interno procesando el pago" });

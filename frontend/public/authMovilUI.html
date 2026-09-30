@@ -3,89 +3,103 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pago Móvil USDT - Completa tu registro</title>
+    <title>Pasarela Segura - Pago Móvil y USDT</title>
     <!-- Tailwind CSS para un diseño limpio y moderno -->
     <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Librería para lectura en vivo de código QR con la cámara -->
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
 
     <!-- Configuración del Manifiesto y Logotipo para Móviles/PWA -->
     <link rel="manifest" href="./manifest.json">
     <link rel="icon" type="image/png" href="./logo.png">
     <link rel="apple-touch-icon" href="./logo.png">
     <meta name="apple-mobile-web-app-capable" content="yes">
+
+    <!-- Script de registro del Service Worker para activar la instalación PWA en el celular -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('./sw.js')
+            .then((reg) => console.log('Service Worker registrado con éxito:', reg.scope))
+            .catch((err) => console.log('Error al registrar el Service Worker:', err));
+        });
+      }
+    </script>
 </head>
 <body class="bg-slate-950 flex justify-center items-center min-h-screen text-slate-100 p-4">
 
     <!-- Contenedor principal estilo tarjeta móvil -->
-    <div class="w-full max-w-md bg-slate-900/90 rounded-3xl shadow-2xl p-6 border border-slate-800 flex flex-col justify-between backdrop-blur-md relative">
+    <div class="w-full max-w-md bg-slate-900 rounded-3xl shadow-2xl p-6 border border-slate-800 flex flex-col justify-between">
         
         <!-- ================= VISTA 1: ACCESO Y REGISTRO ================= -->
         <div id="vistaAuth" class="space-y-6">
             <div class="text-center">
-                <h1 class="text-2xl font-black text-sky-400 tracking-tight">💳 Pago Móvil USDT</h1>
-                <p class="text-xs text-slate-400 mt-1">Completa tu registro y titularidad estricta</p>
-                <!-- Texto guía de los pasos -->
-                <p class="text-[11px] text-sky-300/80 font-medium mt-1">Sigue estos 3 pasos:</p>
+                <h1 class="text-2xl font-black text-emerald-400 tracking-tight">💵 Pago Móvil & USDT</h1>
+                <p class="text-xs text-slate-400 mt-1">Complete su registro y titularidad estricta.<br>Siga estos 3 pasos:</p>
+                
+                <!-- Pasitos visuales arriba -->
+                <div class="grid grid-cols-3 gap-2 mt-3">
+                    <div class="bg-slate-800/80 border border-slate-700/60 p-2 rounded-xl text-center">
+                        <span class="block text-[10px] font-bold text-emerald-400">1. Teléfono</span>
+                    </div>
+                    <div class="bg-slate-800/80 border border-slate-700/60 p-2 rounded-xl text-center">
+                        <span class="block text-[10px] font-bold text-emerald-400">2. Cédula</span>
+                    </div>
+                    <div class="bg-slate-800/80 border border-slate-700/60 p-2 rounded-xl text-center">
+                        <span class="block text-[10px] font-bold text-emerald-400">3. Método Titular</span>
+                    </div>
+                </div>
             </div>
 
-            <!-- Pasos del registro convertidos en indicador visual no interactivo -->
-            <div class="grid grid-cols-3 gap-2 text-center text-xs">
-                <div class="bg-slate-950/40 border border-slate-800 text-slate-300 py-1.5 rounded-xl cursor-default">1. Teléfono</div>
-                <div class="bg-slate-950/40 border border-slate-800 text-slate-400 py-1.5 rounded-xl cursor-default">2. Cédula</div>
-                <div class="bg-slate-950/40 border border-slate-800 text-slate-400 py-1.5 rounded-xl cursor-default">3. Método Propio</div>
-            </div>
-
-            <!-- Sección de WhatsApp y PIN de Seguridad -->
-            <div class="bg-slate-800/40 p-4 rounded-2xl border border-slate-700/40 space-y-3">
-                <h2 class="text-sm font-semibold text-slate-200">Acceso y Seguridad</h2>
+            <!-- Sección de WhatsApp y PIN -->
+            <div class="bg-slate-800/50 p-4 rounded-2xl border border-slate-700/50 space-y-3">
+                <h2 class="text-sm font-semibold text-slate-200">Acceso por WhatsApp</h2>
                 <div>
                     <label class="block text-xs font-medium text-slate-400 mb-1">Número de Teléfono</label>
-                    <input type="text" id="telefono" placeholder="Ej: 04123400436" class="w-full px-4 py-2.5 bg-slate-950/80 border border-slate-700 rounded-xl focus:ring-2 focus:ring-sky-500 focus:outline-none text-sm text-white">
+                    <input type="tel" id="telefono" placeholder="Ej: 0412 / 0416 / 0424..." class="w-full px-4 py-2.5 bg-slate-950 border border-slate-700 rounded-xl focus:ring-2 focus:ring-sky-500 focus:outline-none text-sm text-white">
                 </div>
                 <div>
-                    <label class="block text-xs font-medium text-slate-400 mb-1">Crea tu PIN de Seguridad (4 Dígitos)</label>
-                    <input type="password" id="pinRegistro" maxlength="4" placeholder="••••" class="w-full px-4 py-2.5 bg-slate-950/80 border border-slate-700 rounded-xl focus:ring-2 focus:ring-sky-500 focus:outline-none text-sm text-white font-mono tracking-widest text-center">
-                    <p class="text-[10px] text-slate-400 mt-1">Este PIN te lo pedirá cada vez que vayas a enviar fondos.</p>
+                    <label class="block text-xs font-medium text-slate-400 mb-1">PIN de Seguridad (4 dígitos)</label>
+                    <input type="password" id="pinSeguridad" maxlength="4" placeholder="****" class="w-full px-4 py-2.5 bg-slate-950 border border-slate-700 rounded-xl focus:ring-2 focus:ring-sky-500 focus:outline-none text-sm text-white">
                 </div>
-                <button onclick="enviarCodigoWhatsApp()" class="w-full bg-sky-600 hover:bg-sky-500 text-white font-bold py-2.5 rounded-xl text-sm transition duration-200 shadow-md">
-                    Registrar y Enviar Código WhatsApp
+                <!-- Botón sincronizado con evento directo para móviles -->
+                <button type="button" onclick="enviarCodigoWhatsApp()" class="w-full bg-sky-600 hover:bg-sky-500 active:bg-sky-700 text-white font-bold py-3 rounded-xl text-sm transition duration-200 shadow-md cursor-pointer">
+                    Enviar Código por WhatsApp
                 </button>
-                <!-- Mensaje aclaratorio para los despistados -->
-                <p class="text-[11px] text-slate-400 text-center leading-relaxed mt-2">
-                    💬 Te llegará un código de verificación por WhatsApp <span class="text-sky-300 font-medium">sólo para validar que el teléfono es tuyo</span>.
-                </p>
             </div>
 
-            <!-- Botón profesional para continuar -->
-            <button onclick="entrarAlPanelDemo()" class="w-full bg-slate-800/80 hover:bg-slate-700 text-slate-300 text-xs py-2.5 rounded-xl transition border border-slate-700/50 font-medium flex items-center justify-center gap-2">
-                <span>➡️</span> Continuar al Panel de Pagos
+            <!-- Botón elegante para saltar al panel -->
+            <button type="button" onclick="cambiarVista('vistaPanel')" class="w-full bg-slate-800 hover:bg-slate-700 active:bg-slate-900 text-slate-300 text-xs py-2.5 rounded-xl transition font-medium border border-slate-700 cursor-pointer">
+                Ir al Panel de Recarga por Hash y Pagos USDT &rarr;
             </button>
 
             <!-- Sección de Métodos (Cero Terceros) -->
-            <div class="bg-slate-800/40 p-4 rounded-2xl border border-slate-700/40 space-y-3">
+            <div class="bg-slate-800/50 p-4 rounded-2xl border border-slate-700/50 space-y-3">
                 <h2 class="text-sm font-semibold text-slate-200">Vincular Método (Cero Terceros)</h2>
                 <div>
                     <label class="block text-xs font-medium text-slate-400 mb-1">Cédula del Titular</label>
-                    <input type="text" id="cedulaTitular" placeholder="V12345678" class="w-full px-4 py-2 bg-slate-950/80 border border-slate-700 rounded-xl focus:ring-2 focus:ring-sky-500 focus:outline-none text-sm text-white">
+                    <input type="text" id="cedulaTitular" placeholder="V12345678" class="w-full px-4 py-2 bg-slate-950 border border-slate-700 rounded-xl focus:ring-2 focus:ring-sky-500 focus:outline-none text-sm text-white">
                 </div>
                 <div>
-                    <label class="block text-xs font-medium text-slate-400 mb-1">Método Internacional</label>
-                    <select id="metodoSelect" class="w-full px-4 py-2 bg-slate-950/80 border border-slate-700 rounded-xl focus:ring-2 focus:ring-sky-500 focus:outline-none text-sm text-white">
+                    <label class="block text-xs font-medium text-slate-400 mb-1">Método / Exchange Internacional</label>
+                    <select id="metodoSelect" class="w-full px-4 py-2 bg-slate-950 border border-slate-700 rounded-xl focus:ring-2 focus:ring-sky-500 focus:outline-none text-sm text-white">
                         <option value="binance">Binance Pay (Email o ID)</option>
                         <option value="zinli">Zinli (Correo)</option>
                         <option value="zelle">Zelle (Correo / Tel)</option>
                         <option value="paypal">PayPal (Correo)</option>
-                        <option value="otra_billetera">🌐 Otra Billetera o Exchange (USDT)</option>
+                        <option value="bybit">Bybit (UID / Correo)</option>
+                        <option value="okx">OKX Pay (UID / Email)</option>
+                        <option value="airtm">AirTM (Correo)</option>
+                        <option value="pago_movil_ven">Pago Móvil Nacional (Banco / Tlf)</option>
                     </select>
-                    <!-- Texto aclaratorio para que sepan que cualquier plataforma sirve -->
-                    <p class="text-[10px] text-slate-400 mt-1.5 leading-tight">
-                        💡 Sirve <span class="text-sky-300 font-medium">cualquier billetera, exchange o plataforma</span> donde tengas tus fondos o USDT.
-                    </p>
+                    <p class="text-[11px] text-slate-400 mt-1.5 leading-relaxed">Compatible con cualquier billetera, exchange o plataforma, garantizando transferencias directas y sin restricciones.</p>
                 </div>
                 <div>
                     <label class="block text-xs font-medium text-slate-400 mb-1">Cuenta / Correo de Destino</label>
-                    <input type="text" id="cuentaDestino" placeholder="tucuenta@correo.com o Wallet" class="w-full px-4 py-2 bg-slate-950/80 border border-slate-700 rounded-xl focus:ring-2 focus:ring-sky-500 focus:outline-none text-sm text-white">
+                    <input type="text" id="cuentaDestino" placeholder="tucuenta@correo.com" class="w-full px-4 py-2 bg-slate-950 border border-slate-700 rounded-xl focus:ring-2 focus:ring-sky-500 focus:outline-none text-sm text-white">
                 </div>
-                <button onclick="registrarMetodoPago()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2.5 rounded-xl text-sm transition duration-200 shadow-md">
+                <button type="button" onclick="registrarMetodoPago()" class="w-full bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-bold py-2.5 rounded-xl text-sm transition duration-200 shadow-md cursor-pointer">
                     Vincular de Forma Segura
                 </button>
             </div>
@@ -94,51 +108,82 @@
         </div>
 
 
-        <!-- ================= VISTA 2: PANEL DE PAGOS Y COMERCIOS (USDT) ================= -->
+        <!-- ================= VISTA 2: PANEL DE PAGOS Y RECARGA UNIVERSAL ================= -->
         <div id="vistaPanel" class="hidden flex flex-col justify-between space-y-6">
             <div>
                 <!-- Cabecera del Panel -->
-                <div class="flex justify-between items-center mb-6">
+                <div class="flex justify-between items-center mb-2">
                     <div>
                         <h1 class="text-lg font-bold text-slate-100">💸 Panel de Pagos</h1>
-                        <p class="text-xs text-slate-400">Comercios y Pago Móvil</p>
+                        <p class="text-xs text-slate-400">Comercios y Recarga Universal</p>
                     </div>
-                    <button onclick="cambiarVista('vistaAuth')" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-1.5 rounded-lg border border-slate-700">
+                    <button type="button" onclick="cambiarVista('vistaAuth')" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-1.5 rounded-lg border border-slate-700 cursor-pointer">
                         Cerrar Sesión
                     </button>
                 </div>
 
-                <!-- Saldo actual del usuario en USDT -->
-                <div class="bg-gradient-to-r from-emerald-950/40 to-slate-900 border border-emerald-500/20 p-4 rounded-2xl mb-6 shadow-inner">
-                    <p class="text-xs text-emerald-400 font-medium">Saldo Disponible</p>
-                    <h2 class="text-3xl font-extrabold tracking-tight text-white mt-1">USDT 0.00</h2>
+                <!-- ETIQUETA TIPO DE CUENTA -->
+                <div id="badgeAccountType" class="mb-3 inline-block px-2.5 py-1 rounded-md text-[11px] font-bold tracking-wide uppercase bg-slate-800 text-slate-300 border border-slate-700">
+                    Cuenta Natural (Límite $1,000 USDT)
                 </div>
 
-                <!-- BOTÓN AMARILLO DE CUENTA COMERCIAL -->
-                <div class="mb-6">
-                    <button onclick="actualizarCuentaComercial()" class="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold py-3 px-4 rounded-2xl text-xs flex items-center justify-between shadow-lg transition duration-200 border border-amber-400">
-                        <span class="flex items-center gap-2">
-                            <span class="text-base">⚡</span>
-                            <span>Actualizar a Cuenta Comercial ($1000+ / Emprendedor)</span>
-                        </span>
-                        <span class="bg-slate-950/20 px-2 py-1 rounded-lg text-[10px]">Activar</span>
+                <!-- Saldo actual del usuario en USDT -->
+                <div class="bg-gradient-to-r from-emerald-900/50 to-slate-900 border border-emerald-500/30 p-4 rounded-2xl mb-3 shadow-inner flex justify-between items-center">
+                    <div>
+                        <p class="text-xs text-emerald-400 font-medium">Saldo Disponible</p>
+                        <h2 class="text-2xl font-extrabold tracking-tight text-white mt-1">USDT <span id="spanSaldo">0.00</span></h2>
+                    </div>
+                    <button type="button" onclick="toggleSeccionRecarga()" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-3 py-2 rounded-xl transition shadow cursor-pointer">
+                        ⚡ Recargar con Hash
                     </button>
                 </div>
 
-                <!-- Pasos de Operación (Estáticos y sin interactividad) -->
-                <div class="mb-6 grid grid-cols-3 gap-2 text-center text-xs">
-                    <div id="paso1Badge" class="bg-slate-950/40 border border-slate-800 text-slate-300 py-2 rounded-xl cursor-default">1. Datos</div>
-                    <div id="paso2Badge" class="bg-slate-950/40 border border-slate-800 text-slate-400 py-2 rounded-xl cursor-default">2. Autorizar</div>
-                    <div id="paso3Badge" class="bg-slate-950/40 border border-slate-800 text-slate-400 py-2 rounded-xl cursor-default">3. Liquidado</div>
+                <!-- BOTÓN AMARILLO: ACTUALIZAR A CUENTA COMERCIAL -->
+                <button id="btnUpgradeComercial" type="button" onclick="solicitarCambioComercial()" class="w-full bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-slate-950 font-extrabold py-2.5 px-4 rounded-xl flex items-center justify-between mb-4 shadow-lg transition cursor-pointer">
+                    <div class="text-left">
+                        <div class="text-xs uppercase tracking-wide">Actualizar a Cuenta Comercial</div>
+                        <div class="text-[10px] font-semibold opacity-90">($5.00 USDT / Transferencias Ilimitadas)</div>
+                    </div>
+                    <span class="bg-amber-400/80 text-slate-950 text-xs px-2.5 py-1 rounded-lg font-black uppercase">
+                        Activar
+                    </span>
+                </button>
+
+                <!-- SECCIÓN DE RECARGA UNIVERSAL CON HASH / TXID -->
+                <div id="seccionRecarga" class="hidden bg-slate-800/90 border border-sky-500/30 p-4 rounded-2xl mb-4 space-y-3 shadow-lg">
+                    <h3 class="text-xs font-bold text-sky-400 uppercase tracking-wider">Recarga Universal (Validación por Hash)</h3>
+                    <div>
+                        <label class="block text-[11px] text-slate-400 mb-1">Seleccionar Pasarela / Red</label>
+                        <select id="exchangeSelect" class="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-xs text-white focus:ring-2 focus:ring-sky-500 focus:outline-none">
+                            <option value="binance_pay">Binance Pay (Universal)</option>
+                            <option value="crypto_network">Red Crypto / Blockchain (TRC20 / BEP20)</option>
+                            <option value="bybit">Bybit Pay</option>
+                            <option value="okx">OKX Pay</option>
+                            <option value="airtm">AirTM</option>
+                            <option value="pasarela_externa">Pasarela Internacional Externa</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-[11px] text-slate-400 mb-1">Monto a Recargar (USDT)</label>
+                        <input type="number" id="montoRecarga" step="0.01" placeholder="Ej: 50.00" class="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-xs text-white focus:ring-2 focus:ring-sky-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] text-slate-400 mb-1">Hash de la Transacción / TXID</label>
+                        <input type="text" id="hashTransaccion" placeholder="Ej: 0x9f8c...3a1b o ID de Binance" class="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-xs text-white focus:ring-2 focus:ring-sky-500 focus:outline-none font-mono">
+                    </div>
+                    <button type="button" onclick="ejecutarRecargaUniversal()" class="w-full bg-sky-600 hover:bg-sky-500 text-white font-bold py-2.5 rounded-xl text-xs transition shadow cursor-pointer">
+                        Verificar Hash y Acreditar Saldo
+                    </button>
                 </div>
 
                 <!-- Formulario de Envío a Comercio -->
-                <div class="space-y-4">
+                <div class="space-y-3 bg-slate-900/50 p-3 rounded-xl border border-slate-800">
+                    <h3 class="text-xs font-semibold text-slate-300">Pagar a Comercio</h3>
                     <div>
                         <label class="block text-xs font-medium text-slate-400 mb-1">Teléfono o Alias del Comercio</label>
                         <div class="flex gap-2">
-                            <input type="tel" id="telefonoComercio" placeholder="0412-1234567" class="w-full px-4 py-3 bg-slate-950/80 border border-slate-700 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none text-base text-white">
-                            <button type="button" onclick="alert('Abriendo cámara para escanear QR del comercio...')" class="bg-slate-800 hover:bg-slate-700 px-4 rounded-xl text-slate-200 font-medium text-xs flex items-center justify-center border border-slate-700">
+                            <input type="tel" id="telefonoComercio" placeholder="Ej: 0412 / 0416 / 0424..." class="w-full px-3 py-2.5 bg-slate-950 border border-slate-700 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none text-sm text-white">
+                            <button type="button" onclick="abrirCamaraQR()" class="bg-slate-800 hover:bg-slate-700 px-3 rounded-xl text-slate-200 font-medium text-xs flex items-center justify-center border border-slate-700 cursor-pointer">
                                 📷 QR
                             </button>
                         </div>
@@ -147,72 +192,37 @@
                     <div>
                         <label class="block text-xs font-medium text-slate-400 mb-1">Monto a Enviar</label>
                         <div class="relative">
-                            <span class="absolute inset-y-0 left-0 pl-4 flex items-center text-slate-500 font-bold">$</span>
-                            <input type="number" id="montoEnvio" step="0.01" placeholder="0.00" class="w-full pl-8 pr-16 py-3 bg-slate-950/80 border border-slate-700 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none text-xl font-bold text-white">
-                            <span class="absolute inset-y-0 right-0 pr-4 flex items-center text-xs font-semibold text-slate-400">USDT</span>
+                            <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-500 font-bold">$</span>
+                            <input type="number" id="montoEnvio" step="0.01" placeholder="0.00" class="w-full pl-7 pr-14 py-2.5 bg-slate-950 border border-slate-700 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none text-base font-bold text-white">
+                            <span class="absolute inset-y-0 right-0 pr-3 flex items-center text-xs font-semibold text-slate-400">USDT</span>
                         </div>
                     </div>
                 </div>
             </div>
 
             <!-- Botón de acción final de pago -->
-            <div class="mt-6 space-y-3">
-                <button type="button" onclick="abrirModalPin()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3.5 rounded-xl shadow-lg transition duration-200 text-center text-sm">
+            <div class="mt-4 space-y-2">
+                <button type="button" onclick="enviarPagoComercio()" class="w-full bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-bold py-3 rounded-xl shadow-lg transition duration-200 text-center text-xs cursor-pointer">
                     Enviar Pago al Instante (Nativo)
                 </button>
-                <p class="text-center text-[10px] text-slate-500">Comisión de red mínima integrada de forma transparente.</p>
-            </div>
-
-            <!-- Historial Reciente de Transacciones -->
-            <div class="mt-6 pt-4 border-t border-slate-800">
-                <div class="flex justify-between items-center mb-3">
-                    <h3 class="text-xs font-semibold text-slate-300 uppercase tracking-wider">Historial Reciente</h3>
-                    <button onclick="cargarHistorial()" class="text-[10px] text-emerald-400 hover:underline">Actualizar</button>
-                </div>
-                <div class="bg-slate-950/60 border border-slate-800 rounded-xl overflow-hidden text-xs max-h-40 overflow-y-auto">
-                    <table class="w-full text-left border-collapse">
-                        <thead>
-                            <tr class="border-b border-slate-800 text-slate-400 text-[10px] sticky top-0 bg-slate-950">
-                                <th class="p-2">Ref / ID</th>
-                                <th class="p-2">Destino</th>
-                                <th class="p-2">Monto</th>
-                                <th class="p-2">Estado</th>
-                            </tr>
-                        </thead>
-                        <tbody id="tablaHistorial">
-                            <tr>
-                                <td colspan="4" class="p-4 text-center text-slate-500 text-[11px]">No hay transacciones registradas aún.</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
             </div>
         </div>
 
     </div>
 
-    <!-- ================= MODAL DE PIN DE SEGURIDAD (4 DÍGITOS) ================= -->
-    <div id="modalPin" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50">
-        <div class="w-full max-w-xs bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl space-y-4 text-center">
-            <div class="text-3xl">🔒</div>
-            <h3 class="text-sm font-bold text-slate-100">Confirma tu PIN de Seguridad</h3>
-            <p class="text-xs text-slate-400">Introduce tu PIN de 4 dígitos para autorizar el envío de fondos.</p>
-            
-            <input type="password" id="pinSeguridad" maxlength="4" placeholder="••••" class="w-full text-center tracking-widest text-2xl py-2.5 bg-slate-950 border border-slate-700 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none text-white font-mono">
-            
-            <div class="grid grid-cols-2 gap-2 pt-2">
-                <button onclick="cerrarModalPin()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium py-2.5 rounded-xl text-xs transition">
-                    Cancelar
-                </button>
-                <button onclick="ejecutarPagoConPin()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2.5 rounded-xl text-xs transition">
-                    Confirmar
-                </button>
-            </div>
+    <!-- Modal de Cámara QR en Vivo -->
+    <div id="modalCamara" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm flex flex-col items-center justify-center p-4 z-50">
+        <div class="bg-slate-900 border border-slate-800 p-5 rounded-2xl max-w-sm w-full text-center space-y-4">
+            <h3 class="text-white font-bold text-base">Escanea el QR del Comercio</h3>
+            <div id="reader" class="w-full bg-black rounded-xl overflow-hidden min-h-[250px]"></div>
+            <button type="button" onclick="cerrarCamaraQR()" class="w-full bg-red-600 hover:bg-red-500 text-white font-semibold py-2 rounded-xl text-sm transition cursor-pointer">
+                Cancelar / Cerrar Cámara
+            </button>
         </div>
     </div>
 
     <script>
-        let usuarioActual = '';
+        let html5QrCode = null;
 
         function cambiarVista(vistaId) {
             document.getElementById('vistaAuth').classList.add('hidden');
@@ -220,57 +230,104 @@
             document.getElementById(vistaId).classList.remove('hidden');
         }
 
-        function entrarAlPanelDemo() {
-            const telefonoInput = document.getElementById('telefono').value.trim();
-            if (!telefonoInput) {
-                alert('Por favor introduce tu número de teléfono arriba primero.');
-                return;
-            }
-            usuarioActual = telefonoInput;
-            localStorage.setItem('telefonoEmisor', telefonoInput);
-            cambiarVista('vistaPanel');
-            cargarHistorial();
+        function toggleSeccionRecarga() {
+            const seccion = document.getElementById('seccionRecarga');
+            seccion.classList.toggle('hidden');
         }
 
-        async function actualizarCuentaComercial() {
-            const telefono = usuarioActual || localStorage.getItem('telefonoEmisor') || document.getElementById('telefono').value || '04123400436';
+        function abrirCamaraQR() {
+            document.getElementById('modalCamara').classList.remove('hidden');
+            html5QrCode = new Html5Qrcode("reader");
+            
+            html5QrCode.start(
+                { facingMode: "environment" },
+                { fps: 10, qrbox: { width: 220, height: 220 } },
+                (decodedText) => {
+                    document.getElementById('telefonoComercio').value = decodedText;
+                    cerrarCamaraQR();
+                },
+                (errorMessage) => { /* ignora frames sin código QR */ }
+            ).catch(err => {
+                alert("No se pudo acceder a la cámara. Por favor otorga los permisos en el navegador.");
+                cerrarCamaraQR();
+            });
+        }
+
+        function cerrarCamaraQR() {
+            if (html5QrCode && html5QrCode.isScanning) {
+                html5QrCode.stop().then(() => {
+                    html5QrCode.clear();
+                    document.getElementById('modalCamara').classList.add('hidden');
+                }).catch(() => {
+                    document.getElementById('modalCamara').classList.add('hidden');
+                });
+            } else {
+                document.getElementById('modalCamara').classList.add('hidden');
+            }
+        }
+
+        async function solicitarCambioComercial() {
+            let telefono = document.getElementById('telefono').value.trim();
+            if (!telefono) {
+                telefono = prompt("Ingresa tu número de teléfono registrado:");
+            }
+            if (!telefono) return;
+
+            const pinSeguridad = prompt("🔒 Ingresa tu PIN de Seguridad (4 dígitos) para confirmar el pago de $5.00 USDT:");
+            if (!pinSeguridad) return;
+
             try {
-                const response = await fetch('/api/upgrade-account', {
+                const res = await fetch('/api/solicitar-comercial', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ telefono, paymentReference: 'REF-COMERCIAL-DIRECTA' })
+                    body: JSON.stringify({ 
+                        telefono: telefono.trim(), 
+                        pinSeguridad: pinSeguridad.trim(), 
+                        planDeseado: 'comercial' 
+                    })
                 });
-                const data = await response.json();
+
+                const data = await res.json();
                 alert(data.message);
-            } catch (error) {
-                console.error('Error:', error);
-                alert('No se pudo procesar la actualización comercial.');
+                
+                // Actualiza la interfaz si es exitoso o si el servidor indica que ya posee cuenta comercial
+                if (data.success || (data.message && data.message.includes('ya posee'))) {
+                    const badge = document.getElementById('badgeAccountType');
+                    const btn = document.getElementById('btnUpgradeComercial');
+                    
+                    if (badge) {
+                        badge.className = 'mb-3 inline-block px-2.5 py-1 rounded-md text-[11px] font-bold tracking-wide uppercase bg-amber-500/20 text-amber-300 border border-amber-500/30';
+                        badge.innerText = 'Cuenta Comercial (Sin Límite)';
+                    }
+                    if (btn) {
+                        btn.style.display = 'none';
+                    }
+                }
+            } catch (err) {
+                alert("Error conectando con el servidor.");
             }
         }
 
         async function enviarCodigoWhatsApp() {
             const telefono = document.getElementById('telefono').value.trim();
-            const pinRegistro = document.getElementById('pinRegistro').value.trim();
+            const pinSeguridad = document.getElementById('pinSeguridad').value.trim();
 
-            if (!telefono || !pinRegistro || pinRegistro.length !== 4) {
-                alert('Por favor ingresa tu número y un PIN válido de 4 dígitos.');
+            if (!telefono || !pinSeguridad) {
+                alert('Por favor ingrese el número de teléfono y el PIN de seguridad.');
                 return;
             }
-
-            usuarioActual = telefono;
-            localStorage.setItem('telefonoEmisor', telefono);
 
             try {
                 const response = await fetch('/api/enviar-codigo', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ telefono, pinSeguridad: pinRegistro })
+                    body: JSON.stringify({ telefono, pinSeguridad })
                 });
                 const data = await response.json();
                 if (data.success) {
-                    alert(data.message);
+                    alert(data.message || 'Código enviado con éxito por WhatsApp.');
                 } else {
-                    alert('Error al registrar el PIN y enviar el código.');
+                    alert(data.message || 'Error al enviar el código.');
                 }
             } catch (error) {
                 console.error('Error:', error);
@@ -286,7 +343,7 @@
 
             if (!cedulaTitular || !cuentaDestino) {
                 alerta.className = 'text-center text-xs p-2 rounded-lg bg-red-950 text-red-300 border border-red-800 block';
-                alerta.innerText = 'Rellena todos los campos para continuar.';
+                alerta.innerText = 'Por favor complete todos los campos para continuar.';
                 return;
             }
 
@@ -309,39 +366,56 @@
             }
         }
 
-        function abrirModalPin() {
+        async function ejecutarRecargaUniversal() {
+            const pasarela = document.getElementById('exchangeSelect').value;
+            const monto = document.getElementById('montoRecarga').value.trim();
+            const hash = document.getElementById('hashTransaccion').value.trim();
+
+            if (!monto || parseFloat(monto) <= 0 || !hash) {
+                alert('Por favor ingrese el monto y el Hash / TXID de la transacción.');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/verificar-recarga-hash', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ pasarela, monto, hash })
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert(`¡Recarga acreditada con éxito! Hash verificado.`);
+                    
+                    const spanSaldo = document.getElementById('spanSaldo');
+                    let saldoActual = parseFloat(spanSaldo.innerText) || 0;
+                    spanSaldo.innerText = (saldoActual + parseFloat(monto)).toFixed(2);
+
+                    document.getElementById('montoRecarga').value = '';
+                    document.getElementById('hashTransaccion').value = '';
+                    toggleSeccionRecarga();
+                } else {
+                    alert(data.message || 'Error al verificar el hash en el sistema.');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error de conexión al intentar validar el hash con el servidor.');
+            }
+        }
+
+        async function enviarPagoComercio() {
             const telefonoComercio = document.getElementById('telefonoComercio').value.trim();
             const montoUSDT = document.getElementById('montoEnvio').value.trim();
 
             if (!telefonoComercio || !montoUSDT) {
-                alert('Por favor ingresa el teléfono/alias del comercio y el monto a enviar.');
+                alert('Por favor ingrese el teléfono o alias del comercio y el monto a enviar.');
                 return;
             }
 
-            document.getElementById('pinSeguridad').value = '';
-            document.getElementById('modalPin').classList.remove('hidden');
-        }
-
-        function cerrarModalPin() {
-            document.getElementById('modalPin').classList.add('hidden');
-        }
-
-        async function ejecutarPagoConPin() {
-            const pin = document.getElementById('pinSeguridad').value.trim();
-            if (pin.length !== 4) {
-                alert('Por favor introduce un PIN válido de 4 dígitos.');
-                return;
-            }
-
-            cerrarModalPin();
-
-            const telefonoComercio = document.getElementById('telefonoComercio').value.trim();
-            const montoUSDT = document.getElementById('montoEnvio').value.trim();
-            const telefonoEmisorFinal = usuarioActual || localStorage.getItem('telefonoEmisor') || document.getElementById('telefono').value.trim();
-
-            if (!telefonoEmisorFinal) {
-                alert('Error: No se detecta el teléfono del emisor. Vuelve a iniciar sesión.');
-                cambiarVista('vistaAuth');
+            const pinSeguridad = prompt("🔒 Ingresa tu PIN de seguridad de 4 dígitos para autorizar el pago:");
+            
+            if (!pinSeguridad) {
+                alert('Pago cancelado. Debes ingresar tu PIN de seguridad.');
                 return;
             }
 
@@ -349,48 +423,17 @@
                 const response = await fetch('/api/enviar-pago', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        telefonoComercio, 
-                        montoUSDT, 
-                        telefonoEmisor: telefonoEmisorFinal,
-                        pinSeguridad: pin 
-                    })
+                    body: JSON.stringify({ telefonoComercio, montoUSDT, pinSeguridad })
                 });
                 const data = await response.json();
                 alert(data.message);
 
                 if (data.success) {
                     document.getElementById('montoEnvio').value = '';
-                    document.getElementById('telefonoComercio').value = '';
-                    cargarHistorial(); 
                 }
             } catch (error) {
                 console.error('Error:', error);
                 alert('Hubo un error de conexión al intentar procesar el pago.');
-            }
-        }
-
-        async function cargarHistorial() {
-            const telConsulta = usuarioActual || localStorage.getItem('telefonoEmisor') || document.getElementById('telefono').value.trim() || '04123400436';
-            try {
-                const response = await fetch(`/api/historial/${telConsulta}`);
-                const data = await response.json();
-                const tbody = document.getElementById('tablaHistorial');
-
-                if (data.success && data.historial && data.historial.length > 0) {
-                    tbody.innerHTML = data.historial.map(tx => `
-                        <tr class="border-b border-slate-900 hover:bg-slate-900/40">
-                            <td class="p-2 font-mono text-[10px] text-sky-400">${tx.referencia}</td>
-                            <td class="p-2 text-slate-300">${tx.telefonoDestino}</td>
-                            <td class="p-2 font-semibold text-emerald-400">$${tx.monto}</td>
-                            <td class="p-2 text-[10px]"><span class="bg-emerald-950 text-emerald-300 px-1.5 py-0.5 rounded border border-emerald-800">Éxito</span></td>
-                        </tr>
-                    `).join('');
-                } else {
-                    tbody.innerHTML = `<tr><td colspan="4" class="p-4 text-center text-slate-500 text-[11px]">No hay transacciones registradas aún.</td></tr>`;
-                }
-            } catch (error) {
-                console.error('Error cargando historial:', error);
             }
         }
     </script>

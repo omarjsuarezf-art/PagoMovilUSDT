@@ -3,130 +3,207 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Panel - Pago Móvil USDT</title>
+    <title>Pasarela Segura - Pago Móvil y USDT</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="manifest" href="/manifest.json">
-    <script>
-      if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('/sw.js');
-      }
-    </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { background-color: #080d19; color: #f8fafc; font-family: system-ui, -apple-system, sans-serif; }
+        .glass-card { background: #0f172a; border: 1px solid rgba(255, 255, 255, 0.08); }
+    </style>
 </head>
-<body class="bg-gray-900 text-white min-h-screen p-6">
-    <div class="max-w-xl mx-auto bg-gray-800 p-6 rounded-xl shadow-lg space-y-6">
-        <h2 class="text-xl font-bold text-green-400">Panel de Operaciones USDT</h2>
+<body class="min-h-screen flex items-center justify-center p-4">
+
+    <div class="w-full max-w-md space-y-4">
         
-        <!-- Sección Enviar Pago -->
-        <div class="border-b border-gray-700 pb-4">
-            <h3 class="text-lg font-semibold mb-3">Enviar Pago Móvil</h3>
-            <form id="pagoForm" class="space-y-3">
-                <input type="text" id="telefonoEmisor" placeholder="Tu Teléfono" required class="w-full px-3 py-2 bg-gray-700 rounded border border-gray-600">
-                <input type="text" id="telefonoComercio" placeholder="Teléfono Destino" required class="w-full px-3 py-2 bg-gray-700 rounded border border-gray-600">
-                <input type="number" step="0.01" id="montoUSDT" placeholder="Monto USDT" required class="w-full px-3 py-2 bg-gray-700 rounded border border-gray-600">
-                <input type="password" id="pinSeguridad" maxlength="4" placeholder="PIN de Seguridad" required class="w-full px-3 py-2 bg-gray-700 rounded border border-gray-600">
-                <button type="submit" class="w-full bg-blue-500 hover:bg-blue-600 font-semibold py-2 rounded transition">Procesar Pago</button>
-            </form>
-            <div id="pagoResultado" class="mt-2 text-sm text-center"></div>
+        <!-- CONTENEDOR PRINCIPAL -->
+        <div class="glass-card rounded-2xl p-6 shadow-2xl relative">
+            
+            <!-- HEADER -->
+            <div class="flex justify-between items-start mb-4">
+                <div>
+                    <h1 class="text-lg font-bold text-white flex items-center gap-2">
+                        <i class="fa-solid fa-money-bill-transfer text-emerald-400"></i> Panel de Pagos
+                    </h1>
+                    <p class="text-xs text-slate-400">Comercios y Recarga Universal</p>
+                </div>
+                <button onclick="cerrarSesion()" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 px-3 py-1.5 rounded-lg transition">
+                    Cerrar Sesión
+                </button>
+            </div>
+
+            <!-- ETIQUETA TIPO DE CUENTA -->
+            <div id="badgeAccountType" class="mb-3 inline-block px-2.5 py-1 rounded-md text-[11px] font-bold tracking-wide uppercase bg-slate-800 text-slate-300 border border-slate-700">
+                Cuenta Natural (Límite $1,000 USDT)
+            </div>
+
+            <!-- TARJETA DE SALDO DISPONIBLE -->
+            <div class="bg-slate-900/90 border border-emerald-500/20 rounded-xl p-4 flex justify-between items-center mb-4">
+                <div>
+                    <p class="text-[11px] text-emerald-400 font-medium">Saldo Disponible</p>
+                    <div class="text-2xl font-extrabold text-white tracking-tight">
+                        USDT <span id="balanceUSDT">0.00</span>
+                    </div>
+                </div>
+                <a href="/recarga" class="bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold text-xs px-3 py-2 rounded-lg flex items-center gap-1.5 transition shadow-md shadow-emerald-500/20">
+                    <i class="fa-solid fa-bolt text-xs"></i> Recargar con Hash
+                </a>
+            </div>
+
+            <!-- BOTÓN AMARILLO: ACTUALIZAR A CUENTA COMERCIAL -->
+            <button id="btnUpgradeComercial" onclick="solicitarCambioComercial()" class="w-full bg-amber-500 hover:bg-amber-600 text-slate-950 font-extrabold py-2.5 px-4 rounded-xl flex items-center justify-between mb-5 shadow-lg shadow-amber-500/10 transition cursor-pointer">
+                <div class="text-left">
+                    <div class="text-xs uppercase tracking-wide">Actualizar a Cuenta Comercial</div>
+                    <div class="text-[10px] font-semibold opacity-90">($5.00 USDT / Transferencias Ilimitadas)</div>
+                </div>
+                <span class="bg-amber-400/80 text-slate-950 text-xs px-2.5 py-1 rounded-lg font-black uppercase">
+                    Activar
+                </span>
+            </button>
+
+            <!-- SECCIÓN: PAGAR A COMERCIO -->
+            <div class="space-y-4 pt-2 border-t border-slate-800">
+                <h2 class="text-xs font-bold text-slate-300">Pagar a Comercio</h2>
+
+                <form id="formPago" onsubmit="procesarEnvioPago(event)" class="space-y-3">
+                    <div>
+                        <label class="block text-[11px] text-slate-400 mb-1">Teléfono o Alias del Comercio</label>
+                        <div class="relative flex items-center">
+                            <input type="text" id="telefonoDestino" placeholder="Ej: 0412 / 0416 / 0424..." required class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500">
+                            <button type="button" class="absolute right-2 text-slate-400 hover:text-white bg-slate-900 border border-slate-800 px-2 py-1 rounded-lg text-xs flex items-center gap-1">
+                                <i class="fa-solid fa-camera"></i> QR
+                            </button>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-[11px] text-slate-400 mb-1">Monto a Enviar</label>
+                        <div class="relative flex items-center">
+                            <span class="absolute left-3 text-slate-400 font-bold text-sm">$</span>
+                            <input type="number" step="0.01" id="montoUSDT" placeholder="0.00" required class="w-full bg-slate-950 border border-slate-800 rounded-xl pl-7 pr-12 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500 font-bold">
+                            <span class="absolute right-3 text-slate-500 font-bold text-xs">USDT</span>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="w-full bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-black py-3 rounded-xl transition shadow-lg shadow-emerald-500/20 text-sm mt-2">
+                        Enviar Pago al Instante (Nativo)
+                    </button>
+                </form>
+            </div>
+
         </div>
 
-        <!-- Sección Historial -->
-        <div class="border-b border-gray-700 pb-4">
-            <h3 class="text-lg font-semibold mb-3">Historial de Transacciones</h3>
-            <input type="text" id="telHistorial" placeholder="Ingresa tu teléfono para buscar" class="w-full px-3 py-2 bg-gray-700 rounded border border-gray-600 mb-2">
-            <button onclick="cargarHistorial()" class="w-full bg-gray-600 hover:bg-gray-500 py-2 rounded transition mb-3">Consultar Historial</button>
-            <div id="listaHistorial" class="space-y-2 text-sm bg-gray-900 p-3 rounded max-h-40 overflow-y-auto"></div>
-        </div>
-
-        <!-- Sección Recarga Real (Blockchain / Exchange Universal) -->
-        <div>
-            <h3 class="text-lg font-semibold mb-3 text-green-400">Recargar Saldo (Exchange / Wallet)</h3>
-            <form id="recargaForm" class="space-y-3">
-                <input type="text" id="recargaTelefono" placeholder="Tu Teléfono de cuenta" required class="w-full px-3 py-2 bg-gray-700 rounded border border-gray-600">
-                <input type="number" step="0.01" id="recargaMonto" placeholder="Monto exacto en USDT" required class="w-full px-3 py-2 bg-gray-700 rounded border border-gray-600">
-                <input type="text" id="recargaHash" placeholder="Hash de la Transacción (txHash)" required class="w-full px-3 py-2 bg-gray-700 rounded border border-gray-600">
-                <select id="recargaMetodo" class="w-full px-3 py-2 bg-gray-700 rounded border border-gray-600">
-                    <option value="BinancePay">Binance Pay</option>
-                    <option value="MetaMask_Phantom">MetaMask / Phantom (Blockchain)</option>
-                    <option value="Otro_Exchange">Otro Exchange</option>
-                </select>
-                <button type="submit" class="w-full bg-green-600 hover:bg-green-500 font-semibold py-2 rounded transition text-white">Validar y Acreditar Recarga</button>
-            </form>
-            <div id="recargaResultado" class="mt-2 text-sm text-center"></div>
-        </div>
     </div>
 
+    <!-- SCRIPT JS -->
     <script>
-        document.getElementById('pagoForm').addEventListener('submit', async (e) => {
+        async function cargarSaldo() {
+            const telefono = localStorage.getItem('userPhone') || localStorage.getItem('usuarioTelefono') || '';
+            if (!telefono) return;
+
+            try {
+                const res = await fetch(`/api/saldo/${telefono}`);
+                const data = await res.json();
+                
+                if (data.success) {
+                    document.getElementById('balanceUSDT').innerText = parseFloat(data.saldoUSDT).toFixed(2);
+                    
+                    const badge = document.getElementById('badgeAccountType');
+                    const btnUpgrade = document.getElementById('btnUpgradeComercial');
+
+                    if (data.accountType === 'comercial' || data.accountType === 'emprendedor') {
+                        badge.className = 'mb-3 inline-block px-2.5 py-1 rounded-md text-[11px] font-bold tracking-wide uppercase bg-amber-500/20 text-amber-300 border border-amber-500/30';
+                        badge.innerText = 'Cuenta Comercial (Sin Límite)';
+                        btnUpgrade.style.display = 'none';
+                    } else {
+                        badge.className = 'mb-3 inline-block px-2.5 py-1 rounded-md text-[11px] font-bold tracking-wide uppercase bg-slate-800 text-slate-300 border border-slate-700';
+                        badge.innerText = 'Cuenta Natural (Límite $1,000 USDT)';
+                        btnUpgrade.style.display = 'flex';
+                    }
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        async function solicitarCambioComercial() {
+            let telefono = localStorage.getItem('userPhone') || localStorage.getItem('usuarioTelefono');
+            if (!telefono) {
+                telefono = prompt("Ingresa tu número de teléfono registrado:");
+            }
+            if (!telefono) return;
+
+            const pinSeguridad = prompt("🔒 Ingresa tu PIN de Seguridad (4 dígitos) para confirmar el pago de $5.00 USDT:");
+            if (!pinSeguridad) return;
+
+            try {
+                const res = await fetch('/api/solicitar-comercial', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        telefono: telefono.trim(), 
+                        pinSeguridad: pinSeguridad.trim(), 
+                        planDeseado: 'comercial' 
+                    })
+                });
+
+                const data = await res.json();
+                alert(data.message);
+                if (data.success) {
+                    cargarSaldo();
+                }
+            } catch (err) {
+                alert("Error conectando con el servidor.");
+            }
+        }
+
+        async function procesarEnvioPago(e) {
             e.preventDefault();
-            const bodyData = {
-                telefonoEmisor: document.getElementById('telefonoEmisor').value,
-                telefonoComercio: document.getElementById('telefonoComercio').value,
-                montoUSDT: document.getElementById('montoUSDT').value,
-                pinSeguridad: document.getElementById('pinSeguridad').value
-            };
-            const resDiv = document.getElementById('pagoResultado');
-            
+            const telefonoEmisor = localStorage.getItem('userPhone') || localStorage.getItem('usuarioTelefono');
+            const telefonoComercio = document.getElementById('telefonoDestino').value.trim();
+            const monto = document.getElementById('montoUSDT').value;
+
+            if (!telefonoEmisor) {
+                alert("No se detectó un teléfono registrado. Inicia sesión primero.");
+                return;
+            }
+
+            const pinSeguridad = prompt("🔒 Ingresa tu PIN de Seguridad de 4 dígitos:");
+            if (!pinSeguridad) return;
+
             try {
                 const res = await fetch('/api/enviar-pago', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(bodyData)
+                    body: JSON.stringify({ 
+                        telefonoEmisor, 
+                        telefonoComercio, 
+                        montoUSDT: monto, 
+                        pinSeguridad 
+                    })
                 });
-                const data = await res.json();
-                resDiv.textContent = data.message || data.error;
-                resDiv.className = data.success ? 'mt-2 text-sm text-center text-green-400' : 'mt-2 text-sm text-center text-red-400';
-            } catch (err) {
-                resDiv.textContent = 'Error al procesar el pago.';
-                resDiv.className = 'mt-2 text-sm text-center text-red-400';
-            }
-        });
 
-        document.getElementById('recargaForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const bodyData = {
-                phoneNumber: document.getElementById('recargaTelefono').value,
-                amount: document.getElementById('recargaMonto').value,
-                txHash: document.getElementById('recargaHash').value,
-                metodo: document.getElementById('recargaMetodo').value
-            };
-            const resDiv = document.getElementById('recargaResultado');
-            
-            try {
-                const res = await fetch('/api/recargar', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(bodyData)
-                });
                 const data = await res.json();
-                resDiv.textContent = data.message || data.error;
-                resDiv.className = data.success ? 'mt-2 text-sm text-center text-green-400' : 'mt-2 text-sm text-center text-red-400';
-            } catch (err) {
-                resDiv.textContent = 'Error al acreditar la recarga.';
-                resDiv.className = 'mt-2 text-sm text-center text-red-400';
-            }
-        });
+                alert(data.message);
 
-        async function cargarHistorial() {
-            const tel = document.getElementById('telHistorial').value;
-            const contenedor = document.getElementById('listaHistorial');
-            if (!tel) return;
-            
-            try {
-                const res = await fetch(`/api/historial/${tel}`);
-                const data = await res.json();
-                if (data.success && data.transacciones.length > 0) {
-                    contenedor.innerHTML = data.transacciones.map(t => `
-                        <div class="border-b border-gray-800 pb-1 mb-1">
-                            <span class="text-green-400">Ref: ${t.referencia}</span> | Monto: $${t.monto} | <span class="text-gray-400">${t.fechaHora || ''}</span>
-                        </div>
-                    `).join('');
-                } else {
-                    contenedor.innerHTML = '<p class="text-gray-400 text-center">No hay transacciones registradas.</p>';
+                if (!data.success && (data.message.includes('Límite superado') || data.message.includes('Naturales'))) {
+                    if (confirm("¿Deseas activar la Cuenta Comercial ($5 USDT) para eliminar el límite diario de $1,000 USDT?")) {
+                        solicitarCambioComercial();
+                    }
+                } else if (data.success) {
+                    document.getElementById('formPago').reset();
+                    cargarSaldo();
                 }
-            } catch (e) {
-                contenedor.innerHTML = '<p class="text-red-400 text-center">Error al cargar historial.</p>';
+            } catch (err) {
+                alert("Error procesando el pago.");
             }
         }
+
+        function cerrarSesion() {
+            localStorage.clear();
+            window.location.href = '/auth';
+        }
+
+        window.onload = cargarSaldo;
     </script>
 </body>
 </html>
