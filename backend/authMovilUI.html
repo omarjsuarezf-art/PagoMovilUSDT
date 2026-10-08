@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registro y Autenticación - Pago Móvil USDT</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-900 text-white min-h-screen flex items-center justify-center p-6">
+    <div class="max-w-md w-full bg-gray-800 p-6 rounded-xl shadow-lg space-y-6">
+        <h2 class="text-2xl font-bold text-green-400 text-center">Registro de Línea USDT</h2>
+        
+        <form id="authForm" class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium mb-1 text-gray-300">Número de Teléfono</label>
+                <input type="text" id="telefono" placeholder="Ej: 0412 / 0414 / 0424 / 0422" required class="w-full px-3 py-2 bg-gray-700 rounded border border-gray-600 text-white focus:outline-none focus:border-green-400">
+            </div>
+            <div>
+                <label class="block text-sm font-medium mb-1 text-gray-300">PIN de Seguridad (4 dígitos)</label>
+                <input type="password" id="pinSeguridad" maxlength="4" placeholder="****" required class="w-full px-3 py-2 bg-gray-700 rounded border border-gray-600 text-white focus:outline-none focus:border-green-400">
+            </div>
+            <button type="submit" class="w-full bg-green-500 hover:bg-green-600 font-semibold py-2 rounded transition text-gray-900">Validar y Registrar en WhatsApp</button>
+        </form>
+
+        <div id="authResultado" class="text-sm text-center"></div>
+
+        <div class="text-center pt-2 border-t border-gray-700">
+            <a href="/panel" class="text-blue-400 hover:underline text-sm">Ir al Panel de Operaciones (Pago Móvil) &rarr;</a>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('authForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const telefono = document.getElementById('telefono').value;
+            const pinSeguridad = document.getElementById('pinSeguridad').value;
+            const resDiv = document.getElementById('authResultado');
+            
+            resDiv.textContent = "Procesando registro...";
+            resDiv.className = "text-sm text-center text-yellow-400";
+
+            try {
+                const res = await fetch('/api/enviar-codigo', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ telefono, pinSeguridad })
+                });
+                const data = await res.json();
+                
+                if (data.success) {
+                    resDiv.textContent = data.message;
+                    resDiv.className = "text-sm text-center text-green-400";
+                } else {
+                    resDiv.textContent = data.message || "Error en el registro.";
+                    resDiv.className = "text-sm text-center text-red-400";
+                }
+            } catch (err) {
+                resDiv.textContent = 'Error de conexión con el servidor.';
+                resDiv.className = 'text-sm text-center text-red-400';
+            }
+        });
+    </script>
+</body>
+</html>

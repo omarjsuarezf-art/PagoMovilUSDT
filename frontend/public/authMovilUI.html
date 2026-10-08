@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pasarela Segura - Pago Móvil y USDT</title>
+    <!-- Tailwind CSS para un diseño limpio y moderno -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Librería para lectura en vivo y generación de código QR -->
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+
+    <!-- Configuración del Manifiesto y Logotipo para Móviles/PWA -->
+    <link rel="manifest" href="./manifest.json">
+    <link rel="icon" type="image/png" href="./logo.png">
+    <link rel="apple-touch-icon" href="./logo.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+
+    <!-- Script de registro del Service Worker -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('./sw.js')
+            .then((reg) => console.log('Service Worker registrado con éxito:', reg.scope))
+            .catch((err) => console.log('Error al registrar el Service Worker:', err));
+        });
+      }
+    </script>
+</head>
+<body class="bg-slate-950 flex justify-center items-center min-h-screen text-slate-100 p-4">
+
+    <!-- Contenedor principal estilo tarjeta móvil -->
+    <div class="w-full max-w-md bg-slate-900 rounded-3xl shadow-2xl p-6 border border-slate-800 flex flex-col justify-between">
+        
+        <!-- ================= VISTA 1: ACCESO Y REGISTRO ================= -->
+        <div id="vistaAuth" class="space-y-6">
+            <div class="text-center">
+                <h1 class="text-2xl font-black text-emerald-400 tracking-tight">💵 Pago Móvil & USDT</h1>
+                <p class="text-xs text-slate-400 mt-1">Complete su registro y titularidad estricta.<br>Siga estos 3 pasos:</p>
+                
+                <div class="grid grid-cols-3 gap-2 mt-3">
+                    <div class="bg-slate-800/80 border border-slate-700/60 p-2 rounded-xl text-center">
+                        <span class="block text-[10px] font-bold text-emerald-400">1. Teléfono</span>
+                    </div>
+                    <div class="bg-slate-800/80 border border-slate-700/60 p-2 rounded-xl text-center">
+                        <span class="block text-[10px] font-bold text-emerald-400">2. Cédula</span>
+                    </div>
+                    <div class="bg-slate-800/80 border border-slate-700/60 p-2 rounded-xl text-center">
+                        <span class="block text-[10px] font-bold text-emerald-400">3. Método Titular</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-slate-800/50 p-4 rounded-2xl border border-slate-700/50 space-y-3">
+                <h2 class="text-sm font-semibold text-slate-200">Acceso Rápido por PIN</h2>
+                <div>
+                    <label class="block text-xs font-medium text-slate-400 mb-1">Número de Teléfono</label>
+                    <input type="tel" id="telefono" placeholder="Ej: 0412 / 0416 / 0424..." class="w-full px-4 py-2.5 bg-slate-950 border border-slate-700 rounded-xl focus:ring-2 focus:ring-sky-500 focus:outline-none text-sm text-white">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-400 mb-1">PIN de Seguridad (4 dígitos)</label>
+                    <input type="password" id="pinSeguridad" maxlength="4" placeholder="****" class="w-full px-4 py-2.5 bg-slate-950 border border-slate-700 rounded-xl focus:ring-2 focus:ring-sky-500 focus:outline-none text-sm text-white">
+                </div>
+<<<<<<< HEAD
+=======
+                <!-- BOTÓN ORIGINAL DE ENVÍO POR WHATSAPP -->
+>>>>>>> 234def3 (Sistema Pago Movil USDT listo para produccion)
+                <button type="button" onclick="enviarCodigoWhatsApp()" class="w-full bg-sky-600 hover:bg-sky-500 active:bg-sky-700 text-white font-bold py-3 rounded-xl text-sm transition duration-200 shadow-md cursor-pointer">
+                    Ingresar con PIN de Seguridad
+                </button>
+            </div>
+
+            <button type="button" onclick="cambiarVista('vistaPanel')" class="w-full bg-slate-800 hover:bg-slate-700 active:bg-slate-900 text-slate-300 text-xs py-2.5 rounded-xl transition font-medium border border-slate-700 cursor-pointer">
+                Ir al Panel de Retiros y Pagos USDT &rarr;
+            </button>
+
+            <div class="bg-slate-800/50 p-4 rounded-2xl border border-slate-700/50 space-y-3">
+                <h2 class="text-sm font-semibold text-slate-200">Vincular Método (Cero Terceros)</h2>
+                <div>
+                    <label class="block text-xs font-medium text-slate-400 mb-1">Cédula del Titular</label>
+                    <input type="text" id="cedulaTitular" placeholder="V12345678" class="w-full px-4 py-2 bg-slate-950 border border-slate-700 rounded-xl focus:ring-2 focus:ring-sky-500 focus:outline-none text-sm text-white">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-400 mb-1">Método / Exchange Internacional</label>
+                    <select id="metodoSelect" class="w-full px-4 py-2 bg-slate-950 border border-slate-700 rounded-xl focus:ring-2 focus:ring-sky-500 focus:outline-none text-sm text-white">
+                        <option value="binance">Binance Pay (Email o ID)</option>
+                        <option value="zinli">Zinli (Correo)</option>
+                        <option value="zelle">Zelle (Correo / Tel)</option>
+                        <option value="paypal">PayPal (Correo)</option>
+                        <option value="bybit">Bybit (UID / Correo)</option>
+                        <option value="okx">OKX Pay (UID / Email)</option>
+                        <option value="airtm">AirTM (Correo)</option>
+                    </select>
+                    <p class="text-[11px] text-slate-400 mt-1.5 leading-relaxed">Compatible con cualquier billetera, exchange o plataforma, garantizando transferencias directas y sin restricciones.</p>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-400 mb-1">Cuenta / Correo de Destino</label>
+                    <input type="text" id="cuentaDestino" placeholder="tucuenta@correo.com" class="w-full px-4 py-2 bg-slate-950 border border-slate-700 rounded-xl focus:ring-2 focus:ring-sky-500 focus:outline-none text-sm text-white">
+                </div>
+                <button type="button" onclick="registrarMetodoPago()" class="w-full bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-bold py-2.5 rounded-xl text-sm transition duration-200 shadow-md cursor-pointer">
+                    Vincular de Forma Segura
+                </button>
+            </div>
+
+            <div id="alertaRespuesta" class="text-center text-xs p-2 rounded-lg hidden"></div>
+        </div>
+
+
+        <!-- ================= VISTA 2: PANEL DE PAGOS Y RETIRO MULTI-EXCHANGE ================= -->
+        <div id="vistaPanel" class="hidden flex flex-col justify-between space-y-6">
+            <div>
+                <!-- Cabecera del Panel -->
+                <div class="flex justify-between items-center mb-2">
+                    <div>
+                        <h1 class="text-lg font-bold text-slate-100">💸 Panel de Pagos</h1>
+                        <p class="text-xs text-slate-400">Comercios y Retiros Directos</p>
+                    </div>
+                    <button type="button" onclick="cerrarSesion()" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-1.5 rounded-lg border border-slate-700 cursor-pointer">
+                        Cerrar Sesión
+                    </button>
+                </div>
+
+                <!-- ETIQUETA TIPO DE CUENTA -->
+                <div id="badgeAccountType" class="mb-3 inline-block px-2.5 py-1 rounded-md text-[11px] font-bold tracking-wide uppercase bg-slate-800 text-slate-300 border border-slate-700">
+                    Cuenta Natural (Límite $1,000 USDT)
+                </div>
+
+                <!-- Saldo actual del usuario en USDT con los botones de Recarga y Retiro -->
+                <div class="bg-gradient-to-r from-emerald-900/50 to-slate-900 border border-emerald-500/30 p-4 rounded-2xl mb-3 shadow-inner flex justify-between items-center">
+                    <div>
+                        <p class="text-xs text-emerald-400 font-medium">Saldo Disponible</p>
+                        <h2 class="text-2xl font-extrabold tracking-tight text-white mt-1">USDT <span id="spanSaldo">0.00</span></h2>
+                    </div>
+<<<<<<< HEAD
+                    <button type="button" onclick="toggleSeccionRetiro()" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-3 py-2 rounded-xl transition shadow cursor-pointer flex items-center gap-1">
+                        📤 Retirar Saldo
+                    </button>
+=======
+                    <div class="flex flex-col gap-1.5">
+                        <!-- BOTÓN DE RECARGA -->
+                        <a href="/recargamovil.html" class="bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold px-3 py-1.5 rounded-xl transition shadow cursor-pointer flex items-center justify-center gap-1">
+                            <span>📥</span> Recargar
+                        </a>
+                        <!-- Botón de Retirar Saldo -->
+                        <button type="button" onclick="toggleSeccionRetiro()" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-3 py-1.5 rounded-xl transition shadow cursor-pointer flex items-center justify-center gap-1">
+                            <span>📤</span> Retirar
+                        </button>
+                    </div>
+>>>>>>> 234def3 (Sistema Pago Movil USDT listo para produccion)
+                </div>
+
+                <!-- SECCIÓN DE RETIRO -->
+                <div id="seccionRetiro" class="hidden bg-slate-800/90 border border-emerald-500/30 p-4 rounded-2xl mb-4 space-y-3 shadow-lg">
+                    <h3 class="text-xs font-bold text-emerald-400 uppercase tracking-wider">Retirar a Billetera o Exchange</h3>
+                    <div>
+                        <label class="block text-[11px] text-slate-400 mb-1">Seleccionar Destino / Plataforma</label>
+                        <select id="retiroExchangeSelect" class="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-xs text-white focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                            <option value="binance_pay">Binance Pay (Pay ID / Email)</option>
+                            <option value="zinli">Zinli (Correo Registrado)</option>
+                            <option value="bybit">Bybit (UID / Correo)</option>
+                            <option value="okx">OKX Pay (UID / Email)</option>
+                            <option value="airtm">AirTM (Correo Electrónico)</option>
+                            <option value="trc20">Billetera Crypto TRC20 (USDT)</option>
+                            <option value="bep20">Billetera Crypto BEP20 / BNB Chain (USDT)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-[11px] text-slate-400 mb-1">Dirección / UID / ID de Destino</label>
+<<<<<<< HEAD
+                        <input type="text" id="destinoRetiro" placeholder="Ej: 284910394 / usuario@correo.com / Wallet TRC20..." class="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-xs text-white focus:ring-2 focus:ring-emerald-500 focus:outline-none font-mono">
+=======
+                        <input type="text" id="destinoRetiro" placeholder="Ej: 284910394 / usuario@correo.com..." class="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-xs text-white focus:ring-2 focus:ring-emerald-500 focus:outline-none font-mono">
+>>>>>>> 234def3 (Sistema Pago Movil USDT listo para produccion)
+                    </div>
+                    <div>
+                        <label class="block text-[11px] text-slate-400 mb-1">Monto a Retirar (USDT)</label>
+                        <input type="number" id="montoRetiro" step="0.01" placeholder="Ej: 25.00" class="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-xs text-white focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                    </div>
+                    <button type="button" onclick="ejecutarRetiroDirecto()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2.5 rounded-xl text-xs transition shadow cursor-pointer">
+                        Confirmar y Procesar Retiro
+                    </button>
+                </div>
+
+                <!-- BOTÓN AMARILLO: ACTUALIZAR A CUENTA COMERCIAL -->
+                <button id="btnUpgradeComercial" type="button" onclick="solicitarCambioComercial()" class="w-full bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-slate-950 font-extrabold py-2.5 px-4 rounded-xl flex items-center justify-between mb-3 shadow-lg transition cursor-pointer">
+                    <div class="text-left">
+                        <div class="text-xs uppercase tracking-wide">Actualizar a Cuenta Comercial</div>
+                        <div class="text-[10px] font-semibold opacity-90">($5.00 USDT / Transferencias Ilimitadas)</div>
+                    </div>
+                    <span class="bg-amber-400/80 text-slate-950 text-xs px-2.5 py-1 rounded-lg font-black uppercase">
+                        Activar
+                    </span>
+                </button>
+
+<<<<<<< HEAD
+=======
+                <!-- BOTÓN DE CAMBIO DE PIN DE SEGURIDAD (INTEGRADO EN EL PANEL) -->
+                <button type="button" onclick="cambiarPinSeguridad()" class="w-full bg-sky-700 hover:bg-sky-600 active:bg-sky-800 text-white font-bold py-2 px-4 rounded-xl flex items-center justify-between mb-4 shadow transition cursor-pointer text-xs">
+                    <span>🔒 Cambiar PIN de Seguridad</span>
+                    <span class="bg-sky-800 px-2 py-0.5 rounded text-[10px]">Modificar</span>
+                </button>
+
+>>>>>>> 234def3 (Sistema Pago Movil USDT listo para produccion)
+                <!-- SECCIÓN DE GENERACIÓN Y MUESTRA DE QR DEL COMERCIO (PROTEGIDO) -->
+                <div id="seccionQRComercio" class="hidden bg-slate-900 border border-emerald-500/30 p-4 rounded-2xl mb-4 text-center">
+                    <h3 class="text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">Código QR de Cobro Protegido</h3>
+                    
+                    <div class="flex flex-col items-center justify-center bg-slate-950 p-4 rounded-xl border border-slate-800">
+                        <div id="qrCodeContainer" class="bg-white p-2 rounded-lg min-w-[160px] min-h-[160px] flex items-center justify-center">
+                            <!-- El SRC se inyecta dinámicamente en JS -->
+                            <img id="imgQRComercio" src="" alt="QR Comercio" class="w-40 h-40">
+                        </div>
+                        
+                        <div class="mt-3 font-extrabold text-sm text-emerald-400 tracking-wide uppercase border-t border-slate-800 pt-2 w-full text-center">
+                            Pago Móvil USDT
+                        </div>
+                        <p class="text-[10px] text-slate-500 mt-0.5">ID Comercio: <span id="idComercioOculto" class="text-slate-400 font-mono"></span></p>
+                    </div>
+                </div>
+
+                <!-- Formulario de Envío a Comercio -->
+                <div class="space-y-3 bg-slate-900/50 p-3 rounded-xl border border-slate-800">
+                    <h3 class="text-xs font-semibold text-slate-300">Pagar a Comercio</h3>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-400 mb-1">ID de Comercio / Alias Privado</label>
+                        <div class="flex gap-2">
+<<<<<<< HEAD
+                            <!-- EL VALUE SE DEJA VACÍO PARA PERMITIR PRUEBAS LIBRES -->
+=======
+>>>>>>> 234def3 (Sistema Pago Movil USDT listo para produccion)
+                            <input type="text" id="telefonoComercio" value="" placeholder="Escanea el QR o ingresa Alias / ID..." class="w-full px-3 py-2.5 bg-slate-950 border border-slate-700 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none text-sm text-white font-mono">
+                            <button type="button" onclick="abrirCamaraQR()" class="bg-slate-800 hover:bg-slate-700 px-3 rounded-xl text-slate-200 font-medium text-xs flex items-center justify-center border border-slate-700 cursor-pointer gap-1">
+                                📷 QR
+                            </button>
+                        </div>
+                        <p class="text-[10px] text-slate-500 mt-1">🔒 El número telefónico del comercio permanece privado por seguridad.</p>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-medium text-slate-400 mb-1">Monto a Enviar</label>
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-500 font-bold">$</span>
+                            <input type="number" id="montoEnvio" step="0.01" placeholder="0.00" class="w-full pl-7 pr-14 py-2.5 bg-slate-950 border border-slate-700 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none text-base font-bold text-white">
+                            <span class="absolute inset-y-0 right-0 pr-3 flex items-center text-xs font-semibold text-slate-400">USDT</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Botón de acción final de pago -->
+            <div class="mt-4 space-y-2">
+                <button type="button" onclick="enviarPagoComercio()" class="w-full bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-bold py-3 rounded-xl shadow-lg transition duration-200 text-center text-xs cursor-pointer">
+                    Enviar Pago al Instante (Nativo)
+                </button>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Modal de Cámara QR en Vivo -->
+    <div id="modalCamara" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm flex flex-col items-center justify-center p-4 z-50">
+        <div class="bg-slate-900 border border-slate-800 p-5 rounded-2xl max-w-sm w-full text-center space-y-4">
+            <h3 class="text-white font-bold text-base">Escanea el QR del Comercio</h3>
+            
+            <div class="bg-black rounded-xl p-2 border border-slate-800">
+                <div id="reader" class="w-full bg-black rounded-xl overflow-hidden min-h-[250px]"></div>
+                <div class="text-center font-extrabold text-sm text-emerald-400 tracking-wide uppercase pt-2">
+                    Pago Móvil USDT
+                </div>
+            </div>
+
+            <button type="button" onclick="cerrarCamaraQR()" class="w-full bg-red-600 hover:bg-red-500 text-white font-semibold py-2 rounded-xl text-sm transition cursor-pointer">
+                Cancelar / Cerrar Cámara
+            </button>
+        </div>
+    </div>
+
+    <script>
+        let html5QrCode = null;
+
+<<<<<<< HEAD
+=======
+        window.addEventListener('DOMContentLoaded', () => {
+            const telGuardado = localStorage.getItem('userPhone') || localStorage.getItem('telefonoUsuario');
+            if (telGuardado) {
+                const inputTel = document.getElementById('telefono');
+                if (inputTel) inputTel.value = telGuardado.trim();
+            }
+        });
+
+>>>>>>> 234def3 (Sistema Pago Movil USDT listo para produccion)
+        function obtenerTelefonoActivo() {
+            let tel = localStorage.getItem('userPhone') || localStorage.getItem('telefonoUsuario') || document.getElementById('telefono')?.value.trim();
+            return tel ? tel.trim() : null;
+        }
+
+<<<<<<< HEAD
+        function cambiarVista(vistaId) {
+            const tel = obtenerTelefonoActivo();
+            if (vistaId === 'vistaPanel' && !tel) {
+                alert("Primero ingresa tu número de teléfono y envía el código.");
+=======
+        async function cambiarVista(vistaId) {
+            const tel = obtenerTelefonoActivo();
+
+            if (vistaId === 'vistaPanel') {
+                if (!tel) {
+                    alert("⚠️ Primero ingresa tu número de teléfono y PIN.");
+                    return;
+                }
+
+                try {
+                    const res = await fetch(`/api/saldo/${encodeURIComponent(tel)}`);
+                    const data = await res.json();
+
+                    if (!data.success || !data.metodoVinculado) {
+                        alert("⚠️ Acceso denegado. Primero debes vincular tu Cédula y Método Titular para verificar tu identidad.");
+                        return;
+                    }
+                } catch (err) {
+                    alert("⚠️ Error al verificar el estatus de la cuenta en el servidor.");
+                    return;
+                }
+
+                window.location.href = '/panel';
+>>>>>>> 234def3 (Sistema Pago Movil USDT listo para produccion)
+                return;
+            }
+
+            document.getElementById('vistaAuth').classList.add('hidden');
+            document.getElementById('vistaPanel').classList.add('hidden');
+            document.getElementById(vistaId).classList.remove('hidden');
+
+            if (vistaId === 'vistaPanel') {
+                cargarDatosPanel();
+            }
+        }
+
+        async function cargarDatosPanel() {
+            const telefono = obtenerTelefonoActivo();
+            if (!telefono) return;
+
+            try {
+                const res = await fetch(`/api/saldo/${encodeURIComponent(telefono)}`);
+                const data = await res.json();
+
+                if (data.success) {
+                    document.getElementById('spanSaldo').innerText = parseFloat(data.saldoUSDT).toFixed(2);
+
+                    const badge = document.getElementById('badgeAccountType');
+                    const btn = document.getElementById('btnUpgradeComercial');
+                    const seccionQR = document.getElementById('seccionQRComercio');
+
+<<<<<<< HEAD
+                    if (data.accountType === 'comercial' || data.accountType === 'emprendedor') {
+=======
+                    const esComercialBackend = data.accountType === 'comercial' || data.accountType === 'emprendedor' || data.esComercial === true;
+
+                    if (esComercialBackend) {
+>>>>>>> 234def3 (Sistema Pago Movil USDT listo para produccion)
+                        if (badge) {
+                            badge.className = 'mb-3 inline-block px-2.5 py-1 rounded-md text-[11px] font-bold tracking-wide uppercase bg-amber-500/20 text-amber-300 border border-amber-500/30';
+                            badge.innerText = 'Cuenta Comercial (Sin Límite)';
+                        }
+                        if (btn) btn.style.display = 'none';
+                        if (seccionQR) {
+                            seccionQR.classList.remove('hidden');
+<<<<<<< HEAD
+                            
+                            // LÓGICA DINÁMICA: Crea un ID oculto (Alias) basado en el teléfono del usuario
+                            const aliasDinamico = "MERCHANT-" + btoa(telefono).replace(/=/g, '').substring(0, 6).toUpperCase();
+                            
+=======
+                            const aliasDinamico = "MERCHANT-" + btoa(telefono).replace(/=/g, '').substring(0, 6).toUpperCase();
+>>>>>>> 234def3 (Sistema Pago Movil USDT listo para produccion)
+                            document.getElementById('idComercioOculto').innerText = aliasDinamico;
+                            document.getElementById('imgQRComercio').src = `https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=PMUSDT:${aliasDinamico}`;
+                        }
+                    } else {
+                        if (badge) {
+                            badge.className = 'mb-3 inline-block px-2.5 py-1 rounded-md text-[11px] font-bold tracking-wide uppercase bg-slate-800 text-slate-300 border border-slate-700';
+                            badge.innerText = `Cuenta Natural (Límite $${data.dailyLimit || 1000} USDT)`;
+                        }
+                        if (btn) btn.style.display = 'flex';
+                        if (seccionQR) seccionQR.classList.add('hidden');
+                    }
+                }
+            } catch (err) {
+                console.error('Error al actualizar datos del panel:', err);
+            }
+        }
+
+        function toggleSeccionRetiro() {
+            const seccion = document.getElementById('seccionRetiro');
+            seccion.classList.toggle('hidden');
+        }
+
+        function abrirCamaraQR() {
+            document.getElementById('modalCamara').classList.remove('hidden');
+            html5QrCode = new Html5Qrcode("reader");
+            
+            html5QrCode.start(
+                { facingMode: "environment" },
+                { fps: 10, qrbox: { width: 220, height: 220 } },
+                (decodedText) => {
+                    let idComercio = decodedText;
+                    if (decodedText.startsWith('PMUSDT:')) {
+                        idComercio = decodedText.replace('PMUSDT:', '');
+                    }
+                    document.getElementById('telefonoComercio').value = idComercio.trim();
+                    cerrarCamaraQR();
+                },
+                (errorMessage) => { }
+            ).catch(err => {
+                alert("No se pudo acceder a la cámara. Por favor otorga los permisos en el navegador.");
+                cerrarCamaraQR();
+            });
+        }
+
+        function cerrarCamaraQR() {
+            if (html5QrCode && html5QrCode.isScanning) {
+                html5QrCode.stop().then(() => {
+                    html5QrCode.clear();
+                    document.getElementById('modalCamara').classList.add('hidden');
+                }).catch(() => {
+                    document.getElementById('modalCamara').classList.add('hidden');
+                });
+            } else {
+                document.getElementById('modalCamara').classList.add('hidden');
+            }
+        }
+
+        async function solicitarCambioComercial() {
+            let telefono = obtenerTelefonoActivo();
+            if (!telefono) {
+                telefono = prompt("Ingresa tu número de teléfono registrado:");
+            }
+            if (!telefono) return;
+
+            const pinSeguridad = prompt("🔒 Ingresa tu PIN de Seguridad (4 dígitos) para confirmar el pago de $5.00 USDT:");
+            if (!pinSeguridad) return;
+
+            try {
+                const res = await fetch('/api/solicitar-comercial', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        telefono: telefono.trim(), 
+                        pinSeguridad: pinSeguridad.trim(), 
+                        planDeseado: 'comercial' 
+                    })
+                });
+
+                const data = await res.json();
+                alert(data.message);
+                
+                if (data.success || (data.message && data.message.includes('ya posee'))) {
+<<<<<<< HEAD
+                    cargarDatosPanel();
+=======
+                    await cargarDatosPanel();
+
+                    const badge = document.getElementById('badgeAccountType');
+                    const btn = document.getElementById('btnUpgradeComercial');
+                    const seccionQR = document.getElementById('seccionQRComercio');
+
+                    if (badge) {
+                        badge.className = 'mb-3 inline-block px-2.5 py-1 rounded-md text-[11px] font-bold tracking-wide uppercase bg-amber-500/20 text-amber-300 border border-amber-500/30';
+                        badge.innerText = 'Cuenta Comercial (Sin Límite)';
+                    }
+                    if (btn) btn.style.display = 'none';
+                    if (seccionQR) {
+                        seccionQR.classList.remove('hidden');
+                        const aliasDinamico = data.idComercio || ("MERCHANT-" + btoa(telefono).replace(/=/g, '').substring(0, 6).toUpperCase());
+                        document.getElementById('idComercioOculto').innerText = aliasDinamico;
+                        document.getElementById('imgQRComercio').src = `https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=PMUSDT:${aliasDinamico}`;
+                    }
+>>>>>>> 234def3 (Sistema Pago Movil USDT listo para produccion)
+                }
+            } catch (err) {
+                alert("Error conectando con el servidor.");
+            }
+        }
+
+        async function cambiarPinSeguridad() {
+            const telefono = obtenerTelefonoActivo();
+            if (!telefono) {
+                alert("⚠️ Teléfono no identificado.");
+                return;
+            }
+
+            const pinActual = prompt("🔒 Ingrese su PIN de seguridad ACTUAL (4 dígitos):");
+            if (!pinActual || pinActual.length !== 4) {
+                alert("Debe ingresar un PIN actual válido de 4 dígitos.");
+                return;
+            }
+
+            const pinNuevo = prompt("🔒 Ingrese su NUEVO PIN de seguridad (4 dígitos):");
+            if (!pinNuevo || pinNuevo.length !== 4) {
+                alert("El nuevo PIN debe ser estrictamente de 4 dígitos.");
+                return;
+            }
+
+            const pinNuevoConfirmar = prompt("🔒 Confirme su NUEVO PIN de seguridad (4 dígitos):");
+            if (pinNuevo !== pinNuevoConfirmar) {
+                alert("❌ Los PINs nuevos no coinciden. Operación cancelada.");
+                return;
+            }
+
+            try {
+                const res = await fetch('/api/cambiar-pin', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        telefono: telefono.trim(),
+                        pinActual: pinActual.trim(),
+                        pinNuevo: pinNuevo.trim()
+                    })
+                });
+
+                const data = await res.json();
+                alert(data.message || (data.success ? "¡PIN cambiado con éxito!" : "Error al cambiar el PIN."));
+            } catch (err) {
+                console.error('Error al cambiar el PIN:', err);
+                alert("Error de conexión al intentar cambiar el PIN.");
+            }
+        }
+
+        // FUNCIÓN ORIGINAL: ENVÍA EL CÓDIGO POR WHATSAPP TAL COMO ESTABA
+        async function enviarCodigoWhatsApp() {
+            const telefono = document.getElementById('telefono').value.trim();
+            const pinSeguridad = document.getElementById('pinSeguridad').value.trim();
+
+            if (!telefono || !pinSeguridad) {
+                alert('Por favor ingrese el número de teléfono y el PIN de seguridad.');
+                return;
+            }
+
+            if (pinSeguridad.length !== 4) {
+                alert('❌ El PIN de seguridad debe ser estrictamente de 4 dígitos.');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/enviar-codigo', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ telefono, pinSeguridad })
+                });
+                const data = await response.json();
+<<<<<<< HEAD
+                if (data.success) {
+                    localStorage.setItem('userPhone', telefono);
+                    localStorage.setItem('telefonoUsuario', telefono);
+                    alert(data.message || 'Código enviado con éxito por WhatsApp.');
+                    cambiarVista('vistaPanel');
+=======
+                
+                if (response.ok && data.success) {
+                    localStorage.setItem('userPhone', telefono);
+                    localStorage.setItem('telefonoUsuario', telefono);
+                    alert(data.message || '¡Código enviado por WhatsApp con éxito!');
+>>>>>>> 234def3 (Sistema Pago Movil USDT listo para produccion)
+                } else {
+                    alert(data.message || 'Error al enviar el código.');
+                }
+            } catch (error) {
+                console.error('Error de conexión:', error);
+                alert('⚠️ Error de conexión con el servidor.');
+            }
+        }
+
+        async function registrarMetodoPago() {
+            const cedulaTitular = document.getElementById('cedulaTitular').value.trim();
+            const metodo = document.getElementById('metodoSelect').value;
+            const cuentaDestino = document.getElementById('cuentaDestino').value.trim();
+            const telefono = obtenerTelefonoActivo();
+            const alerta = document.getElementById('alertaRespuesta');
+
+            if (!telefono) {
+                alerta.className = 'text-center text-xs p-2 rounded-lg bg-red-950 text-red-300 border border-red-800 block';
+                alerta.innerText = '⚠️ Primero ingresa tu número de teléfono arriba.';
+                return;
+            }
+
+            if (!cedulaTitular || !cuentaDestino) {
+                alerta.className = 'text-center text-xs p-2 rounded-lg bg-red-950 text-red-300 border border-red-800 block';
+                alerta.innerText = 'Por favor complete todos los campos para continuar.';
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/registrar-metodos', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ cedulaTitular, metodo, cuentaDestino, telefono })
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    alerta.className = 'text-center text-xs p-2 rounded-lg bg-emerald-950 text-emerald-300 border border-emerald-800 block';
+                    alerta.innerText = '¡Método vinculado con éxito!';
+                } else {
+                    alerta.className = 'text-center text-xs p-2 rounded-lg bg-red-950 text-red-300 border border-red-800 block';
+                    alerta.innerText = data.message;
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alerta.className = 'text-center text-xs p-2 rounded-lg bg-red-950 text-red-300 border border-red-800 block';
+                alerta.innerText = 'Error de conexión al intentar vincular el método.';
+            }
+        }
+
+        async function ejecutarRetiroDirecto() {
+            const plataforma = document.getElementById('retiroExchangeSelect').value;
+            const destino = document.getElementById('destinoRetiro').value.trim();
+            const monto = document.getElementById('montoRetiro').value.trim();
+            const telefono = obtenerTelefonoActivo();
+
+            if (!destino || !monto || parseFloat(monto) <= 0) {
+                alert('Por favor complete los datos del destino y un monto válido a retirar.');
+                return;
+            }
+
+            const pinSeguridad = prompt("🔒 Ingrese su PIN de Seguridad de 4 dígitos para autorizar el retiro:");
+            if (!pinSeguridad) {
+                alert('Retiro cancelado. Se requiere PIN de seguridad.');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/procesar-retiro', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ plataforma, destino, monto, pinSeguridad, telefono })
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    alert(data.message || `¡Solicitud de retiro procesada exitosamente!`);
+                    cargarDatosPanel();
+                    document.getElementById('destinoRetiro').value = '';
+                    document.getElementById('montoRetiro').value = '';
+                    toggleSeccionRetiro();
+                } else {
+                    alert(data.message || 'Error al procesar la solicitud de retiro.');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error de conexión al procesar el retiro.');
+            }
+        }
+
+        async function enviarPagoComercio() {
+            let telefonoComercio = document.getElementById('telefonoComercio').value.trim();
+            const montoUSDT = document.getElementById('montoEnvio').value.trim();
+            const telefonoEmisor = obtenerTelefonoActivo();
+
+            if (!telefonoComercio) {
+                alert('Por favor ingrese el ID o Alias del comercio.');
+                return;
+            }
+
+            if (!montoUSDT) {
+                alert('Por favor ingrese el monto a enviar.');
+                return;
+            }
+
+            const pinSeguridad = prompt("🔒 Ingresa tu PIN de seguridad de 4 dígitos para autorizar el pago:");
+            if (!pinSeguridad) {
+                alert('Pago cancelado. Debes ingresar tu PIN de seguridad.');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/enviar-pago', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ telefonoComercio, montoUSDT, pinSeguridad, telefonoEmisor })
+                });
+                const data = await response.json();
+                alert(data.message);
+
+                if (data.success) {
+                    document.getElementById('montoEnvio').value = '';
+                    cargarDatosPanel();
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Hubo un error de conexión al intentar procesar el pago.');
+            }
+        }
+
+        function cerrarSesion() {
+            localStorage.clear();
+<<<<<<< HEAD
+=======
+            sessionStorage.clear();
+>>>>>>> 234def3 (Sistema Pago Movil USDT listo para produccion)
+            window.location.reload();
+        }
+    </script>
+</body>
+</html>

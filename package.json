@@ -1,0 +1,30 @@
+{
+  "name": "pago-movil-usdt",
+  "version": "1.0.0",
+  "description": "Plataforma de pago móvil USDT con WhatsApp",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "express": "^4.22.3",
+    "express-rate-limit": "^7.2.0",
+    "qrcode-terminal": "^0.12.0",
+    "sqlite": "^5.1.1",
+    "sqlite3": "^5.1.7",
+    "whatsapp-web.js": "^1.23.1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/omarjsuarezf-art/PagoMovilUSDT.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/omarjsuarezf-art/PagoMovilUSDT/issues"
+  },
+  "homepage": "https://github.com/omarjsuarezf-art/PagoMovilUSDT#readme"
+}

@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recarga USDT y Términos</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="manifest" href="/manifest.json">
+    <script>
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/sw.js');
+      }
+    </script>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen flex items-center justify-center p-4">
+
+<<<<<<< HEAD
+    <!-- Contenedor Principal -->
+    <div class="w-full max-w-xl bg-slate-800 p-6 md:p-8 rounded-2xl shadow-2xl border border-slate-700 space-y-6">
+=======
+    <!-- Contenedor Principal (Ajustado a max-w-md para uniformidad móvil) -->
+    <div class="w-full max-w-md bg-slate-800 p-6 md:p-8 rounded-2xl shadow-2xl border border-slate-700 space-y-6">
+>>>>>>> 234def3 (Sistema Pago Movil USDT listo para produccion)
+        
+        <!-- Cabecera -->
+        <div class="flex justify-between items-center border-b border-slate-700/60 pb-4">
+            <div class="flex items-center gap-3">
+                <a href="/panel" class="text-xs bg-slate-700 hover:bg-slate-600 text-slate-200 px-3 py-1.5 rounded-lg border border-slate-600 transition flex items-center gap-1 font-semibold">
+                    ← Ir al Panel
+                </a>
+                <h2 class="text-lg font-bold text-white flex items-center gap-1.5">
+                    <span>📥</span> Recarga Segura
+                </h2>
+            </div>
+            <span class="text-xs bg-blue-950 text-blue-400 border border-blue-800 font-semibold px-3 py-1 rounded-full">
+                Red Polygon / USDT
+            </span>
+        </div>
+
+        <!-- Instrucciones y Advertencia -->
+        <div class="space-y-3">
+            <div class="bg-slate-900/90 p-4 rounded-xl border border-slate-700 text-xs text-slate-300 space-y-2">
+                <p class="font-semibold text-blue-400 flex items-center gap-1.5">
+                    <span>⚡</span> Instrucciones del Sistema:
+                </p>
+                <p class="text-slate-400 leading-relaxed">
+                    Realice su transferencia de USDT y reporte el comprobante con su número de teléfono y hash único para una acreditación rápida. <b>Monto mínimo de recarga: $5.00 USDT.</b>
+                </p>
+            </div>
+
+            <div class="bg-rose-950/30 border border-rose-800/50 p-4 rounded-xl text-xs text-rose-200 space-y-2">
+                <p class="font-bold text-rose-400 flex items-center gap-1.5">
+                    <span>⚠️</span> Advertencia Estricta de Red y Descargo:
+                </p>
+                <ul class="list-disc list-inside space-y-1 text-rose-300/90 leading-relaxed">
+                    <li><strong>Red Exclusiva Polygon (MATIC):</strong> Cualquier envío fuera de esta red (Ethereum, Tron, BSC, etc.) causará la <strong>pérdida permanente e irreversible</strong> de los fondos, sin derecho a reembolso.</li>
+                    <li><strong>Errores de Dirección:</strong> La plataforma no asume responsabilidad por fondos enviados a cuentas incorrectas o ajenas por descuido del usuario. Verifique rigurosamente.</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Dirección de Monedero Oficial -->
+        <div class="bg-slate-900/80 p-4 rounded-xl border border-slate-700/80">
+            <p class="text-xs text-slate-400 mb-2 font-medium">
+                Dirección oficial de recepción (Copia con un clic):
+            </p>
+            <div id="walletAddress" class="bg-slate-950 p-3 rounded-lg border border-slate-800 text-xs font-mono text-blue-400 break-all select-all font-semibold cursor-pointer hover:border-blue-500 transition" onclick="copiarDireccion()">
+                0x0950Cd97BD1417Dc513716d3a75D470a33599Bff
+            </div>
+            <p class="text-[10px] text-slate-500 mt-1.5 text-right">Haz clic en la dirección para copiar</p>
+        </div>
+
+        <!-- Formulario de Recarga -->
+        <form id="formRecarga" class="space-y-4 pt-2 border-t border-slate-700/60">
+            <div>
+                <label class="block text-sm font-medium text-slate-300 mb-1">Número de Teléfono (Tu Cuenta)</label>
+                <input type="text" id="phoneNumber" readonly class="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-emerald-400 font-mono font-bold text-sm focus:outline-none cursor-not-allowed" required>
+            </div>
+            
+            <div>
+                <label class="block text-sm font-medium text-slate-300 mb-1">Monto Enviado (USDT)</label>
+                <input type="number" id="amount" step="0.01" min="5.00" placeholder="Mínimo $5.00 USDT" class="w-full px-4 py-3 bg-slate-900 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent focus:outline-none text-sm transition font-bold" required>
+            </div>
+
+            <!-- DESGLOSE DINÁMICO DE RECARGA -->
+            <div id="desgloseRecarga"></div>
+
+            <div>
+                <label class="block text-sm font-medium text-slate-300 mb-1">Hash de la Transferencia (TXID)</label>
+                <input type="text" id="txHash" placeholder="Pega el hash de la transacción aquí..." class="w-full px-4 py-3 bg-slate-900 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent focus:outline-none text-sm transition font-mono text-xs" required>
+            </div>
+
+            <button type="submit" id="btnRecargar" class="w-full bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white font-bold py-4 rounded-xl shadow-lg transition duration-200 mt-2">
+                Verificar y Acreditar Saldo
+            </button>
+        </form>
+        
+        <!-- Notificaciones -->
+        <div id="mensajeNotificacion" class="mt-4 p-3 rounded-xl text-sm text-center hidden"></div>
+
+        <!-- HISTORIAL -->
+        <div class="pt-4 border-t border-slate-700/60 space-y-3">
+            <div class="flex items-center justify-between">
+<<<<<<< HEAD
+                <h3 class="text-sm font-semibold text-slate-300 flex items-center gap-1.5">
+                    <span>📜</span> Historial de Recargas Recientes
+                </h3>
+=======
+                <div>
+                    <h3 class="text-sm font-semibold text-slate-300 flex items-center gap-1.5">
+                        <span>📜</span> Historial de Recargas Recientes
+                    </h3>
+                    <p class="text-[11px] text-slate-400 mt-0.5">
+                        ℹ️ Mostrando las últimas 10 operaciones. Los registros antiguos se purgan automáticamente cada 60 días.
+                    </p>
+                </div>
+>>>>>>> 234def3 (Sistema Pago Movil USDT listo para produccion)
+                <button type="button" onclick="cargarHistorial()" class="text-xs text-blue-400 hover:underline font-medium">
+                    🔄 Actualizar
+                </button>
+            </div>
+
+            <div class="overflow-x-auto rounded-xl border border-slate-700 bg-slate-900/50">
+                <table class="w-full text-left text-xs">
+                    <thead class="bg-slate-950 text-slate-400 uppercase text-[10px] tracking-wider">
+                        <tr>
+                            <th class="p-2.5">Hash / Ref</th>
+                            <th class="p-2.5">Monto</th>
+                            <th class="p-2.5 text-right">Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tablaHistorial" class="divide-y divide-slate-800 text-slate-300">
+                        <tr>
+                            <td colspan="3" class="p-4 text-center text-slate-500">
+<<<<<<< HEAD
+                                Ingrese su número de teléfono arriba para consultar sus recargas
+=======
+                                Cargando movimientos de tu cuenta...
+>>>>>>> 234def3 (Sistema Pago Movil USDT listo para produccion)
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- Footer -->
+        <div class="text-center text-[11px] text-slate-500 pt-2 border-t border-slate-700/40">
+            © 2026 Pasarela Segura Pago Móvil & USDT. Todos los derechos reservados.
+        </div>
+    </div>
+
+    <script>
+    function copiarDireccion() {
+        const text = document.getElementById('walletAddress').innerText.trim();
+        navigator.clipboard.writeText(text);
+        alert('¡Dirección copiada al portapapeles!');
+    }
+
+<<<<<<< HEAD
+    // CÁLCULO DINÁMICO DE RECARGA
+=======
+>>>>>>> 234def3 (Sistema Pago Movil USDT listo para produccion)
+    const inputAmount = document.getElementById('amount');
+    const divDesglose = document.getElementById('desgloseRecarga');
+
+    if (inputAmount) {
+        inputAmount.addEventListener('input', (e) => {
+            const monto = parseFloat(e.target.value) || 0;
+
+            if (monto <= 0) {
+                divDesglose.innerHTML = '';
+                return;
+            }
+
+            if (monto < 5.00) {
+                divDesglose.innerHTML = `
+                    <div class="bg-rose-950/60 border border-rose-800/50 p-2.5 rounded-xl text-[11px] text-rose-300">
+                        ⚠ El monto mínimo para recargar es de <b>$5.00 USDT</b>.
+                    </div>
+                `;
+                return;
+            }
+
+            let comision = monto * 0.02;
+            if (comision < 1.00) comision = 1.00;
+
+            const netoAcreditar = monto - comision;
+
+            divDesglose.innerHTML = `
+                <div class="bg-slate-950 border border-slate-800 p-3 rounded-xl text-xs space-y-1 text-slate-300">
+                    <div>💵 <b>Monto enviado:</b> $${monto.toFixed(2)} USDT</div>
+                    <div>🏷 <b>Comisión de servicio (2%):</b> $${comision.toFixed(2)} USDT</div>
+                    <div class="text-emerald-400 font-bold pt-1 border-t border-slate-800">
+                        💰 <b>Neto a recibir en wallet:</b> $${netoAcreditar.toFixed(2)} USDT
+                    </div>
+                </div>
+            `;
+        });
+    }
+
+    async function cargarHistorial() {
+<<<<<<< HEAD
+        const phone = document.getElementById('phoneNumber').value.trim();
+        const tbody = document.getElementById('tablaHistorial');
+
+        if (!phone || !tbody) return;
+
+        // Limpieza previa del contenido antes de pintar
+=======
+        let phone = document.getElementById('phoneNumber').value.trim();
+        if (!phone) {
+            phone = (localStorage.getItem('userPhone') || localStorage.getItem('usuarioTelefono') || '').trim();
+        }
+        
+        const tbody = document.getElementById('tablaHistorial');
+        if (!phone || !tbody) return;
+
+>>>>>>> 234def3 (Sistema Pago Movil USDT listo para produccion)
+        tbody.innerHTML = `<tr><td colspan="3" class="p-4 text-center text-slate-500">Cargando movimientos...</td></tr>`;
+
+        try {
+            const res = await fetch(`/api/historial/${phone}`);
+            const data = await res.json();
+
+<<<<<<< HEAD
+            // Limpia la tabla por completo antes de inyectar datos
+=======
+>>>>>>> 234def3 (Sistema Pago Movil USDT listo para produccion)
+            tbody.innerHTML = '';
+
+            if (data.success && data.transacciones && data.transacciones.length > 0) {
+                data.transacciones.forEach(tx => {
+                    const rowHtml = `
+                        <tr class="hover:bg-slate-800/50 transition">
+                            <td class="p-2.5 font-mono text-[11px] text-slate-400">
+                                ${tx.reference_hash ? tx.reference_hash.substring(0, 10) + '...' : (tx.referencia || 'N/A')}
+                            </td>
+                            <td class="p-2.5 font-bold text-emerald-400">
+                                +$${parseFloat(tx.monto || 0).toFixed(2)}
+                            </td>
+                            <td class="p-2.5 text-right font-medium text-emerald-400 text-[11px]">
+                                Acreditado
+                            </td>
+                        </tr>
+                    `;
+                    tbody.innerHTML += rowHtml;
+                });
+            } else {
+                tbody.innerHTML = `<tr><td colspan="3" class="p-4 text-center text-slate-500">Sin movimientos recientes registrados</td></tr>`;
+            }
+        } catch (err) {
+            console.error("Error al obtener historial:", err);
+            tbody.innerHTML = `<tr><td colspan="3" class="p-4 text-center text-rose-400">Error al obtener historial</td></tr>`;
+        }
+    }
+
+<<<<<<< HEAD
+    document.getElementById('phoneNumber').addEventListener('blur', cargarHistorial);
+
+=======
+>>>>>>> 234def3 (Sistema Pago Movil USDT listo para produccion)
+    document.getElementById('formRecarga').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const btn = document.getElementById('btnRecargar');
+        const mensajeDiv = document.getElementById('mensajeNotificacion');
+        const amount = parseFloat(document.getElementById('amount').value);
+
+        if (amount < 5.00) {
+            alert('❌ El monto mínimo para recargar es de $5.00 USDT.');
+            return;
+        }
+
+        const payload = {
+            phoneNumber: document.getElementById('phoneNumber').value.trim(),
+            amount: amount,
+            txHash: document.getElementById('txHash').value.trim()
+        };
+
+        btn.disabled = true;
+        btn.innerHTML = 'Verificando...';
+        mensajeDiv.classList.add('hidden');
+        mensajeDiv.className = 'mt-4 p-3 rounded-xl text-sm text-center hidden';
+
+        try {
+            const response = await fetch('/api/recargar', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            
+            const result = await response.json();
+            
+            mensajeDiv.classList.remove('hidden');
+            if (result.success) {
+                mensajeDiv.classList.add('bg-emerald-950/80', 'text-emerald-300', 'border', 'border-emerald-600/50');
+                mensajeDiv.innerHTML = `✅ ${result.message}`;
+<<<<<<< HEAD
+                document.getElementById('formRecarga').reset();
+                document.getElementById('desgloseRecarga').innerHTML = '';
+=======
+                document.getElementById('amount').value = '';
+                document.getElementById('txHash').value = '';
+                document.getElementById('desgloseRecarga').innerHTML = '';
+                
+                // Recarga instantánea del historial tras éxito
+>>>>>>> 234def3 (Sistema Pago Movil USDT listo para produccion)
+                cargarHistorial();
+            } else {
+                mensajeDiv.classList.add('bg-rose-950/80', 'text-rose-300', 'border', 'border-rose-600/50');
+                mensajeDiv.innerHTML = `❌ ${result.error || result.message}`;
+            }
+        } catch (error) {
+            mensajeDiv.classList.remove('hidden');
+            mensajeDiv.classList.add('bg-rose-950/80', 'text-rose-300', 'border', 'border-rose-600/50');
+            mensajeDiv.innerHTML = '❌ Error de red. Intenta nuevamente.';
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = 'Verificar y Acreditar Saldo';
+        }
+    });
+
+    window.onload = () => {
+<<<<<<< HEAD
+        const phone = localStorage.getItem('userPhone') || localStorage.getItem('usuarioTelefono');
+        if (phone) {
+            document.getElementById('phoneNumber').value = phone.trim();
+            cargarHistorial();
+=======
+        const phone = (localStorage.getItem('userPhone') || localStorage.getItem('usuarioTelefono') || '').trim();
+        if (phone) {
+            document.getElementById('phoneNumber').value = phone;
+            cargarHistorial();
+        } else {
+            window.location.href = '/auth';
+>>>>>>> 234def3 (Sistema Pago Movil USDT listo para produccion)
+        }
+    };
+    </script>
+</body>
+</html>

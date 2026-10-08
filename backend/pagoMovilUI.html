@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pago Móvil USDT - Enviar Pago</title>
+    <!-- Tailwind CSS para un diseño limpio y rápido -->
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-100 flex justify-center items-center h-screen">
+
+    <!-- Contenedor principal estilo tarjeta móvil -->
+    <div class="w-full max-w-md bg-white h-full md:h-auto md:rounded-2xl shadow-lg p-6 flex flex-col justify-between">
+        
+        <!-- Cabecera -->
+        <div>
+            <div class="flex justify-between items-center mb-6">
+                <h1 class="text-xl font-bold text-slate-800">💸 Pago Móvil USDT</h1>
+                <span class="text-xs bg-emerald-100 text-emerald-800 font-semibold px-2.5 py-1 rounded-full">Activo</span>
+            </div>
+
+            <!-- Saldo actual del usuario -->
+            <div class="bg-slate-900 text-white p-4 rounded-xl mb-6 shadow-md">
+                <p class="text-xs text-slate-400">Saldo Disponible</p>
+                <h2 class="text-3xl font-extrabold tracking-tight">USDT 125.50</h2>
+            </div>
+
+            <!-- Formulario de Pago ajustado con los nombres correctos -->
+            <form id="paymentForm" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Teléfono del Emisor (Tu línea)</label>
+                    <input type="tel" id="telefonoEmisor" placeholder="Ej: 0412 / 0424" required class="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none text-base">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Teléfono o Alias del Comercio (Destino)</label>
+                    <input type="tel" id="telefonoComercio" placeholder="Ej: 0412 / 0424 / 0416" required class="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none text-base">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Monto a Enviar</label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 pl-4 flex items-center text-slate-400 font-bold">$</span>
+                        <input type="number" id="montoUSDT" step="0.01" placeholder="0.00" required class="w-full pl-8 pr-16 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none text-xl font-bold">
+                        <span class="absolute inset-y-0 right-0 pr-4 flex items-center text-xs font-semibold text-slate-500">USDT</span>
+                    </div>
+                </div>
+
+                <!-- Botón de acción final -->
+                <div class="mt-6">
+                    <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-4 rounded-xl shadow-lg transition duration-200 text-center">
+                        Enviar Pago al Instante
+                    </button>
+                    <p class="text-center text-xs text-slate-400 mt-3">Comisión del 0.6% integrada de forma transparente.</p>
+                </div>
+            </form>
+            
+            <div id="resultadoPago" class="text-sm text-center mt-4"></div>
+        </div>
+
+    </div>
+
+    <!-- Script de conexión sincronizado con el backend -->
+    <script>
+        const form = document.getElementById('paymentForm');
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const telefonoEmisor = document.getElementById('telefonoEmisor').value;
+            const telefonoComercio = document.getElementById('telefonoComercio').value;
+            const montoUSDT = document.getElementById('montoUSDT').value;
+            const resDiv = document.getElementById('resultadoPago');
+
+            resDiv.textContent = "Procesando pago...";
+            resDiv.className = "text-sm text-center text-yellow-600";
+
+            try {
+                const response = await fetch('/api/enviar-pago', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ telefonoEmisor, telefonoComercio, montoUSDT })
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    resDiv.textContent = data.message;
+                    resDiv.className = "text-sm text-center text-emerald-600 font-semibold";
+                } else {
+                    resDiv.textContent = 'Error: ' + (data.error || 'No se pudo procesar el pago');
+                    resDiv.className = "text-sm text-center text-red-600";
+                }
+            } catch (error) {
+                console.error('Error de conexión:', error);
+                resDiv.textContent = 'Ocurrió un error al conectar con el servidor.';
+                resDiv.className = 'text-sm text-center text-red-600';
+            }
+        });
+    </script>
+</body>
+</html>
