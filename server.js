@@ -196,7 +196,7 @@ async function enviarMensajeWhatsappSeguro(numero, mensaje) {
 const client = new Client({
     authStrategy: new LocalAuth(),
     puppeteer: {
-        executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
+        executablePath: '/opt/render/.cache/puppeteer/chrome/linux-146.0.7680.31/chrome-linux64/chrome',
         args: [
             '--no-sandbox',
             '--disable-setuid-sandbox',
@@ -876,7 +876,7 @@ const enviarPagoHandler = async (req, res) => {
             
             await db.run(
                 'INSERT INTO comisiones (tipo, monto, referencia, fechaHora) VALUES (?, ?, ?, ?)',
-                ['binance', comisionAplicada, numeroReferencia, ahora]
+                ['binance', comisionAplicar, numeroReferencia, ahora]
             );
 
             await enviarMensajeWhatsappSeguro(usuarioReceptor.telefono, `¡PAGO RECIBIDO! 🟢\n\n📌 Ref: ${numeroReferencia}\n💵 Monto: $${monto} USDT\n📅 ${ahora}`);
