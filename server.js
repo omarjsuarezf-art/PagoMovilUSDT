@@ -20,7 +20,7 @@ app.use(express.urlencoded({ extended: true }));
 let db;
 
 // ==========================================
-// CONFIGURACIÓN DE BASE DE DATOS (SQLITE ASÍNCRONO OPTIMIZADO PARA RENDER)
+// CONFIGURACIÓN DE BASE DE DATOS (SQLITE ASÍNCRONO OPTIMIZADO)
 // ==========================================
 async function inicializarBaseDatos() {
     try {
@@ -191,7 +191,7 @@ async function enviarMensajeWhatsappSeguro(numero, mensaje) {
 }
 
 // ==========================================
-// CLIENTE DE WHATSAPP (LIMPIO PARA RENDER)
+// CLIENTE DE WHATSAPP (LOCAL LIMPIO)
 // ==========================================
 const client = new Client({
     authStrategy: new LocalAuth(),
