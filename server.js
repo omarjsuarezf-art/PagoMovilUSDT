@@ -347,7 +347,7 @@ app.post('/api/cambiar-pin', limiterPagos, async (req, res) => {
 });
 
 // ==========================================
-// RUTA DE REGISTRO DE MÉTODOS (CON VALIDACIÓN ESTRICTA)
+// RUTA DE REGISTRO DE MÉTODOS (BLINDADA CONTRA TERCEROS Y DATOS FALSOS)
 // ==========================================
 app.post('/api/registrar-metodos', limiterPagos, async (req, res) => {
     const { cedulaTitular, metodo, cuentaDestino, telefono } = req.body;
@@ -365,26 +365,58 @@ app.post('/api/registrar-metodos', limiterPagos, async (req, res) => {
         });
     }
 
-    const destinoLimpio = cuentaDestino.trim();
+    const destinoLimpio = cuentaDestino.trim().toLowerCase();
     let esValido = false;
     let mensajeErrorFormato = '';
 
-    const metodosQueExigenCorreo = ['binance', 'zinli', 'zelle', 'paypal', 'bybit', 'okx', 'airtm'];
+    const metodosSoportados = ['binance', 'zinli', 'zelle', 'paypal', 'bybit', 'okx', 'airtm'];
+    const metodoElegido = metodo.trim().toLowerCase();
 
-    if (metodosQueExigenCorreo.includes(metodo)) {
-        const regexCorreo = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-        const regexBinanceID = /^\d{8,15}$/;
+    if (!metodosSoportados.includes(metodoElegido)) {
+        return res.status(400).json({ success: false, message: '❌ El método de pago o exchange seleccionado no es válido.' });
+    }
 
-        if (regexCorreo.test(destinoLimpio) || (metodo === 'binance' && regexBinanceID.test(destinoLimpio))) {
+    if (metodoElegido === 'binance') {
+        const regexBinanceEmail = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+        const regexBinanceID = /^\d{8,12}$/;
+        if (regexBinanceEmail.test(destinoLimpio) || regexBinanceID.test(destinoLimpio)) {
             esValido = true;
         } else {
-            mensajeErrorFormato = `❌ El destino ingresado no es válido para ${metodo.toUpperCase()}. Debe ser un correo electrónico real (ej: usuario@correo.com) o ID válido.`;
+            mensajeErrorFormato = '❌ Cuenta o correo inválido para Binance Pay. Debe ser un correo real o UID numérico válido de Binance.';
+        }
+    } else if (metodoElegido === 'bybit') {
+        const regexBybit = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$\vert{}^\d{7,12}$/;
+        if (regexBybit.test(destinoLimpio)) {
+            esValido = true;
+        } else {
+            mensajeErrorFormato = '❌ Cuenta o correo inválido para Bybit. Ingrese un correo o ID de Bybit real.';
+        }
+    } else if (metodoElegido === 'okx') {
+        const regexOkx = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$\vert{}^\d{8,12}$/;
+        if (regexOkx.test(destinoLimpio)) {
+            esValido = true;
+        } else {
+            mensajeErrorFormato = '❌ Cuenta o correo inválido para OKX. Ingrese un correo o UID verificado de OKX.';
+        }
+    } else if (metodoElegido === 'zinli' || metodoElegido === 'paypal' || metodoElegido === 'airtm') {
+        const regexCorreoGeneral = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+        if (regexCorreoGeneral.test(destinoLimpio)) {
+            esValido = true;
+        } else {
+            mensajeErrorFormato = `❌ Para ${metodoElegido.toUpperCase()} debe ingresar obligatoriamente un correo electrónico con formato real (ej: usuario@correo.com).`;
+        }
+    } else if (metodoElegido === 'zelle') {
+        const regexZelle = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$\vert{}^\+?\d{10,15}$/;
+        if (regexZelle.test(destinoLimpio)) {
+            esValido = true;
+        } else {
+            mensajeErrorFormato = '❌ Para Zelle debe ingresar un correo electrónico o número de teléfono asociado válido.';
         }
     } else {
         if (destinoLimpio.length >= 20) {
             esValido = true;
         } else {
-            mensajeErrorFormato = '❌ La dirección de billetera cripto es demasiado corta o inválida.';
+            mensajeErrorFormato = '❌ La dirección de billetera cripto o destino es demasiado corta o inválida.';
         }
     }
 
@@ -397,7 +429,7 @@ app.post('/api/registrar-metodos', limiterPagos, async (req, res) => {
     try {
         await db.run(
             'INSERT INTO metodos_pago (cedulaTitular, metodo, cuentaDestino, fechaRegistro) VALUES (?, ?, ?, ?)',
-            [cedulaLimpia, metodo, destinoLimpio, ahora]
+            [cedulaLimpia, metodoElegido, cuentaDestino.trim(), ahora]
         );
 
         if (telefono) {
