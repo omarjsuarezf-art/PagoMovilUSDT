@@ -61,10 +61,6 @@
                     <label class="block text-xs font-medium text-slate-400 mb-1">PIN de Seguridad (4 dígitos)</label>
                     <input type="password" id="pinSeguridad" maxlength="4" placeholder="****" class="w-full px-4 py-2.5 bg-slate-950 border border-slate-700 rounded-xl focus:ring-2 focus:ring-sky-500 focus:outline-none text-sm text-white">
                 </div>
-<<<<<<< HEAD
-=======
-                <!-- BOTÓN ORIGINAL DE ENVÍO POR WHATSAPP -->
->>>>>>> 234def3 (Sistema Pago Movil USDT listo para produccion)
                 <button type="button" onclick="enviarCodigoWhatsApp()" class="w-full bg-sky-600 hover:bg-sky-500 active:bg-sky-700 text-white font-bold py-3 rounded-xl text-sm transition duration-200 shadow-md cursor-pointer">
                     Ingresar con PIN de Seguridad
                 </button>
@@ -131,11 +127,6 @@
                         <p class="text-xs text-emerald-400 font-medium">Saldo Disponible</p>
                         <h2 class="text-2xl font-extrabold tracking-tight text-white mt-1">USDT <span id="spanSaldo">0.00</span></h2>
                     </div>
-<<<<<<< HEAD
-                    <button type="button" onclick="toggleSeccionRetiro()" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-3 py-2 rounded-xl transition shadow cursor-pointer flex items-center gap-1">
-                        📤 Retirar Saldo
-                    </button>
-=======
                     <div class="flex flex-col gap-1.5">
                         <!-- BOTÓN DE RECARGA -->
                         <a href="/recargamovil.html" class="bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold px-3 py-1.5 rounded-xl transition shadow cursor-pointer flex items-center justify-center gap-1">
@@ -146,7 +137,6 @@
                             <span>📤</span> Retirar
                         </button>
                     </div>
->>>>>>> 234def3 (Sistema Pago Movil USDT listo para produccion)
                 </div>
 
                 <!-- SECCIÓN DE RETIRO -->
@@ -166,11 +156,7 @@
                     </div>
                     <div>
                         <label class="block text-[11px] text-slate-400 mb-1">Dirección / UID / ID de Destino</label>
-<<<<<<< HEAD
-                        <input type="text" id="destinoRetiro" placeholder="Ej: 284910394 / usuario@correo.com / Wallet TRC20..." class="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-xs text-white focus:ring-2 focus:ring-emerald-500 focus:outline-none font-mono">
-=======
                         <input type="text" id="destinoRetiro" placeholder="Ej: 284910394 / usuario@correo.com..." class="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-xs text-white focus:ring-2 focus:ring-emerald-500 focus:outline-none font-mono">
->>>>>>> 234def3 (Sistema Pago Movil USDT listo para produccion)
                     </div>
                     <div>
                         <label class="block text-[11px] text-slate-400 mb-1">Monto a Retirar (USDT)</label>
@@ -192,15 +178,12 @@
                     </span>
                 </button>
 
-<<<<<<< HEAD
-=======
                 <!-- BOTÓN DE CAMBIO DE PIN DE SEGURIDAD (INTEGRADO EN EL PANEL) -->
                 <button type="button" onclick="cambiarPinSeguridad()" class="w-full bg-sky-700 hover:bg-sky-600 active:bg-sky-800 text-white font-bold py-2 px-4 rounded-xl flex items-center justify-between mb-4 shadow transition cursor-pointer text-xs">
                     <span>🔒 Cambiar PIN de Seguridad</span>
                     <span class="bg-sky-800 px-2 py-0.5 rounded text-[10px]">Modificar</span>
                 </button>
 
->>>>>>> 234def3 (Sistema Pago Movil USDT listo para produccion)
                 <!-- SECCIÓN DE GENERACIÓN Y MUESTRA DE QR DEL COMERCIO (PROTEGIDO) -->
                 <div id="seccionQRComercio" class="hidden bg-slate-900 border border-emerald-500/30 p-4 rounded-2xl mb-4 text-center">
                     <h3 class="text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">Código QR de Cobro Protegido</h3>
@@ -224,10 +207,6 @@
                     <div>
                         <label class="block text-xs font-medium text-slate-400 mb-1">ID de Comercio / Alias Privado</label>
                         <div class="flex gap-2">
-<<<<<<< HEAD
-                            <!-- EL VALUE SE DEJA VACÍO PARA PERMITIR PRUEBAS LIBRES -->
-=======
->>>>>>> 234def3 (Sistema Pago Movil USDT listo para produccion)
                             <input type="text" id="telefonoComercio" value="" placeholder="Escanea el QR o ingresa Alias / ID..." class="w-full px-3 py-2.5 bg-slate-950 border border-slate-700 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none text-sm text-white font-mono">
                             <button type="button" onclick="abrirCamaraQR()" class="bg-slate-800 hover:bg-slate-700 px-3 rounded-xl text-slate-200 font-medium text-xs flex items-center justify-center border border-slate-700 cursor-pointer gap-1">
                                 📷 QR
@@ -278,8 +257,6 @@
     <script>
         let html5QrCode = null;
 
-<<<<<<< HEAD
-=======
         window.addEventListener('DOMContentLoaded', () => {
             const telGuardado = localStorage.getItem('userPhone') || localStorage.getItem('telefonoUsuario');
             if (telGuardado) {
@@ -288,18 +265,11 @@
             }
         });
 
->>>>>>> 234def3 (Sistema Pago Movil USDT listo para produccion)
         function obtenerTelefonoActivo() {
             let tel = localStorage.getItem('userPhone') || localStorage.getItem('telefonoUsuario') || document.getElementById('telefono')?.value.trim();
             return tel ? tel.trim() : null;
         }
 
-<<<<<<< HEAD
-        function cambiarVista(vistaId) {
-            const tel = obtenerTelefonoActivo();
-            if (vistaId === 'vistaPanel' && !tel) {
-                alert("Primero ingresa tu número de teléfono y envía el código.");
-=======
         async function cambiarVista(vistaId) {
             const tel = obtenerTelefonoActivo();
 
@@ -323,7 +293,6 @@
                 }
 
                 window.location.href = '/panel';
->>>>>>> 234def3 (Sistema Pago Movil USDT listo para produccion)
                 return;
             }
 
@@ -351,13 +320,9 @@
                     const btn = document.getElementById('btnUpgradeComercial');
                     const seccionQR = document.getElementById('seccionQRComercio');
 
-<<<<<<< HEAD
-                    if (data.accountType === 'comercial' || data.accountType === 'emprendedor') {
-=======
                     const esComercialBackend = data.accountType === 'comercial' || data.accountType === 'emprendedor' || data.esComercial === true;
 
                     if (esComercialBackend) {
->>>>>>> 234def3 (Sistema Pago Movil USDT listo para produccion)
                         if (badge) {
                             badge.className = 'mb-3 inline-block px-2.5 py-1 rounded-md text-[11px] font-bold tracking-wide uppercase bg-amber-500/20 text-amber-300 border border-amber-500/30';
                             badge.innerText = 'Cuenta Comercial (Sin Límite)';
@@ -365,14 +330,7 @@
                         if (btn) btn.style.display = 'none';
                         if (seccionQR) {
                             seccionQR.classList.remove('hidden');
-<<<<<<< HEAD
-                            
-                            // LÓGICA DINÁMICA: Crea un ID oculto (Alias) basado en el teléfono del usuario
                             const aliasDinamico = "MERCHANT-" + btoa(telefono).replace(/=/g, '').substring(0, 6).toUpperCase();
-                            
-=======
-                            const aliasDinamico = "MERCHANT-" + btoa(telefono).replace(/=/g, '').substring(0, 6).toUpperCase();
->>>>>>> 234def3 (Sistema Pago Movil USDT listo para produccion)
                             document.getElementById('idComercioOculto').innerText = aliasDinamico;
                             document.getElementById('imgQRComercio').src = `https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=PMUSDT:${aliasDinamico}`;
                         }
@@ -455,9 +413,6 @@
                 alert(data.message);
                 
                 if (data.success || (data.message && data.message.includes('ya posee'))) {
-<<<<<<< HEAD
-                    cargarDatosPanel();
-=======
                     await cargarDatosPanel();
 
                     const badge = document.getElementById('badgeAccountType');
@@ -475,7 +430,6 @@
                         document.getElementById('idComercioOculto').innerText = aliasDinamico;
                         document.getElementById('imgQRComercio').src = `https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=PMUSDT:${aliasDinamico}`;
                     }
->>>>>>> 234def3 (Sistema Pago Movil USDT listo para produccion)
                 }
             } catch (err) {
                 alert("Error conectando con el servidor.");
@@ -548,19 +502,11 @@
                     body: JSON.stringify({ telefono, pinSeguridad })
                 });
                 const data = await response.json();
-<<<<<<< HEAD
-                if (data.success) {
-                    localStorage.setItem('userPhone', telefono);
-                    localStorage.setItem('telefonoUsuario', telefono);
-                    alert(data.message || 'Código enviado con éxito por WhatsApp.');
-                    cambiarVista('vistaPanel');
-=======
                 
                 if (response.ok && data.success) {
                     localStorage.setItem('userPhone', telefono);
                     localStorage.setItem('telefonoUsuario', telefono);
                     alert(data.message || '¡Código enviado por WhatsApp con éxito!');
->>>>>>> 234def3 (Sistema Pago Movil USDT listo para produccion)
                 } else {
                     alert(data.message || 'Error al enviar el código.');
                 }
@@ -693,10 +639,7 @@
 
         function cerrarSesion() {
             localStorage.clear();
-<<<<<<< HEAD
-=======
             sessionStorage.clear();
->>>>>>> 234def3 (Sistema Pago Movil USDT listo para produccion)
             window.location.reload();
         }
     </script>

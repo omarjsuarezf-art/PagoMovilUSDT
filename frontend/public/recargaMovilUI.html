@@ -14,13 +14,8 @@
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen flex items-center justify-center p-4">
 
-<<<<<<< HEAD
     <!-- Contenedor Principal -->
-    <div class="w-full max-w-xl bg-slate-800 p-6 md:p-8 rounded-2xl shadow-2xl border border-slate-700 space-y-6">
-=======
-    <!-- Contenedor Principal (Ajustado a max-w-md para uniformidad móvil) -->
     <div class="w-full max-w-md bg-slate-800 p-6 md:p-8 rounded-2xl shadow-2xl border border-slate-700 space-y-6">
->>>>>>> 234def3 (Sistema Pago Movil USDT listo para produccion)
         
         <!-- Cabecera -->
         <div class="flex justify-between items-center border-b border-slate-700/60 pb-4">
@@ -101,11 +96,6 @@
         <!-- HISTORIAL -->
         <div class="pt-4 border-t border-slate-700/60 space-y-3">
             <div class="flex items-center justify-between">
-<<<<<<< HEAD
-                <h3 class="text-sm font-semibold text-slate-300 flex items-center gap-1.5">
-                    <span>📜</span> Historial de Recargas Recientes
-                </h3>
-=======
                 <div>
                     <h3 class="text-sm font-semibold text-slate-300 flex items-center gap-1.5">
                         <span>📜</span> Historial de Recargas Recientes
@@ -114,7 +104,6 @@
                         ℹ️ Mostrando las últimas 10 operaciones. Los registros antiguos se purgan automáticamente cada 60 días.
                     </p>
                 </div>
->>>>>>> 234def3 (Sistema Pago Movil USDT listo para produccion)
                 <button type="button" onclick="cargarHistorial()" class="text-xs text-blue-400 hover:underline font-medium">
                     🔄 Actualizar
                 </button>
@@ -132,11 +121,7 @@
                     <tbody id="tablaHistorial" class="divide-y divide-slate-800 text-slate-300">
                         <tr>
                             <td colspan="3" class="p-4 text-center text-slate-500">
-<<<<<<< HEAD
-                                Ingrese su número de teléfono arriba para consultar sus recargas
-=======
                                 Cargando movimientos de tu cuenta...
->>>>>>> 234def3 (Sistema Pago Movil USDT listo para produccion)
                             </td>
                         </tr>
                     </tbody>
@@ -157,10 +142,6 @@
         alert('¡Dirección copiada al portapapeles!');
     }
 
-<<<<<<< HEAD
-    // CÁLCULO DINÁMICO DE RECARGA
-=======
->>>>>>> 234def3 (Sistema Pago Movil USDT listo para produccion)
     const inputAmount = document.getElementById('amount');
     const divDesglose = document.getElementById('desgloseRecarga');
 
@@ -200,14 +181,6 @@
     }
 
     async function cargarHistorial() {
-<<<<<<< HEAD
-        const phone = document.getElementById('phoneNumber').value.trim();
-        const tbody = document.getElementById('tablaHistorial');
-
-        if (!phone || !tbody) return;
-
-        // Limpieza previa del contenido antes de pintar
-=======
         let phone = document.getElementById('phoneNumber').value.trim();
         if (!phone) {
             phone = (localStorage.getItem('userPhone') || localStorage.getItem('usuarioTelefono') || '').trim();
@@ -216,17 +189,12 @@
         const tbody = document.getElementById('tablaHistorial');
         if (!phone || !tbody) return;
 
->>>>>>> 234def3 (Sistema Pago Movil USDT listo para produccion)
         tbody.innerHTML = `<tr><td colspan="3" class="p-4 text-center text-slate-500">Cargando movimientos...</td></tr>`;
 
         try {
             const res = await fetch(`/api/historial/${phone}`);
             const data = await res.json();
 
-<<<<<<< HEAD
-            // Limpia la tabla por completo antes de inyectar datos
-=======
->>>>>>> 234def3 (Sistema Pago Movil USDT listo para produccion)
             tbody.innerHTML = '';
 
             if (data.success && data.transacciones && data.transacciones.length > 0) {
@@ -255,11 +223,6 @@
         }
     }
 
-<<<<<<< HEAD
-    document.getElementById('phoneNumber').addEventListener('blur', cargarHistorial);
-
-=======
->>>>>>> 234def3 (Sistema Pago Movil USDT listo para produccion)
     document.getElementById('formRecarga').addEventListener('submit', async (e) => {
         e.preventDefault();
         
@@ -296,16 +259,9 @@
             if (result.success) {
                 mensajeDiv.classList.add('bg-emerald-950/80', 'text-emerald-300', 'border', 'border-emerald-600/50');
                 mensajeDiv.innerHTML = `✅ ${result.message}`;
-<<<<<<< HEAD
-                document.getElementById('formRecarga').reset();
-                document.getElementById('desgloseRecarga').innerHTML = '';
-=======
                 document.getElementById('amount').value = '';
                 document.getElementById('txHash').value = '';
                 document.getElementById('desgloseRecarga').innerHTML = '';
-                
-                // Recarga instantánea del historial tras éxito
->>>>>>> 234def3 (Sistema Pago Movil USDT listo para produccion)
                 cargarHistorial();
             } else {
                 mensajeDiv.classList.add('bg-rose-950/80', 'text-rose-300', 'border', 'border-rose-600/50');
@@ -322,19 +278,12 @@
     });
 
     window.onload = () => {
-<<<<<<< HEAD
-        const phone = localStorage.getItem('userPhone') || localStorage.getItem('usuarioTelefono');
-        if (phone) {
-            document.getElementById('phoneNumber').value = phone.trim();
-            cargarHistorial();
-=======
         const phone = (localStorage.getItem('userPhone') || localStorage.getItem('usuarioTelefono') || '').trim();
         if (phone) {
             document.getElementById('phoneNumber').value = phone;
             cargarHistorial();
         } else {
             window.location.href = '/auth';
->>>>>>> 234def3 (Sistema Pago Movil USDT listo para produccion)
         }
     };
     </script>
