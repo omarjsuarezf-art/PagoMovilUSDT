@@ -618,10 +618,15 @@ app.post('/api/enviar-codigo', limiterPagos, async (req, res) => {
         let usuario = await db.get('SELECT * FROM usuarios WHERE telefono = ?', [telefono]);
 
         if (usuario) {
-            if (usuario.pinSeguridad && usuario.pinSeguridad !== pinSeguridad) {
+            // Si el usuario existe pero no tiene PIN, se lo asignamos limpiamente
+            if (!usuario.pinSeguridad) {
+                await db.run('UPDATE usuarios SET pinSeguridad = ? WHERE id = ?', [pinSeguridad, usuario.id]);
+                usuario.pinSeguridad = pinSeguridad;
+            } else if (usuario.pinSeguridad !== pinSeguridad) {
                 return res.status(401).json({ success: false, message: '❌ PIN de seguridad incorrecto para este número.' });
             }
         } else {
+            // Si el número no existe, lo creamos limpio desde cero
             await db.run(
                 `INSERT INTO usuarios (telefono, pinSeguridad, accountType, dailyLimit) VALUES (?, ?, 'natural', 1000.00)`,
                 [telefono, pinSeguridad]
