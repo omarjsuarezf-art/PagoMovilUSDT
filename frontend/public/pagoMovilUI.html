@@ -112,6 +112,17 @@
             <!-- SECCIÓN RETIRAR A EXCHANGE / BILLETERA -->
             <div id="seccionRetiro" class="hidden bg-slate-900/80 border border-slate-800 rounded-xl p-4 space-y-3">
                 <h2 class="text-xs font-bold text-emerald-400 uppercase tracking-wide">Retirar USDT / Cripto</h2>
+                
+                <!-- BANNER VISUAL DE ADVERTENCIA PARA RETIROS POLYGON -->
+                <div class="bg-amber-950/40 border border-amber-500/40 p-2.5 rounded-xl space-y-1">
+                    <div class="flex items-center gap-1.5 text-amber-400 text-[11px] font-bold">
+                        <i class="fa-solid fa-triangle-exclamation"></i> Verificación de Dirección:
+                    </div>
+                    <p class="text-[10px] text-slate-300 leading-snug">
+                        Si seleccionas <strong>Wallet USDT (Red Polygon)</strong> para retirar a MetaMask, Phantom o Trust Wallet, tu dirección <strong>DEBE empezar por 0x</strong>. Evita usar direcciones de Tron (T...) o Solana.
+                    </p>
+                </div>
+
                 <form id="formRetiro" onsubmit="procesarRetiro(event)" class="space-y-3">
                     <div>
                         <label class="block text-[11px] text-slate-400 mb-1">Seleccionar Destino / Plataforma</label>
@@ -129,7 +140,7 @@
                     </div>
                     <div>
                         <label class="block text-[11px] text-slate-400 mb-1">Dirección / UID / Correo de Destino</label>
-                        <input type="text" id="destinoRetiro" placeholder="Ej: correo@paypal.com o wallet..." required class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 font-mono">
+                        <input type="text" id="destinoRetiro" placeholder="Ej: correo@paypal.com o 0x..." required class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 font-mono">
                     </div>
                     <div>
                         <label class="block text-[11px] text-slate-400 mb-1">Monto a Retirar (USDT)</label>
@@ -302,7 +313,7 @@
 
             const pinNuevo = prompt("🔒 Ingrese su NUEVO PIN de seguridad (4 dígitos):");
             if (!pinNuevo || pinNuevo.length !== 4) {
-                alert("El nuevo PIN debe ser estrictamente de 4 dígitos.");
+                alert("El nuevo PIN debe ser strictly de 4 dígitos.");
                 return;
             }
 
@@ -537,6 +548,7 @@
             }
         }
 
+        // PROCESAR RETIRO CON FILTRO ESTRICTO DE DIRECCIONES POLYGON (0x)
         async function procesarRetiro(e) {
             e.preventDefault();
             const plataforma = document.getElementById('tipoExchange').value;
@@ -545,6 +557,14 @@
             const telefono = obtenerTelefonoActivo();
 
             if (!destino || !monto || monto <= 0) return alert('⚠️ Revisa los datos del retiro.');
+
+            // FILTRO DE SEGURIDAD ESTRICTO: VALIDACIÓN 0x EN RED POLYGON
+            if (plataforma === 'polygon') {
+                if (!destino.toLowerCase().startsWith('0x') || destino.length < 40) {
+                    alert("❌ DIRECCIÓN INVÁLIDA:\n\nPara retirar a la Red Polygon (MetaMask, Phantom, Trust Wallet) la dirección DEBE empezar obligatoriamente por '0x'. Por favor verifica tu wallet.");
+                    return;
+                }
+            }
 
             const pinSeguridad = prompt("🔒 PIN de Seguridad (4 dígitos):");
             if (!pinSeguridad) return;
