@@ -373,6 +373,39 @@ app.get('/api/saldo/:telefono', limiterConsultasComercio, async (req, res) => {
 });
 
 // ==========================================
+// RUTA OFICIAL DE INICIO DE SESIÓN POR PIN
+// ==========================================
+app.post('/api/login', limiterPagos, async (req, res) => {
+    const telefono = (req.body.telefono || req.body.telefonoUsuario || '').trim();
+    const pinSeguridad = (req.body.pinSeguridad || '').trim();
+
+    if (!telefono || !pinSeguridad) {
+        return res.status(400).json({ success: false, message: '⚠️ El teléfono y el PIN son obligatorios.' });
+    }
+
+    try {
+        const usuario = await db.get('SELECT * FROM usuarios WHERE telefono = ? OR merchant_id = ?', [telefono, telefono]);
+        if (!usuario) {
+            return res.status(404).json({ success: false, message: '❌ El número no está registrado. Debe registrarse primero.' });
+        }
+
+        if (usuario.pinSeguridad && usuario.pinSeguridad !== pinSeguridad) {
+            return res.status(401).json({ success: false, message: '❌ PIN de seguridad incorrecto para este número.' });
+        }
+
+        res.json({ 
+            success: true, 
+            message: '¡Acceso autorizado!',
+            telefono: usuario.telefono,
+            accountType: usuario.accountType,
+            merchantId: usuario.merchant_id
+        });
+    } catch (err) {
+        return res.status(500).json({ success: false, message: '❌ Error interno al procesar el inicio de sesión.' });
+    }
+});
+
+// ==========================================
 // RUTA OFICIAL PARA CAMBIO DE PIN DE SEGURIDAD
 // ==========================================
 app.post('/api/cambiar-pin', limiterPagos, async (req, res) => {
@@ -849,7 +882,7 @@ const logicaRecargaHandler = async (req, res) => {
             res.json({ 
                 success: true, 
                 message: `¡Recarga de $${montoLimpio.toFixed(2)} USDT validada en Polygon! Acreditados $${montoNetoAcreditar.toFixed(2)}. Ref: ${referenciaGen}`,
-                montoAcreditado: montoNetoAcredititar.toFixed(2),
+                montoAcreditado: montoNetoAcreditar.toFixed(2),
                 comisionAplicada: comisionAplicar.toFixed(2),
                 referencia: referenciaGen
             });
