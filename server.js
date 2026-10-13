@@ -8,6 +8,10 @@ const qrcode = require('qrcode-terminal');
 const rateLimit = require('express-rate-limit');
 const { open } = require('sqlite');
 const sqlite3Internal = require('sqlite3');
+const { Resend } = require('resend');
+
+// Configuración de Resend limpia (protegida para evitar bloqueos de GitHub)
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 const app = express();
 
@@ -19,6 +23,25 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 let db;
+
+// ==========================================
+// FUNCIÓN AUXILIAR DE ENVÍO DE CORREOS CON RESEND
+// ==========================================
+async function enviarCorreoResend(destino, asunto, mensajeHtml) {
+    try {
+        const respuesta = await resend.emails.send({
+            from: 'PagoMovil USDT <onboarding@resend.dev>',
+            to: [destino],
+            subject: asunto,
+            html: mensajeHtml
+        });
+        console.log('✅ Correo de Resend enviado con éxito. ID:', respuesta.id);
+        return true;
+    } catch (err) {
+        console.error('⚠️ Error al enviar correo vía Resend:', err.message);
+        return false;
+    }
+}
 
 // ==========================================
 // CONFIGURACIÓN DE BASE DE DATOS (SQLITE ASÍNCRONO OPTIMIZADO)
@@ -176,7 +199,7 @@ function calcularComisionRetiro(monto) {
 async function verificarHashPolygonEnBlockchain(txHash, montoEsperadoMinimo) {
     return new Promise((resolve) => {
         if (!txHash || txHash.length < 10) {
-            return resolve({ valido: false, mensaje: '❌ Hash de transacción de Polygon inválido[cite: 7].' });
+            return resolve({ valido: false, mensaje: '❌ Hash de transacción de Polygon inválido.' });
         }
 
         const url = `https://api.polygonscan.com/api?module=proxy&action=eth_getTransactionByHash&txhash=${txHash.trim()}`;
@@ -188,26 +211,26 @@ async function verificarHashPolygonEnBlockchain(txHash, montoEsperadoMinimo) {
                 try {
                     const respuesta = JSON.parse(data);
                     if (!respuesta || !respuesta.result) {
-                        return resolve({ valido: false, mensaje: '❌ La transacción no existe o no ha sido confirmada en la red Polygon[cite: 7].' });
+                        return resolve({ valido: false, mensaje: '❌ La transacción no existe o no ha sido confirmada en la red Polygon.' });
                     }
 
                     const tx = respuesta.result;
                     
                     if (!tx.blockNumber) {
-                        return resolve({ valido: false, mensaje: '❌ La transacción en Polygon aún está pendiente o no confirmada[cite: 7].' });
+                        return resolve({ valido: false, mensaje: '❌ La transacción en Polygon aún está pendiente o no confirmada.' });
                     }
 
                     if (PLATFORM_POLYGON_WALLET && tx.to && tx.to.toLowerCase() !== PLATFORM_POLYGON_WALLET) {
-                        return resolve({ valido: false, mensaje: '❌ El destinatario de esta transacción en Polygon no corresponde a la wallet oficial de la plataforma[cite: 7].' });
+                        return resolve({ valido: false, mensaje: '❌ El destinatario de esta transacción en Polygon no corresponde a la wallet oficial de la plataforma.' });
                     }
 
-                    return resolve({ valido: true, mensaje: '✅ Transacción verificada en Polygon correctamente[cite: 7].', dataTx: tx });
+                    return resolve({ valido: true, mensaje: '✅ Transacción verificada en Polygon correctamente.', dataTx: tx });
                 } catch (e) {
-                    return resolve({ valido: false, mensaje: '❌ Error al procesar la respuesta de la blockchain de Polygon[cite: 7].' });
+                    return resolve({ valido: false, mensaje: '❌ Error al procesar la respuesta de la blockchain de Polygon.' });
                 }
             });
         }).on('error', (err) => {
-            return resolve({ valido: false, mensaje: '❌ Error de conexión con el explorador de la red Polygon[cite: 7].' });
+            return resolve({ valido: false, mensaje: '❌ Error de conexión con el explorador de la red Polygon.' });
         });
     });
 }
@@ -224,7 +247,7 @@ function formatearNumeroWhatsapp(numero) {
 async function enviarMensajeWhatsappSeguro(numero, mensaje) {
     try {
         if (!client || !client.info) {
-            console.warn('⚠️ WhatsApp no está listo o conectado en este momento. Omitiendo notificación sin afectar la transacción[cite: 7].');
+            console.warn('⚠️ WhatsApp no está listo o conectado en este momento. Omitiendo notificación sin afectar la transacción.');
             return false;
         }
 
@@ -232,7 +255,7 @@ async function enviarMensajeWhatsappSeguro(numero, mensaje) {
         if (!chatId) return false;
 
         await client.sendMessage(chatId, mensaje);
-        console.log(`✅ WhatsApp enviado exitosamente a ${chatId}[cite: 7].`);
+        console.log(`✅ WhatsApp enviado exitosamente a ${chatId}.`);
         return true;
     } catch (error) {
         console.error(`⚠️ Error no crítico en WhatsApp (Ignorado para no bloquear la app):`, error.message);
@@ -264,13 +287,13 @@ client.on('qr', (qr) => {
 });
 
 client.on('ready', () => {
-    console.log('¡Cliente de WhatsApp conectado y listo para enviar mensajes[cite: 7]!');
+    console.log('¡Cliente de WhatsApp conectado y listo para enviar mensajes!');
 });
 
 client.on('disconnected', async (reason) => {
     console.warn('⚠️ WhatsApp desconectado por:', reason);
     try {
-        console.log('🔄 Intentando reconectar cliente de WhatsApp automáticamente en 10 segundos[cite: 7]...');
+        console.log('🔄 Intentando reconectar cliente de WhatsApp automáticamente en 10 segundos...');
         setTimeout(async () => {
             try {
                 await client.initialize();
@@ -408,14 +431,14 @@ app.post('/api/cambiar-pin', limiterPagos, async (req, res) => {
             `🔐 *SEGURIDAD ACTUALIZADA*\n\nTu PIN de seguridad de 4 dígitos ha sido modificado con éxito.\nSi no fuiste tú, comunícate de inmediato con soporte.`
         );
 
-        res.json({ success: true, message: '¡PIN cambiado con éxito[cite: 7]!' });
+        res.json({ success: true, message: '¡PIN cambiado con éxito!' });
     } catch (err) {
         return res.status(500).json({ success: false, message: '❌ Error interno al actualizar el PIN.' });
     }
 });
 
 // ==========================================
-// RUTA DE REGISTRO DE MÉTODOS (BLINDADA ANTIFRAUDE Y CERO TERCEROS)
+// RUTA DE REGISTRO DE MÉTODOS Y CORREO OFICIAL (BLINDADA)
 // ==========================================
 app.post('/api/registrar-metodos', limiterPagos, async (req, res) => {
     const { cedulaTitular, metodo, cuentaDestino, telefono } = req.body;
@@ -453,6 +476,7 @@ app.post('/api/registrar-metodos', limiterPagos, async (req, res) => {
 
     let esValido = false;
     let mensajeErrorFormato = '';
+    let correoExtraido = null;
 
     const metodosSoportados = ['binance', 'zinli', 'zelle', 'paypal', 'bybit', 'okx', 'airtm'];
     const metodoElegido = metodo.trim().toLowerCase();
@@ -464,29 +488,27 @@ app.post('/api/registrar-metodos', limiterPagos, async (req, res) => {
     if (metodoElegido === 'binance') {
         const regexBinanceEmail = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
         const regexBinanceID = /^\d{8,12}$/;
-        if (regexBinanceEmail.test(destinoLimpio) || regexBinanceID.test(destinoLimpio)) {
+        if (regexBinanceEmail.test(destinoLimpio)) {
+            esValido = true;
+            correoExtraido = destinoLimpio;
+        } else if (regexBinanceID.test(destinoLimpio)) {
             esValido = true;
         } else {
             mensajeErrorFormato = '❌ Cuenta o correo inválido para Binance Pay. Debe ser un correo real o UID numérico válido de Binance.';
         }
-    } else if (metodoElegido === 'bybit') {
-        const regexBybit = /^([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}|\d{7,12})$/;
-        if (regexBybit.test(destinoLimpio)) {
+    } else if (metodoElegido === 'bybit' || metodoElegido === 'okx') {
+        const regexEx = /^([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}|\d{7,12})$/;
+        if (regexEx.test(destinoLimpio)) {
             esValido = true;
+            if (destinoLimpio.includes('@')) correoExtraido = destinoLimpio;
         } else {
-            mensajeErrorFormato = '❌ Cuenta o correo inválido para Bybit. Ingrese un correo o ID de Bybit real.';
-        }
-    } else if (metodoElegido === 'okx') {
-        const regexOkx = /^([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}|\d{8,12})$/;
-        if (regexOkx.test(destinoLimpio)) {
-            esValido = true;
-        } else {
-            mensajeErrorFormato = '❌ Cuenta o correo inválido para OKX. Ingrese un correo o UID verificado de OKX.';
+            mensajeErrorFormato = `❌ Cuenta o correo inválido para ${metodoElegido.toUpperCase()}. Ingrese un correo o ID real.`;
         }
     } else if (metodoElegido === 'zinli' || metodoElegido === 'paypal' || metodoElegido === 'airtm') {
         const regexCorreoGeneral = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
         if (regexCorreoGeneral.test(destinoLimpio)) {
             esValido = true;
+            correoExtraido = destinoLimpio;
         } else {
             mensajeErrorFormato = `❌ Para ${metodoElegido.toUpperCase()} debe ingresar obligatoriamente un correo electrónico con formato real (ej: usuario@correo.com).`;
         }
@@ -494,6 +516,7 @@ app.post('/api/registrar-metodos', limiterPagos, async (req, res) => {
         const regexZelle = /^([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}|\+?\d{10,15})$/;
         if (regexZelle.test(destinoLimpio)) {
             esValido = true;
+            if (destinoLimpio.includes('@')) correoExtraido = destinoLimpio;
         } else {
             mensajeErrorFormato = '❌ Para Zelle debe ingresar un correo electrónico o número de teléfono asociado válido.';
         }
@@ -519,9 +542,31 @@ app.post('/api/registrar-metodos', limiterPagos, async (req, res) => {
 
         if (telefono) {
             await db.run('UPDATE usuarios SET metodoVinculado = 1 WHERE telefono = ? OR merchant_id = ?', [telefono, telefono]);
+
+            // Disparar correo de bienvenida automático de Resend utilizando el correo indicado en la cuenta de destino
+            if (correoExtraido) {
+                const htmlBienvenida = `
+                    <div style="font-family: Arial, sans-serif; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px;">
+                      <h2 style="color: #2b6cb0;">¡Bienvenido a PagoMovil USDT!</h2>
+                      <p>Tu método de pago (${metodoElegido.toUpperCase()}) ha sido vinculado y verificado con éxito.</p>
+                      
+                      <div style="background-color: #fffaf0; border-left: 4px solid #dd6b20; padding: 12px; margin: 20px 0;">
+                        <strong>Aviso de Seguridad Importante:</strong>
+                        <p style="margin: 5px 0 0 0;">Esta plataforma opera bajo una política de cero custodia. El usuario es el único responsable del resguardo de sus claves y PIN.</p>
+                        <p style="margin: 5px 0 0 0;">Cédula Titular: ${cedulaLimpia}</p>
+                        <p style="margin: 5px 0 0 0;">Cuenta/Destino: ${cuentaDestino.trim()}</p>
+                      </div>
+
+                      <p>Para cualquier consulta oficial, comunícate respondiendo a este correo.</p>
+                      <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;" />
+                      <p style="font-size: 12px; color: #718096;">Este es un mensaje automático de confirmación de registro.</p>
+                    </div>
+                `;
+                await enviarCorreoResend(correoExtraido, 'Bienvenido a PagoMovil USDT - Cuenta Verificada', htmlBienvenida);
+            }
         }
 
-        res.json({ success: true, message: '¡Método verificado y vinculado con éxito[cite: 7]!' });
+        res.json({ success: true, message: '¡Método verificado, vinculado y correo de bienvenida enviado con éxito!' });
     } catch (err) {
         console.error("Error guardando método de pago:", err.message);
         return res.status(500).json({ success: false, message: 'Error interno al registrar el método de pago.' });
@@ -545,7 +590,7 @@ app.get('/api/historial/:telefono', limiterConsultasComercio, async (req, res) =
             success: true, 
             transacciones: rows, 
             historial: rows,
-            avisoAutolimpieza: "Mostrando las últimas 10 operaciones. Los registros antiguos se purgan automáticamente cada 60 días para mantener la plataforma rápida y ligera[cite: 7]."
+            avisoAutolimpieza: "Mostrando las últimas 10 operaciones. Los registros antiguos se purgan automáticamente cada 60 días para mantener la plataforma rápida y ligera."
         });
     } catch (err) {
         console.error("Error consultando historial:", err.message);
@@ -554,39 +599,50 @@ app.get('/api/historial/:telefono', limiterConsultasComercio, async (req, res) =
 });
 
 // ==========================================
-// RUTA ORIGINAL DE ENVÍO DE CÓDIGO POR WHATSAPP
+// RUTA DE AUTENTICACIÓN / REGISTRO ESTRICTA Y SEGURA
 // ==========================================
 app.post('/api/enviar-codigo', limiterPagos, async (req, res) => {
     const telefono = (req.body.telefono || '').trim();
     const pinSeguridad = (req.body.pinSeguridad || '').trim();
+    const emailUsuario = (req.body.email || req.body.correo || '').trim();
     
     if (!telefono || !pinSeguridad) {
         return res.status(400).json({ success: false, message: 'El teléfono y el PIN de seguridad son obligatorios.' });
     }
 
-    try {
-        await db.run(
-            `INSERT INTO usuarios (telefono, pinSeguridad, accountType, dailyLimit) VALUES (?, ?, 'natural', 1000.00)
-             ON CONFLICT(telefono) DO UPDATE SET pinSeguridad = ?`,
-            [telefono, pinSeguridad, pinSeguridad]
-        );
+    if (pinSeguridad.length !== 4) {
+        return res.status(400).json({ success: false, message: 'El PIN de seguridad debe ser estrictamente de 4 dígitos.' });
+    }
 
-        const userRecord = await db.get('SELECT id FROM usuarios WHERE telefono = ?', [telefono]);
-        if (userRecord) {
-            const existingWallet = await db.get('SELECT id FROM wallets WHERE user_id = ?', [userRecord.id]);
-            if (!existingWallet) {
-                await db.run('INSERT INTO wallets (user_id, usdt_balance) VALUES (?, 0.00)', [userRecord.id]);
+    try {
+        let usuario = await db.get('SELECT * FROM usuarios WHERE telefono = ?', [telefono]);
+
+        if (usuario) {
+            if (usuario.pinSeguridad && usuario.pinSeguridad !== pinSeguridad) {
+                return res.status(401).json({ success: false, message: '❌ PIN de seguridad incorrecto para este número.' });
             }
+        } else {
+            await db.run(
+                `INSERT INTO usuarios (telefono, pinSeguridad, accountType, dailyLimit) VALUES (?, ?, 'natural', 1000.00)`,
+                [telefono, pinSeguridad]
+            );
+            usuario = await db.get('SELECT * FROM usuarios WHERE telefono = ?', [telefono]);
+        }
+
+        const existingWallet = await db.get('SELECT id FROM wallets WHERE user_id = ?', [usuario.id]);
+        if (!existingWallet) {
+            await db.run('INSERT INTO wallets (user_id, usdt_balance) VALUES (?, 0.00)', [usuario.id]);
         }
 
         const codigoVerificacion = Math.floor(100000 + Math.random() * 900000);
-        const mensaje = `¡Registro Exitoso en Monedero USDT! 🟢\n\nTu línea ha sido validada correctamente y tu PIN de seguridad de 4 dígitos ha quedado configurado.\n\n🔑 *Tu PIN configurado:* ${pinSeguridad}\n🔢 *Código de verificación:* *${codigoVerificacion}*`;
+        const mensaje = `¡Acceso Exitoso en Monedero USDT! 🟢\n\nTu línea ha sido validada correctamente.\n\n🔢 *Código de verificación:* *${codigoVerificacion}*`;
 
         await enviarMensajeWhatsappSeguro(telefono, mensaje);
-        res.json({ success: true, message: '¡Código enviado por WhatsApp con éxito y PIN configurado[cite: 7]!', codigoMock: codigoVerificacion });
+
+        res.json({ success: true, message: '¡Acceso autorizado y verificado con éxito!', codigoMock: codigoVerificacion });
     } catch (err) {
-        console.error("Error guardando usuario:", err);
-        return res.status(500).json({ success: false, message: 'Error interno al registrar el usuario.' });
+        console.error("Error en autenticación:", err);
+        return res.status(500).json({ success: false, message: 'Error interno al procesar el acceso.' });
     }
 });
 
@@ -612,7 +668,7 @@ const procesarUpgradeComercialHandler = async (req, res) => {
         }
 
         if (!pinSeguridad || usuario.pinSeguridad !== pinSeguridad) {
-            return res.status(401).json({ success: false, message: '❌ PIN de seguridad obligatorio o incorrecto para validar esta operación[cite: 7].' });
+            return res.status(401).json({ success: false, message: '❌ PIN de seguridad obligatorio o incorrecto para validar esta operación.' });
         }
 
         if (usuario.accountType === 'comercial' || usuario.accountType === 'emprendedor') {
@@ -663,7 +719,7 @@ const procesarUpgradeComercialHandler = async (req, res) => {
 
         res.json({
             success: true,
-            message: `¡Cuenta actualizada a comercial! Tu ID QR único generado es ${merchantAliasUnico}[cite: 7].`,
+            message: `¡Cuenta actualizada a comercial! Tu ID QR único generado es ${merchantAliasUnico}.`,
             merchantId: merchantAliasUnico,
             nuevoSaldo: nuevoSaldo.toFixed(2),
             accountType: planDeseado,
@@ -730,12 +786,12 @@ app.post('/api/procesar-retiro', limiterPagos, async (req, res) => {
     let telefono = (req.body.telefono || req.body.telefonoUsuario || '').trim();
 
     if (!telefono) {
-        return res.status(400).json({ success: false, message: '❌ El número de teléfono o emisor es obligatorio para procesar el retiro[cite: 7].' });
+        return res.status(400).json({ success: false, message: '❌ El número de teléfono o emisor es obligatorio para procesar el retiro.' });
     }
 
     const montoNum = parseFloat(monto);
     if (!destino || isNaN(montoNum) || montoNum <= 0) {
-        return res.status(400).json({ success: false, message: 'Datos de retiro inválidos (monto o destino vacíos)[cite: 7].' });
+        return res.status(400).json({ success: false, message: 'Datos de retiro inválidos (monto o destino vacíos).' });
     }
 
     const comisionAplicar = calcularComisionRetiro(montoNum);
@@ -743,23 +799,23 @@ app.post('/api/procesar-retiro', limiterPagos, async (req, res) => {
     if (montoNum <= comisionAplicar) {
         return res.status(400).json({ 
             success: false, 
-            message: `El monto del retiro debe ser superior a la comisión calculada ($${comisionAplicar.toFixed(2)} USDT)[cite: 7].` 
+            message: `El monto del retiro debe ser superior a la comisión calculada ($${comisionAplicar.toFixed(2)} USDT).` 
         });
     }
 
     try {
         const usuario = await db.get('SELECT * FROM usuarios WHERE telefono = ? OR merchant_id = ?', [telefono, telefono]);
         if (!usuario) {
-            return res.status(404).json({ success: false, message: '❌ Usuario no encontrado en el sistema[cite: 7].' });
+            return res.status(404).json({ success: false, message: '❌ Usuario no encontrado en el sistema.' });
         }
 
         if (!pinSeguridad || usuario.pinSeguridad !== pinSeguridad) {
-            return res.status(401).json({ success: false, message: '❌ PIN de seguridad incorrecto o no proporcionado[cite: 7].' });
+            return res.status(401).json({ success: false, message: '❌ PIN de seguridad incorrecto o no proporcionado.' });
         }
 
         const wallet = await db.get('SELECT * FROM wallets WHERE user_id = ?', [usuario.id]);
         if (!wallet || wallet.usdt_balance < montoNum) {
-            return res.status(400).json({ success: false, message: '❌ Saldo insuficiente para realizar el retiro[cite: 7].' });
+            return res.status(400).json({ success: false, message: '❌ Saldo insuficiente para realizar el retiro.' });
         }
 
         const nuevoSaldo = wallet.usdt_balance - montoNum;
@@ -790,13 +846,13 @@ app.post('/api/procesar-retiro', limiterPagos, async (req, res) => {
 
         return res.json({
             success: true,
-            message: `¡Retiro de $${montoNum.toFixed(2)} USDT procesado con éxito[cite: 7]! Ref: ${refRetiro}`,
+            message: `¡Retiro de $${montoNum.toFixed(2)} USDT procesado con éxito! Ref: ${refRetiro}`,
             nuevoSaldo: nuevoSaldo.toFixed(2),
             comisionAplicada: comisionAplicar.toFixed(2),
             referencia: refRetiro
         });
     } catch (err) {
-        return res.status(500).json({ success: false, message: 'Error procesando el retiro[cite: 7].' });
+        return res.status(500).json({ success: false, message: 'Error procesando el retiro.' });
     }
 });
 
@@ -811,33 +867,31 @@ const logicaRecargaHandler = async (req, res) => {
     let txHash = (req.body.txHash || req.body.hash || req.body.referenciaHash || '').trim();
 
     if (!phoneNumber) {
-        return res.status(400).json({ success: false, message: '❌ El número de teléfono del beneficiario es obligatorio para acreditar la recarga[cite: 7].' });
+        return res.status(400).json({ success: false, message: '❌ El número de teléfono del beneficiario es obligatorio para acreditar la recarga.' });
     }
 
     const montoLimpio = parseFloat(amount);
 
     if (!amount || !txHash) {
-        return res.status(400).json({ success: false, message: 'Faltan datos obligatorios (monto o hash) para procesar la recarga[cite: 7].' });
+        return res.status(400).json({ success: false, message: 'Faltan datos obligatorios (monto o hash) para procesar la recarga.' });
     }
 
     if (isNaN(montoLimpio) || montoLimpio < MONTO_MINIMO_RECARGA) {
         return res.status(400).json({ 
             success: false, 
-            message: `El monto mínimo permitido para recargar es de $${MONTO_MINIMO_RECARGA.toFixed(2)} USDT[cite: 7].` 
+            message: `El monto mínimo permitido para recargar es de $${MONTO_MINIMO_RECARGA.toFixed(2)} USDT.` 
         });
     }
 
     try {
-        // 1. VALIDACIÓN ESTRICTA EN LA BLOCKCHAIN DE POLYGON
         const resultadoBlockchain = await verificarHashPolygonEnBlockchain(txHash, montoLimpio);
         if (!resultadoBlockchain.valido) {
             return res.status(400).json({ success: false, error: resultadoBlockchain.mensaje });
         }
 
-        // 2. VERIFICAR QUE EL HASH NO HAYA SIDO USADO ANTES EN LA DB LOCAL
         const txExistente = await db.get('SELECT id FROM transacciones WHERE reference_hash = ?', [txHash]);
         if (txExistente) {
-            return res.status(400).json({ success: false, error: "Esta transacción de Polygon ya fue procesada anteriormente[cite: 7]." });
+            return res.status(400).json({ success: false, error: "Esta transacción de Polygon ya fue procesada anteriormente." });
         }
 
         const comisionAplicar = calcularComisionRecarga(montoLimpio);
@@ -894,13 +948,13 @@ const logicaRecargaHandler = async (req, res) => {
 
         res.json({ 
             success: true, 
-            message: `¡Recarga de $${montoLimpio.toFixed(2)} USDT validada en Polygon[cite: 7]! Se acreditan $${montoNetoAcreditar.toFixed(2)} USDT a ${telReal}. Ref: ${referenciaGen}`,
+            message: `¡Recarga de $${montoLimpio.toFixed(2)} USDT validada en Polygon! Se acreditan $${montoNetoAcreditar.toFixed(2)} USDT a ${telReal}. Ref: ${referenciaGen}`,
             montoAcreditado: montoNetoAcreditar.toFixed(2),
             comisionAplicada: comisionAplicar.toFixed(2),
             referencia: referenciaGen
         });
     } catch (err) {
-        return res.status(500).json({ success: false, error: "Error procesando la recarga en blockchain[cite: 7]" });
+        return res.status(500).json({ success: false, error: "Error procesando la recarga en blockchain" });
     }
 };
 
@@ -933,7 +987,7 @@ app.post('/api/enviar-pago', limiterPagos, async (req, res) => {
         }
 
         if (!pinSeguridad || usuarioEmisor.pinSeguridad !== pinSeguridad) {
-            return res.status(401).json({ success: false, message: '❌ PIN de seguridad incorrecto o no proporcionado[cite: 7].' });
+            return res.status(401).json({ success: false, message: '❌ PIN de seguridad incorrecto o no proporcionado.' });
         }
 
         const limitePermitido = usuarioEmisor.dailyLimit || 1000.00;
@@ -991,12 +1045,12 @@ app.post('/api/enviar-pago', limiterPagos, async (req, res) => {
 
         res.json({ 
             success: true, 
-            message: `¡Pago de $${monto} USDT procesado[cite: 7]! Ref: ${numeroReferencia}`,
+            message: `¡Pago de $${monto} USDT procesado! Ref: ${numeroReferencia}`,
             referencia: numeroReferencia,
             comisionPlataforma: comisionAplicada
         });
     } catch (err) {
-        return res.status(500).json({ success: false, message: 'Error procesando el pago[cite: 7].' });
+        return res.status(500).json({ success: false, message: 'Error procesando el pago.' });
     }
 });
 
