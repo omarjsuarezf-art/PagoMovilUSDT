@@ -557,7 +557,7 @@ app.post('/api/registrar-metodos', limiterPagos, async (req, res) => {
                       </div>
 
                       <div style="text-align: center; margin-top: 25px;">
-                        <p style="font-size: 12px; color: #a0aec0;">Este es un mensaje automático de confirmación de registro y políticas del sistema.</p>
+                        <p style="font-size: 12px; color: #a0aec0;">Este es un mensaje automático de confirmation de registro y políticas del sistema.</p>
                       </div>
                     </div>
                 `;
@@ -598,7 +598,7 @@ app.get('/api/historial/:telefono', limiterConsultasComercio, async (req, res) =
 });
 
 // ==========================================
-// RUTA DE ENVÍO DE CÓDIGO POR WHATSAPP
+// RUTA DE ENVÍO DE CÓDIGO POR WHATSAPP (BLINDADA CON VALIDACIÓN ESTRICTA DE PIN)
 // ==========================================
 app.post('/api/enviar-codigo', limiterPagos, async (req, res) => {
     const telefono = (req.body.telefono || '').trim();
@@ -609,28 +609,41 @@ app.post('/api/enviar-codigo', limiterPagos, async (req, res) => {
     }
 
     try {
-        await db.run(
-            `INSERT INTO usuarios (telefono, pinSeguridad, accountType, dailyLimit) VALUES (?, ?, 'natural', 1000.00)
-             ON CONFLICT(telefono) DO UPDATE SET pinSeguridad = ?`,
-            [telefono, pinSeguridad, pinSeguridad]
-        );
+        // 1. Verificar si el usuario ya existe en la base de datos
+        const usuarioExistente = await db.get('SELECT * FROM usuarios WHERE telefono = ? OR merchant_id = ?', [telefono, telefono]);
 
-        const userRecord = await db.get('SELECT id FROM usuarios WHERE telefono = ?', [telefono]);
-        if (userRecord) {
-            const existingWallet = await db.get('SELECT id FROM wallets WHERE user_id = ?', [userRecord.id]);
-            if (!existingWallet) {
-                await db.run('INSERT INTO wallets (user_id, usdt_balance) VALUES (?, 0.00)', [userRecord.id]);
+        if (usuarioExistente) {
+            // 2. Si el usuario ya existe, el PIN DEBE COINCIDIR EXACTAMENTE
+            if (usuarioExistente.pinSeguridad && usuarioExistente.pinSeguridad !== pinSeguridad) {
+                return res.status(401).json({ 
+                    success: false, 
+                    message: '❌ Acceso denegado. Este número ya está registrado y el PIN de seguridad es incorrecto.' 
+                });
+            }
+        } else {
+            // 3. Si no existe, se crea la cuenta nueva con el PIN asignado por primera vez
+            await db.run(
+                `INSERT INTO usuarios (telefono, pinSeguridad, accountType, dailyLimit) VALUES (?, ?, 'natural', 1000.00)`,
+                [telefono, pinSeguridad]
+            );
+
+            const userRecord = await db.get('SELECT id FROM usuarios WHERE telefono = ?', [telefono]);
+            if (userRecord) {
+                const existingWallet = await db.get('SELECT id FROM wallets WHERE user_id = ?', [userRecord.id]);
+                if (!existingWallet) {
+                    await db.run('INSERT INTO wallets (user_id, usdt_balance) VALUES (?, 0.00)', [userRecord.id]);
+                }
             }
         }
 
         const codigoVerificacion = Math.floor(100000 + Math.random() * 900000);
-        const mensaje = `¡Registro Exitoso en Monedero USDT! 🟢\n\nTu línea ha sido validada correctamente y tu PIN de seguridad de 4 dígitos ha quedado configurado.\n\n🔑 *Tu PIN configurado:* ${pinSeguridad}\n🔢 *Código de verificación:* *${codigoVerificacion}*`;
+        const mensaje = `¡Acceso Verificado en Monedero USDT! 🟢\n\nTu línea ha sido autenticada correctamente.\n\n🔢 *Código de verificación:* *${codigoVerificacion}*`;
 
         await enviarMensajeWhatsappSeguro(telefono, mensaje);
-        res.json({ success: true, message: '¡Código enviado por WhatsApp con éxito y PIN configurado!', codigoMock: codigoVerificacion });
+        res.json({ success: true, message: '¡Acceso autorizado y código enviado por WhatsApp con éxito!', codigoMock: codigoVerificacion });
     } catch (err) {
-        console.error("Error guardando usuario:", err);
-        return res.status(500).json({ success: false, message: 'Error interno al registrar el usuario.' });
+        console.error("Error en autenticación de usuario:", err);
+        return res.status(500).json({ success: false, message: 'Error interno al procesar la autenticación.' });
     }
 });
 
@@ -918,7 +931,7 @@ const logicaRecargaHandler = async (req, res) => {
 
     if (!phoneNumber) {
         const rowUser = await db.get('SELECT telefono FROM usuarios ORDER BY id DESC LIMIT 1');
-        if (rowUser && rowUser.telefono) await procesarConTelefono(rowUser.telefono);
+        if (rowUser && rowUser.telefono) await ejecutarEnvioConEmisor(rowUser.telefono);
         else return res.status(400).json({ success: false, message: 'No hay usuarios registrados.' });
     } else {
         await procesarConTelefono(phoneNumber);
