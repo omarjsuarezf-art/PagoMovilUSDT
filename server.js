@@ -445,7 +445,7 @@ app.post('/api/cambiar-pin', limiterPagos, async (req, res) => {
 });
 
 // ==========================================
-// RUTA DE REGISTRO DE MÉTODOS Y CORREO OFICIAL
+// RUTA DE REGISTRO DE MÉTODOS Y CORREO OFICIAL (CON BIENVENIDA, TÉRMINOS Y AYUDA)
 // ==========================================
 app.post('/api/registrar-metodos', limiterPagos, async (req, res) => {
     const { cedulaTitular, metodo, cuentaDestino, telefono } = req.body;
@@ -523,27 +523,45 @@ app.post('/api/registrar-metodos', limiterPagos, async (req, res) => {
         );
 
         if (telefono) {
+            // Se actualiza el estado a vinculado para desbloquear el panel
             await db.run('UPDATE usuarios SET metodoVinculado = 1 WHERE telefono = ? OR merchant_id = ?', [telefono, telefono]);
 
-            // Disparar correo de bienvenida automático de Resend
+            // Disparar correo completo con Resend (Bienvenida, Guía y Términos)
             if (correoExtraido) {
                 const htmlBienvenida = `
-                    <div style="font-family: Arial, sans-serif; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px;">
-                      <h2 style="color: #2b6cb0;">¡Bienvenido a PagoMovil USDT!</h2>
-                      <p>Tu método de pago (${metodoElegido.toUpperCase()}) ha sido vinculado y verificado con éxito.</p>
+                    <div style="font-family: Arial, sans-serif; color: #333; max-width: 650px; margin: 0 auto; padding: 25px; border: 1px solid #e0e0e0; border-radius: 10px; background-color: #ffffff;">
+                      <h1 style="color: #2b6cb0; text-align: center;">¡Bienvenido a PagoMovil USDT! 🚀</h1>
+                      <p>Hola,</p>
+                      <p>Tu cuenta ha sido verificada y vinculada exitosamente con la Cédula/ID: <strong>${cedulaLimpia}</strong>.</p>
                       
-                      <div style="background-color: #fffaf0; border-left: 4px solid #dd6b20; padding: 12px; margin: 20px 0;">
-                        <strong>Aviso de Seguridad Importante:</strong>
-                        <p style="margin: 5px 0 0 0;">Cédula Titular: ${cedulaLimpia}</p>
-                        <p style="margin: 5px 0 0 0;">Cuenta/Destino: ${cuentaDestino.trim()}</p>
+                      <!-- GUÍA RÁPIDA DE AYUDA -->
+                      <div style="background-color: #ebf8ff; border-left: 4px solid #3182ce; padding: 15px; margin: 20px 0; border-radius: 4px;">
+                        <h3 style="margin-top: 0; color: #2b6cb0;">📖 Guía de Ayuda e Instrucciones Rápidas</h3>
+                        <ul style="padding-left: 20px; margin-bottom: 0;">
+                          <li><strong>Recargas en USDT (Polygon):</strong> Transfiere USDT en la red Polygon a la wallet oficial y registra el Hash (txHash) para acreditar tu saldo de inmediato.</li>
+                          <li><strong>Envíos entre usuarios:</strong> Envía pagos en USDT al instante usando el número de teléfono o ID de Comercio del destinatario.</li>
+                          <li><strong>Retiros:</strong> Retira tus USDT directamente a Binance, Zinli, Zelle u otros exchanges configurados.</li>
+                          <li><strong>Cuenta Comercial:</strong> Si tienes un negocio, solicita el cambio de plan a Comercial para obtener tu código QR de cobro automático.</li>
+                        </ul>
                       </div>
 
-                      <p>Para cualquier consulta oficial, comunícate respondiendo a este correo.</p>
-                      <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;" />
-                      <p style="font-size: 12px; color: #718096;">Este es un mensaje automático de confirmación de registro.</p>
+                      <!-- TÉRMINOS Y CONDICIONES -->
+                      <div style="background-color: #f7fafc; border: 1px solid #e2e8f0; padding: 15px; margin: 20px 0; border-radius: 4px; font-size: 13px; color: #4a5568;">
+                        <h4 style="margin-top: 0; color: #2d3748;">📜 Términos, Condiciones y Políticas del Servicio</h4>
+                        <ol style="padding-left: 18px; margin-bottom: 0;">
+                          <li><strong>Verificación de Transacciones:</strong> Las recargas se auditan en la red Polygon. Hashes duplicados o inválidos serán rechazados.</li>
+                          <li><strong>Comisiones:</strong> Las transferencias y retiros poseen tarifas administrativas reflejadas de manera transparente en tu panel.</li>
+                          <li><strong>Seguridad:</strong> Tu PIN de 4 dígitos es estrictamente personal. Soporte nunca te pedirá esta clave.</li>
+                          <li><strong>Límites:</strong> Las cuentas naturales poseen límites operativos diarios ampliables al pasar a plan Comercial.</li>
+                        </ol>
+                      </div>
+
+                      <div style="text-align: center; margin-top: 25px;">
+                        <p style="font-size: 12px; color: #a0aec0;">Este es un mensaje automático de confirmación de registro y políticas del sistema.</p>
+                      </div>
                     </div>
                 `;
-                await enviarCorreoResend(correoExtraido, 'Bienvenido a PagoMovil USDT - Cuenta Verificada', htmlBienvenida);
+                await enviarCorreoResend(correoExtraido, '¡Bienvenido a PagoMovil USDT! - Guía y Términos Oficiales', htmlBienvenida);
             }
         }
 
@@ -720,16 +738,23 @@ app.post('/api/upgrade-account', limiterPagos, async (req, res) => {
 });
 
 // ==========================================
-// RUTA DE RESET RÁPIDO PARA PRUEBAS (DEV)
+// RUTA DE RESET RÁPIDO PARA PRUEBAS (DEV - ACTUALIZADA)
 // ==========================================
 app.get('/api/dev/reset-all', async (req, res) => {
     const numerosPrueba = ['04126039718', '04123400436'];
     try {
         for (const telefono of numerosPrueba) {
-            await db.run(`UPDATE usuarios SET accountType = 'natural', dailyLimit = 1000.00, merchant_id = NULL WHERE telefono = ?`, [telefono]);
-            await db.run(`UPDATE wallets SET usdt_balance = 500.00 WHERE user_id = (SELECT id FROM usuarios WHERE telefono = ?)`, [telefono]);
+            // Se resetea el usuario y se pone metodoVinculado = 0 para obligar a probar el formulario
+            await db.run(
+                `UPDATE usuarios SET accountType = 'natural', dailyLimit = 1000.00, merchant_id = NULL, metodoVinculado = 0 WHERE telefono = ?`, 
+                [telefono]
+            );
+            await db.run(
+                `UPDATE wallets SET usdt_balance = 500.00 WHERE user_id = (SELECT id FROM usuarios WHERE telefono = ?)`, 
+                [telefono]
+            );
         }
-        res.json({ success: true, message: '¡Listo! Números de prueba restablecidos con $500.00 USDT.' });
+        res.json({ success: true, message: '¡Listo! Números de prueba restablecidos con $500.00 USDT y estado de registro en cero (0).' });
     } catch (err) {
         res.status(500).json({ success: false, error: err.message });
     }

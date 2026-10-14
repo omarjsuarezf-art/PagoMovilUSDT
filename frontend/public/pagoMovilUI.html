@@ -37,171 +37,220 @@
                 CARGANDO CUENTA...
             </div>
 
-            <!-- TARJETA DE SALDO DISPONIBLE Y ACCIONES -->
-            <div class="bg-slate-900/90 border border-emerald-500/20 rounded-xl p-4 space-y-3">
-                <div class="flex justify-between items-center">
+            <!-- ========================================== -->
+            <!-- MURO DE SEGURIDAD: REGISTRO OBLIGATORIO -->
+            <!-- ========================================== -->
+            <div id="seccionRegistroObligatorio" class="hidden bg-slate-900/95 border border-amber-500/40 rounded-xl p-5 space-y-4 shadow-xl">
+                <div class="text-center space-y-1">
+                    <div class="w-12 h-12 bg-amber-500/10 border border-amber-500/30 text-amber-400 rounded-full flex items-center justify-center mx-auto text-xl">
+                        <i class="fa-solid fa-id-card"></i>
+                    </div>
+                    <h2 class="text-sm font-bold text-white">Completa tu Registro de Usuario</h2>
+                    <p class="text-[11px] text-slate-400 leading-snug">
+                        Para habilitar las funciones de pago, recarga y retiros, debes vincular tu cédula y un correo electrónico donde recibirás tu guía de uso y términos oficiales.
+                    </p>
+                </div>
+
+                <form id="formRegistroObligatorio" onsubmit="vincularDatosObligatorios(event)" class="space-y-3">
                     <div>
-                        <p class="text-[11px] text-emerald-400 font-medium">Saldo Disponible</p>
-                        <div class="text-2xl font-extrabold text-white tracking-tight">
-                            USDT <span id="balanceUSDT">0.00</span>
+                        <label class="block text-[11px] text-slate-400 mb-1">Cédula de Identidad (Titular)</label>
+                        <input type="text" id="regCedula" placeholder="Ej: V12345678" required class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500 font-mono">
+                    </div>
+
+                    <div>
+                        <label class="block text-[11px] text-slate-400 mb-1">Método / Exchange de Preferencia</label>
+                        <select id="regMetodo" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500">
+                            <option value="binance">Binance Pay</option>
+                            <option value="paypal">PayPal</option>
+                            <option value="zelle">Zelle</option>
+                            <option value="zinli">Zinli</option>
+                            <option value="airtm">AirTM</option>
+                            <option value="bybit">Bybit</option>
+                            <option value="okx">OKX</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-[11px] text-slate-400 mb-1">Correo Electrónico o Cuenta Destino</label>
+                        <input type="text" id="regCuentaDestino" placeholder="Ej: tu_correo@gmail.com" required class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500 font-mono">
+                    </div>
+
+                    <button type="submit" id="btnGuardarRegistro" class="w-full bg-amber-500 hover:bg-amber-600 text-slate-950 font-black py-2.5 rounded-xl transition text-xs cursor-pointer flex items-center justify-center gap-2 shadow-lg shadow-amber-500/10">
+                        <i class="fa-solid fa-paper-plane"></i> Vincular Datos y Activar Panel
+                    </button>
+                </form>
+            </div>
+
+            <!-- CONTENEDOR OPERATIVO (SE OCULTA SI NO ESTÁ REGISTRADO) -->
+            <div id="bloqueOperativoPanel" class="space-y-4">
+                
+                <!-- TARJETA DE SALDO DISPONIBLE Y ACCIONES -->
+                <div class="bg-slate-900/90 border border-emerald-500/20 rounded-xl p-4 space-y-3">
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <p class="text-[11px] text-emerald-400 font-medium">Saldo Disponible</p>
+                            <div class="text-2xl font-extrabold text-white tracking-tight">
+                                USDT <span id="balanceUSDT">0.00</span>
+                            </div>
                         </div>
+                    </div>
+
+                    <!-- 3 BOTONES PRINCIPALES -->
+                    <div class="grid grid-cols-3 gap-2 pt-1 border-t border-slate-800">
+                        <!-- 1. Recarga Hash -->
+                        <button onclick="location.href='/recarga'" class="bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs py-2.5 px-2 rounded-lg flex flex-col items-center justify-center gap-1 transition shadow-md shadow-blue-500/20 cursor-pointer">
+                            <i class="fa-solid fa-bolt text-sm"></i>
+                            <span>Recarga Hash</span>
+                        </button>
+
+                        <!-- 2. Retiros -->
+                        <button onclick="toggleSeccionRetiro()" class="bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold text-xs py-2.5 px-2 rounded-lg flex flex-col items-center justify-center gap-1 transition shadow-md shadow-emerald-600/20 cursor-pointer">
+                            <i class="fa-solid fa-arrow-up-right-from-square text-sm"></i>
+                            <span>Retiros</span>
+                        </button>
+
+                        <!-- 3. Enviar Pago -->
+                        <button onclick="toggleSeccionHacerPago()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-bold text-xs py-2.5 px-2 rounded-lg flex flex-col items-center justify-center gap-1 transition cursor-pointer">
+                            <i class="fa-solid fa-paper-plane text-sm text-emerald-400"></i>
+                            <span>Enviar Pago</span>
+                        </button>
                     </div>
                 </div>
 
-                <!-- 3 BOTONES PRINCIPALES -->
-                <div class="grid grid-cols-3 gap-2 pt-1 border-t border-slate-800">
-                    <!-- 1. Recarga Hash -->
-                    <button onclick="location.href='/recarga'" class="bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs py-2.5 px-2 rounded-lg flex flex-col items-center justify-center gap-1 transition shadow-md shadow-blue-500/20 cursor-pointer">
-                        <i class="fa-solid fa-bolt text-sm"></i>
-                        <span>Recarga Hash</span>
-                    </button>
-
-                    <!-- 2. Retiros -->
-                    <button onclick="toggleSeccionRetiro()" class="bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold text-xs py-2.5 px-2 rounded-lg flex flex-col items-center justify-center gap-1 transition shadow-md shadow-emerald-600/20 cursor-pointer">
-                        <i class="fa-solid fa-arrow-up-right-from-square text-sm"></i>
-                        <span>Retiros</span>
-                    </button>
-
-                    <!-- 3. Enviar Pago -->
-                    <button onclick="toggleSeccionHacerPago()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-bold text-xs py-2.5 px-2 rounded-lg flex flex-col items-center justify-center gap-1 transition cursor-pointer">
-                        <i class="fa-solid fa-paper-plane text-sm text-emerald-400"></i>
-                        <span>Enviar Pago</span>
+                <!-- BOTÓN / BANNER DE ACTUALIZACIÓN A COMERCIAL -->
+                <div id="seccionUpgradeComercial" class="hidden">
+                    <button onclick="ejecutarUpgradeComercial()" class="w-full bg-amber-500 hover:bg-amber-600 text-slate-950 font-black p-3 rounded-xl transition text-xs flex flex-col items-center justify-center gap-1 shadow-lg shadow-amber-500/10 cursor-pointer">
+                        <span>ACTUALIZAR A CUENTA COMERCIAL</span>
+                        <span class="text-[10px] font-semibold opacity-90">($5.00 USDT / Transferencias ilimitadas)</span>
                     </button>
                 </div>
-            </div>
 
-            <!-- BOTÓN / BANNER DE ACTUALIZACIÓN A COMERCIAL -->
-            <div id="seccionUpgradeComercial" class="hidden">
-                <button onclick="ejecutarUpgradeComercial()" class="w-full bg-amber-500 hover:bg-amber-600 text-slate-950 font-black p-3 rounded-xl transition text-xs flex flex-col items-center justify-center gap-1 shadow-lg shadow-amber-500/10 cursor-pointer">
-                    <span>ACTUALIZAR A CUENTA COMERCIAL</span>
-                    <span class="text-[10px] font-semibold opacity-90">($5.00 USDT / Transferencias ilimitadas)</span>
+                <!-- BOTÓN DE CAMBIO DE PIN DE SEGURIDAD PROTEGIDO -->
+                <button type="button" onclick="cambiarPinSeguridad()" class="w-full bg-sky-700 hover:bg-sky-600 active:bg-sky-800 text-white font-bold py-2.5 px-4 rounded-xl flex items-center justify-between shadow transition cursor-pointer text-xs">
+                    <span><i class="fa-solid fa-lock text-sky-300 mr-1.5"></i> Cambiar PIN de Seguridad</span>
+                    <span class="bg-sky-800 px-2 py-0.5 rounded text-[10px]">Modificar</span>
                 </button>
-            </div>
 
-            <!-- BOTÓN DE CAMBIO DE PIN DE SEGURIDAD PROTEGIDO -->
-            <button type="button" onclick="cambiarPinSeguridad()" class="w-full bg-sky-700 hover:bg-sky-600 active:bg-sky-800 text-white font-bold py-2.5 px-4 rounded-xl flex items-center justify-between shadow transition cursor-pointer text-xs">
-                <span><i class="fa-solid fa-lock text-sky-300 mr-1.5"></i> Cambiar PIN de Seguridad</span>
-                <span class="bg-sky-800 px-2 py-0.5 rounded text-[10px]">Modificar</span>
-            </button>
+                <!-- SECCIÓN OCULTA: ENVIAR PAGO MÓVIL / USDT -->
+                <div id="seccionHacerPago" class="hidden bg-slate-900/90 border border-slate-800 rounded-xl p-4 space-y-3">
+                    <h2 class="text-xs font-bold text-slate-300 flex items-center gap-1.5">
+                        <i class="fa-solid fa-mobile-screen-button text-emerald-400"></i> Enviar USDT a Teléfono / Comercio
+                    </h2>
+                    <form id="formPago" onsubmit="procesarEnvioPago(event)" class="space-y-3">
+                        <div>
+                            <label class="block text-[11px] text-slate-400 mb-1">Teléfono o Alias Comercio</label>
+                            <div class="flex items-center gap-2">
+                                <input type="text" id="telefonoDestino" placeholder="Ej: 04123400436..." required class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 font-mono">
+                                <button type="button" onclick="abrirCamaraQR()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 px-3 py-2 rounded-xl text-xs flex items-center gap-1 transition cursor-pointer shrink-0" title="Escanear QR">
+                                    <i class="fa-solid fa-camera text-emerald-400"></i> Escanear
+                                </button>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-[11px] text-slate-400 mb-1">Monto (USDT)</label>
+                            <input type="number" step="0.01" id="montoUSDT" placeholder="0.00" required class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 font-bold">
+                        </div>
+                        <button type="submit" class="w-full bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-black py-2 rounded-xl transition text-xs cursor-pointer">
+                            Confirmar Envío
+                        </button>
+                    </form>
+                </div>
 
-            <!-- SECCIÓN OCULTA: ENVIAR PAGO MÓVIL / USDT -->
-            <div id="seccionHacerPago" class="hidden bg-slate-900/90 border border-slate-800 rounded-xl p-4 space-y-3">
-                <h2 class="text-xs font-bold text-slate-300 flex items-center gap-1.5">
-                    <i class="fa-solid fa-mobile-screen-button text-emerald-400"></i> Enviar USDT a Teléfono / Comercio
-                </h2>
-                <form id="formPago" onsubmit="procesarEnvioPago(event)" class="space-y-3">
+                <!-- SECCIÓN RETIRAR A EXCHANGE / BILLETERA -->
+                <div id="seccionRetiro" class="hidden bg-slate-900/80 border border-slate-800 rounded-xl p-4 space-y-3">
+                    <h2 class="text-xs font-bold text-emerald-400 uppercase tracking-wide">Retirar USDT / Cripto</h2>
+                    
+                    <!-- BANNER VISUAL DE ADVERTENCIA PARA RETIROS POLYGON -->
+                    <div class="bg-amber-950/40 border border-amber-500/40 p-2.5 rounded-xl space-y-1">
+                        <div class="flex items-center gap-1.5 text-amber-400 text-[11px] font-bold">
+                            <i class="fa-solid fa-triangle-exclamation"></i> Verificación de Dirección:
+                        </div>
+                        <p class="text-[10px] text-slate-300 leading-snug">
+                            Si seleccionas <strong>Wallet USDT (Red Polygon)</strong> para retirar a MetaMask, Phantom o Trust Wallet, tu dirección <strong>DEBE empezar por 0x</strong>. Evita usar direcciones de Tron (T...) o Solana.
+                        </p>
+                    </div>
+
+                    <form id="formRetiro" onsubmit="procesarRetiro(event)" class="space-y-3">
+                        <div>
+                            <label class="block text-[11px] text-slate-400 mb-1">Seleccionar Destino / Plataforma</label>
+                            <select id="tipoExchange" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500">
+                                <option value="paypal">PayPal (Correo Electrónico)</option>
+                                <option value="binance">Binance Pay (Pay ID / Email / Teléfono)</option>
+                                <option value="zelle">Zelle (Correo / Teléfono)</option>
+                                <option value="airtm">AirTM (Correo electrónico)</option>
+                                <option value="trc20">Wallet USDT (Red TRC20 - Tron)</option>
+                                <option value="bep20">Wallet USDT (Red BEP20 - BSC)</option>
+                                <option value="polygon">Wallet USDT (Red Polygon)</option>
+                                <option value="payeer">Payeer (ID de Cuenta / Correo)</option>
+                                <option value="bybit">Bybit UID / Email</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[11px] text-slate-400 mb-1">Dirección / UID / Correo de Destino</label>
+                            <input type="text" id="destinoRetiro" placeholder="Ej: correo@paypal.com o 0x..." required class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 font-mono">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] text-slate-400 mb-1">Monto a Retirar (USDT)</label>
+                            <input type="number" step="0.01" id="montoRetiro" placeholder="Ej: 25.00" required class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 font-bold">
+                        </div>
+                        <div id="desgloseRetiro"></div>
+                        <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2.5 rounded-xl text-xs transition cursor-pointer">
+                            Confirmar y Procesar Retiro
+                        </button>
+                    </form>
+                </div>
+
+                <!-- SECCIÓN PRINCIPAL COMERCIO: QR DE COBRO + BOTÓN DESCARGAR / COMPARTIR -->
+                <div id="seccionQrComercio" class="hidden bg-slate-900/80 border border-amber-500/30 rounded-xl p-4 text-center space-y-3">
+                    <p class="text-xs font-bold text-amber-400 uppercase tracking-wide">Código QR de Cobro Protegido</p>
+                    <div class="bg-white p-3 rounded-xl inline-block shadow-lg">
+                        <div id="qrComercioContainer" class="w-40 h-40 bg-slate-950 flex items-center justify-center text-xs text-amber-400 font-mono text-center p-2 rounded-lg">
+                            Cargando QR...
+                        </div>
+                    </div>
                     <div>
-                        <label class="block text-[11px] text-slate-400 mb-1">Teléfono o Alias Comercio</label>
+                        <div class="text-xs text-emerald-400 font-mono font-bold" id="txtIdComercio">PAGO MÓVIL USDT</div>
+                        <p class="text-[10px] text-slate-400 mt-1">Escanea para recibir pagos instantáneos en caja.</p>
+                    </div>
+                    <button onclick="descargarImagenQR()" class="w-full bg-amber-500 hover:bg-amber-600 text-slate-950 font-black py-2 rounded-xl text-xs transition flex items-center justify-center gap-2 cursor-pointer shadow-md shadow-amber-500/10">
+                        <i class="fa-solid fa-share-nodes"></i> Compartir / Descargar Código QR
+                    </button>
+                </div>
+
+                <!-- SECCIÓN: VENTAS Y MOVIMIENTOS EN VIVO -->
+                <div id="seccionHistorial" class="hidden space-y-3 pt-2">
+                    <div class="flex justify-between items-center gap-2">
+                        <div>
+                            <h2 class="text-xs font-bold text-slate-200 flex items-center gap-1.5">
+                                <i class="fa-solid fa-list-check text-amber-400"></i> Ventas e Ingresos en Vivo
+                            </h2>
+                            <p class="text-[10px] text-slate-400">Actualización en tiempo real</p>
+                        </div>
+                        
                         <div class="flex items-center gap-2">
-                            <input type="text" id="telefonoDestino" placeholder="Ej: 04123400436..." required class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 font-mono">
-                            <button type="button" onclick="abrirCamaraQR()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 px-3 py-2 rounded-xl text-xs flex items-center gap-1 transition cursor-pointer shrink-0" title="Escanear QR">
-                                <i class="fa-solid fa-camera text-emerald-400"></i> Escanear
+                            <button onclick="descargarReporteComercial()" class="bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-[10px] px-2.5 py-1.5 rounded-lg transition flex items-center gap-1 cursor-pointer shadow-md shadow-amber-500/10">
+                                <i class="fa-solid fa-file-csv"></i> Descargar Cierre
+                            </button>
+                            <button onclick="cargarHistorial()" class="text-[10px] text-emerald-400 hover:underline flex items-center gap-1">
+                                <i class="fa-solid fa-rotate-right"></i>
                             </button>
                         </div>
                     </div>
-                    <div>
-                        <label class="block text-[11px] text-slate-400 mb-1">Monto (USDT)</label>
-                        <input type="number" step="0.01" id="montoUSDT" placeholder="0.00" required class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 font-bold">
-                    </div>
-                    <button type="submit" class="w-full bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-black py-2 rounded-xl transition text-xs cursor-pointer">
-                        Confirmar Envío
-                    </button>
-                </form>
-            </div>
 
-            <!-- SECCIÓN RETIRAR A EXCHANGE / BILLETERA -->
-            <div id="seccionRetiro" class="hidden bg-slate-900/80 border border-slate-800 rounded-xl p-4 space-y-3">
-                <h2 class="text-xs font-bold text-emerald-400 uppercase tracking-wide">Retirar USDT / Cripto</h2>
-                
-                <!-- BANNER VISUAL DE ADVERTENCIA PARA RETIROS POLYGON -->
-                <div class="bg-amber-950/40 border border-amber-500/40 p-2.5 rounded-xl space-y-1">
-                    <div class="flex items-center gap-1.5 text-amber-400 text-[11px] font-bold">
-                        <i class="fa-solid fa-triangle-exclamation"></i> Verificación de Dirección:
+                    <div id="contenedorHistorial" class="bg-slate-950/90 border border-slate-800 rounded-xl p-3 max-h-52 overflow-y-auto space-y-2 text-xs">
+                        <p class="text-slate-500 text-center italic">Cargando transacciones...</p>
                     </div>
-                    <p class="text-[10px] text-slate-300 leading-snug">
-                        Si seleccionas <strong>Wallet USDT (Red Polygon)</strong> para retirar a MetaMask, Phantom o Trust Wallet, tu dirección <strong>DEBE empezar por 0x</strong>. Evita usar direcciones de Tron (T...) o Solana.
-                    </p>
-                </div>
 
-                <form id="formRetiro" onsubmit="procesarRetiro(event)" class="space-y-3">
-                    <div>
-                        <label class="block text-[11px] text-slate-400 mb-1">Seleccionar Destino / Plataforma</label>
-                        <select id="tipoExchange" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500">
-                            <option value="paypal">PayPal (Correo Electrónico)</option>
-                            <option value="binance">Binance Pay (Pay ID / Email / Teléfono)</option>
-                            <option value="zelle">Zelle (Correo / Teléfono)</option>
-                            <option value="airtm">AirTM (Correo electrónico)</option>
-                            <option value="trc20">Wallet USDT (Red TRC20 - Tron)</option>
-                            <option value="bep20">Wallet USDT (Red BEP20 - BSC)</option>
-                            <option value="polygon">Wallet USDT (Red Polygon)</option>
-                            <option value="payeer">Payeer (ID de Cuenta / Correo)</option>
-                            <option value="bybit">Bybit UID / Email</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-[11px] text-slate-400 mb-1">Dirección / UID / Correo de Destino</label>
-                        <input type="text" id="destinoRetiro" placeholder="Ej: correo@paypal.com o 0x..." required class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 font-mono">
-                    </div>
-                    <div>
-                        <label class="block text-[11px] text-slate-400 mb-1">Monto a Retirar (USDT)</label>
-                        <input type="number" step="0.01" id="montoRetiro" placeholder="Ej: 25.00" required class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 font-bold">
-                    </div>
-                    <div id="desgloseRetiro"></div>
-                    <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2.5 rounded-xl text-xs transition cursor-pointer">
-                        Confirmar y Procesar Retiro
-                    </button>
-                </form>
-            </div>
-
-            <!-- SECCIÓN PRINCIPAL COMERCIO: QR DE COBRO + BOTÓN DESCARGAR / COMPARTIR -->
-            <div id="seccionQrComercio" class="hidden bg-slate-900/80 border border-amber-500/30 rounded-xl p-4 text-center space-y-3">
-                <p class="text-xs font-bold text-amber-400 uppercase tracking-wide">Código QR de Cobro Protegido</p>
-                <div class="bg-white p-3 rounded-xl inline-block shadow-lg">
-                    <div id="qrComercioContainer" class="w-40 h-40 bg-slate-950 flex items-center justify-center text-xs text-amber-400 font-mono text-center p-2 rounded-lg">
-                        Cargando QR...
-                    </div>
-                </div>
-                <div>
-                    <div class="text-xs text-emerald-400 font-mono font-bold" id="txtIdComercio">PAGO MÓVIL USDT</div>
-                    <p class="text-[10px] text-slate-400 mt-1">Escanea para recibir pagos instantáneos en caja.</p>
-                </div>
-                <button onclick="descargarImagenQR()" class="w-full bg-amber-500 hover:bg-amber-600 text-slate-950 font-black py-2 rounded-xl text-xs transition flex items-center justify-center gap-2 cursor-pointer shadow-md shadow-amber-500/10">
-                    <i class="fa-solid fa-share-nodes"></i> Compartir / Descargar Código QR
-                </button>
-            </div>
-
-            <!-- SECCIÓN: VENTAS Y MOVIMIENTOS EN VIVO -->
-            <div id="seccionHistorial" class="hidden space-y-3 pt-2">
-                <div class="flex justify-between items-center gap-2">
-                    <div>
-                        <h2 class="text-xs font-bold text-slate-200 flex items-center gap-1.5">
-                            <i class="fa-solid fa-list-check text-amber-400"></i> Ventas e Ingresos en Vivo
-                        </h2>
-                        <p class="text-[10px] text-slate-400">Actualización en tiempo real</p>
-                    </div>
-                    
-                    <div class="flex items-center gap-2">
-                        <button onclick="descargarReporteComercial()" class="bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-[10px] px-2.5 py-1.5 rounded-lg transition flex items-center gap-1 cursor-pointer shadow-md shadow-amber-500/10">
-                            <i class="fa-solid fa-file-csv"></i> Descargar Cierre
-                        </button>
-                        <button onclick="cargarHistorial()" class="text-[10px] text-emerald-400 hover:underline flex items-center gap-1">
-                            <i class="fa-solid fa-rotate-right"></i>
-                        </button>
+                    <div class="bg-amber-950/20 border border-amber-500/20 p-2.5 rounded-xl space-y-1">
+                        <div class="flex items-center gap-1 text-amber-400 text-[10px] font-bold uppercase">
+                            <i class="fa-solid fa-circle-info"></i> Responsabilidad Contable:
+                        </div>
+                        <p class="text-[10px] text-slate-400 leading-tight">
+                            Este panel procesa cobros en vivo y autolimpia su vista periódicamente. Descarga tu archivo CSV para llevar el control diario de tu negocio.
+                        </p>
                     </div>
                 </div>
 
-                <div id="contenedorHistorial" class="bg-slate-950/90 border border-slate-800 rounded-xl p-3 max-h-52 overflow-y-auto space-y-2 text-xs">
-                    <p class="text-slate-500 text-center italic">Cargando transacciones...</p>
-                </div>
-
-                <div class="bg-amber-950/20 border border-amber-500/20 p-2.5 rounded-xl space-y-1">
-                    <div class="flex items-center gap-1 text-amber-400 text-[10px] font-bold uppercase">
-                        <i class="fa-solid fa-circle-info"></i> Responsabilidad Contable:
-                    </div>
-                    <p class="text-[10px] text-slate-400 leading-tight">
-                        Este panel procesa cobros en vivo y autolimpia su vista periódicamente. Descarga tu archivo CSV para llevar el control diario de tu negocio.
-                    </p>
-                </div>
             </div>
 
         </div>
@@ -342,6 +391,53 @@
             }
         }
 
+        // VINCULAR DATOS OBLIGATORIOS (CÉDULA Y CORREO)
+        async function vincularDatosObligatorios(e) {
+            e.preventDefault();
+            const telefono = obtenerTelefonoActivo();
+            if (!telefono) {
+                alert("⚠️ Sesión no identificada.");
+                return;
+            }
+
+            const cedulaTitular = document.getElementById('regCedula').value.trim();
+            const metodo = document.getElementById('regMetodo').value;
+            const cuentaDestino = document.getElementById('regCuentaDestino').value.trim();
+
+            const btn = document.getElementById('btnGuardarRegistro');
+            btn.disabled = true;
+            btn.innerText = "Verificando y enviando correo...";
+
+            try {
+                const res = await fetch('/api/registrar-metodos', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        telefono,
+                        cedulaTitular,
+                        metodo,
+                        cuentaDestino
+                    })
+                });
+
+                const data = await res.json();
+
+                if (data.success) {
+                    alert("✅ ¡Registro completado con éxito! Se ha enviado la guía y términos a tu correo electrónico.");
+                    cargarDatosPanel();
+                } else {
+                    alert(`❌ ${data.message || 'No se pudieron vincular los datos.'}`);
+                    btn.disabled = false;
+                    btn.innerText = "Vincular Datos y Activar Panel";
+                }
+            } catch (err) {
+                console.error("Error al registrar datos:", err);
+                alert("❌ Error de conexión al registrar los datos.");
+                btn.disabled = false;
+                btn.innerText = "Vincular Datos y Activar Panel";
+            }
+        }
+
         async function cargarDatosPanel() {
             const autorizado = await verificarAccesoPanel();
             if (!autorizado) return;
@@ -353,6 +449,25 @@
                 const data = await res.json();
                 
                 if (data.success) {
+                    // VERIFICACIÓN DEL MURO DE SEGURIDAD
+                    const seccionRegistro = document.getElementById('seccionRegistroObligatorio');
+                    const bloqueOperativo = document.getElementById('bloqueOperativoPanel');
+
+                    if (!data.metodoVinculado) {
+                        // SI NO HA VINCULADO SU CÉDULA/CORREO: FRENO TOTAL
+                        if (seccionRegistro) seccionRegistro.classList.remove('hidden');
+                        if (bloqueOperativo) bloqueOperativo.classList.add('hidden');
+                        
+                        const badge = document.getElementById('badgeAccountType');
+                        badge.className = "inline-block px-2.5 py-1 rounded-md text-[11px] font-bold tracking-wide uppercase bg-rose-500/20 text-rose-300 border border-rose-500/30";
+                        badge.innerText = "REGISTRO INCOMPLETO (PENDIENTE CÉDULA Y CORREO)";
+                        return; // Se detiene aquí y no muestra el panel
+                    } else {
+                        // SI YA VINCULÓ: ACCESO TOTAL AL PANEL
+                        if (seccionRegistro) seccionRegistro.classList.add('hidden');
+                        if (bloqueOperativo) bloqueOperativo.classList.remove('hidden');
+                    }
+
                     document.getElementById('balanceUSDT').innerText = parseFloat(data.saldoUSDT).toFixed(2);
                     
                     const badge = document.getElementById('badgeAccountType');
