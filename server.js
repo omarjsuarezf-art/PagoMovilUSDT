@@ -557,7 +557,7 @@ app.post('/api/registrar-metodos', limiterPagos, async (req, res) => {
                       </div>
 
                       <div style="text-align: center; margin-top: 25px;">
-                        <p style="font-size: 12px; color: #a0aec0;">Este es un mensaje automático de confirmation de registro y políticas del sistema.</p>
+                        <p style="font-size: 12px; color: #a0aec0;">Este es un mensaje automático de confirmación de registro y políticas del sistema.</p>
                       </div>
                     </div>
                 `;
@@ -931,7 +931,7 @@ const logicaRecargaHandler = async (req, res) => {
 
     if (!phoneNumber) {
         const rowUser = await db.get('SELECT telefono FROM usuarios ORDER BY id DESC LIMIT 1');
-        if (rowUser && rowUser.telefono) await ejecutarEnvioConEmisor(rowUser.telefono);
+        if (rowUser && rowUser.telefono) await procesarConTelefono(rowUser.telefono);
         else return res.status(400).json({ success: false, message: 'No hay usuarios registrados.' });
     } else {
         await procesarConTelefono(phoneNumber);
@@ -944,7 +944,7 @@ app.post('/api/recargar-hash', limiterPagos, logicaRecargaHandler);
 app.post('/api/verificar-recarga-hash', limiterPagos, logicaRecargaHandler);
 
 // ==========================================
-// ENVÍO DE PAGO
+// ENVÍO DE PAGO (BLINDADO - CERO TERCEROS / AMBOS REGISTRADOS Y VINCULADOS)
 // ==========================================
 const enviarPagoHandler = async (req, res) => {
     const monto = parseFloat(req.body.montoUSDT || req.body.monto || req.body.amount || req.body.cantidad || req.body.valor);
@@ -975,8 +975,20 @@ const enviarPagoHandler = async (req, res) => {
                 return res.status(400).json({ success: false, message: 'Saldo insuficiente en USDT.' });
             }
 
+            // BUSCAR RECEPTOR Y VALIDAR QUE EXISTA Y ESTÉ VINCULADO (CERO TERCEROS)
             const usuarioReceptor = await db.get('SELECT * FROM usuarios WHERE telefono = ? OR merchant_id = ?', [telefonoDestino, telefonoDestino]);
-            if (!usuarioReceptor) return res.status(400).json({ success: false, message: 'Destinatario no registrado.' });
+            if (!usuarioReceptor) {
+                return res.status(400).json({ success: false, message: '❌ El número o comercio destino no está registrado en la plataforma.' });
+            }
+
+            // VALIDACIÓN ESTRICTA: El receptor debe estar vinculado (metodoVinculado === 1) o ser cuenta comercial
+            const esComercioReceptor = usuarioReceptor.accountType === 'comercial' || usuarioReceptor.accountType === 'emprendedor';
+            if (usuarioReceptor.metodoVinculado !== 1 && !esComercioReceptor) {
+                return res.status(400).json({ 
+                    success: false, 
+                    message: '❌ El destinatario no ha completado su registro obligatorio de Cédula y Correo. No puede recibir transferencias.' 
+                });
+            }
 
             if (usuarioEmisor.id === usuarioReceptor.id) {
                 return res.status(400).json({ success: false, message: '❌ No puedes transferirte a ti mismo.' });
@@ -996,7 +1008,6 @@ const enviarPagoHandler = async (req, res) => {
                 [numeroReferencia, monto, usuarioEmisor.telefono, usuarioReceptor.telefono, ahora]
             );
 
-            const esComercioReceptor = usuarioReceptor.accountType === 'comercial' || usuarioReceptor.accountType === 'emprendedor';
             let comisionAplicada = esComercioReceptor ? calcularComisionComercio(monto) : COMISION_FIJA_USUARIO;
             
             await db.run(
