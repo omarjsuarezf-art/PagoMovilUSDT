@@ -751,23 +751,19 @@ app.post('/api/upgrade-account', limiterPagos, async (req, res) => {
 });
 
 // ==========================================
-// RUTA DE RESET RÁPIDO PARA PRUEBAS (DEV - ACTUALIZADA)
+// RUTA DE RESET RÁPIDO PARA PRUEBAS (DEV - BORRADO COMPLETO)
 // ==========================================
 app.get('/api/dev/reset-all', async (req, res) => {
     const numerosPrueba = ['04126039718', '04123400436'];
     try {
         for (const telefono of numerosPrueba) {
-            // Se resetea el usuario y se pone metodoVinculado = 0 para obligar a probar el formulario
-            await db.run(
-                `UPDATE usuarios SET accountType = 'natural', dailyLimit = 1000.00, merchant_id = NULL, metodoVinculado = 0 WHERE telefono = ?`, 
-                [telefono]
-            );
-            await db.run(
-                `UPDATE wallets SET usdt_balance = 500.00 WHERE user_id = (SELECT id FROM usuarios WHERE telefono = ?)`, 
-                [telefono]
-            );
+            const user = await db.get('SELECT id FROM usuarios WHERE telefono = ?', [telefono]);
+            if (user) {
+                await db.run('DELETE FROM wallets WHERE user_id = ?', [user.id]);
+                await db.run('DELETE FROM usuarios WHERE id = ?', [user.id]);
+            }
         }
-        res.json({ success: true, message: '¡Listo! Números de prueba restablecidos con $500.00 USDT y estado de registro en cero (0).' });
+        res.json({ success: true, message: '¡Listo! Números de prueba ELIMINADOS por completo. Ya puedes registrar cualquier PIN desde cero.' });
     } catch (err) {
         res.status(500).json({ success: false, error: err.message });
     }
