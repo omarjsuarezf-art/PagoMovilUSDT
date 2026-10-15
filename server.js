@@ -430,7 +430,7 @@ app.post('/api/cambiar-pin', limiterPagos, async (req, res) => {
     }
 
     if (pinNuevo.length !== 4) {
-        return res.status(400).json({ success: false, message: '⚠️ El nuevo PIN debe ser strictly de 4 dígitos.' });
+        return res.status(400).json({ success: false, message: '⚠️ El nuevo PIN debe ser estrictamente de 4 dígitos.' });
     }
 
     try {
@@ -627,7 +627,7 @@ app.get('/api/historial/:telefono', limiterConsultasComercio, async (req, res) =
 });
 
 // ==========================================
-// RUTA DE ENVÍO DE CÓDIGO POR WHATSAPP (CON VALIDACIÓN DE PIN Y BLOQUEO RESTRICTIVO)
+// RUTA DE ENVÍO DE CÓDIGO POR WHATSAPP (CON MENSAJE DETALLADO Y BLOQUEO CERO TERCEROS)
 // ==========================================
 app.post('/api/enviar-codigo', limiterPagos, async (req, res) => {
     const telefono = (req.body.telefono || '').trim();
@@ -684,7 +684,9 @@ app.post('/api/enviar-codigo', limiterPagos, async (req, res) => {
         }
 
         const codigoVerificacion = Math.floor(100000 + Math.random() * 900000);
-        const mensaje = `¡Acceso Verificado en Monedero USDT! 🟢\n\nTu línea ha sido autenticada correctamente.\n\n🔢 *Código de verificación:* *${codigoVerificacion}*`;
+        
+        // Mensaje original detallado restaurado tal como lo tenías antes
+        const mensaje = `¡Registro Exitoso en Monedero USDT! 🟢\n\nTu línea ha sido validada correctamente y tu PIN de seguridad de 4 dígitos ha quedado configurado.\n\n🔑 *Tu PIN configurado:* ${pinSeguridad}\n🔢 *Código de verificación:* *${codigoVerificacion}*`;
 
         await enviarMensajeWhatsappSeguro(telefono, mensaje);
         res.json({ success: true, message: '¡Acceso autorizado y código enviado por WhatsApp con éxito!', codigoMock: codigoVerificacion });

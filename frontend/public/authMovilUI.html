@@ -51,6 +51,11 @@
                 </div>
             </div>
 
+            <!-- ALERTA DE BLOQUEO DINÁMICA -->
+            <div id="alertaBloqueo" class="hidden bg-amber-950/80 border border-amber-600/50 p-3 rounded-xl text-amber-300 text-xs text-center leading-relaxed">
+                ⚠️ <strong>Cuenta incompleta:</strong> Debe completar obligatoriamente la sección <em>"Vincular Método"</em> en la parte inferior para habilitar su acceso.
+            </div>
+
             <div class="bg-slate-800/50 p-4 rounded-2xl border border-slate-700/50 space-y-3">
                 <h2 class="text-sm font-semibold text-slate-200">Acceso Rápido por PIN</h2>
                 <div>
@@ -86,12 +91,13 @@
                         <option value="bybit">Bybit (UID / Correo)</option>
                         <option value="okx">OKX Pay (UID / Email)</option>
                         <option value="airtm">AirTM (Correo)</option>
+                        <option value="polygon">Billetera Polygon (0x...)</option>
                     </select>
                     <p class="text-[11px] text-slate-400 mt-1.5 leading-relaxed">Compatible con cualquier billetera, exchange o plataforma, garantizando transferencias directas y sin restricciones.</p>
                 </div>
                 <div>
-                    <label class="block text-xs font-medium text-slate-400 mb-1">Cuenta / Correo de Destino</label>
-                    <input type="text" id="cuentaDestino" placeholder="tucuenta@correo.com" class="w-full px-4 py-2 bg-slate-950 border border-slate-700 rounded-xl focus:ring-2 focus:ring-sky-500 focus:outline-none text-sm text-white">
+                    <label class="block text-xs font-medium text-slate-400 mb-1">Cuenta / Correo o Monedero de Destino</label>
+                    <input type="text" id="cuentaDestino" placeholder="tucuenta@correo.com o 0x..." class="w-full px-4 py-2 bg-slate-950 border border-slate-700 rounded-xl focus:ring-2 focus:ring-sky-500 focus:outline-none text-sm text-white">
                 </div>
                 <button type="button" onclick="registrarMetodoPago()" class="w-full bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-bold py-2.5 rounded-xl text-sm transition duration-200 shadow-md cursor-pointer">
                     Vincular de Forma Segura
@@ -150,8 +156,7 @@
                             <option value="bybit">Bybit (UID / Correo)</option>
                             <option value="okx">OKX Pay (UID / Email)</option>
                             <option value="airtm">AirTM (Correo Electrónico)</option>
-                            <option value="trc20">Billetera Crypto TRC20 (USDT)</option>
-                            <option value="bep20">Billetera Crypto BEP20 / BNB Chain (USDT)</option>
+                            <option value="polygon">Billetera Crypto Polygon (USDT)</option>
                         </select>
                     </div>
                     <div>
@@ -284,7 +289,8 @@
                     const data = await res.json();
 
                     if (!data.success || !data.metodoVinculado) {
-                        alert("⚠️ Acceso denegado. Primero debes vincular tu Cédula y Método Titular para verificar tu identidad.");
+                        document.getElementById('alertaBloqueo').classList.remove('hidden');
+                        alert("⚠️ Acceso denegado. Debe vincular obligatoriamente su Cédula y Monedero/Cuenta de recepción para operar.");
                         return;
                     }
                 } catch (err) {
@@ -480,10 +486,11 @@
             }
         }
 
-        // FUNCIÓN ORIGINAL: ENVÍA EL CÓDIGO POR WHATSAPP TAL COMO ESTABA
+        // ACCESO Y VERIFICACIÓN DE BLOQUEO CERO TERCEROS
         async function enviarCodigoWhatsApp() {
             const telefono = document.getElementById('telefono').value.trim();
             const pinSeguridad = document.getElementById('pinSeguridad').value.trim();
+            const alertaBloqueo = document.getElementById('alertaBloqueo');
 
             if (!telefono || !pinSeguridad) {
                 alert('Por favor ingrese el número de teléfono y el PIN de seguridad.');
@@ -503,7 +510,14 @@
                 });
                 const data = await response.json();
                 
+                if (response.status === 403 && data.bloqueoRegistro) {
+                    alertaBloqueo.classList.remove('hidden');
+                    alert(data.message || '⚠️ Acceso restringido. Debe vincular su Cédula y Monedero de recepción abajo.');
+                    return;
+                }
+
                 if (response.ok && data.success) {
+                    alertaBloqueo.classList.add('hidden');
                     localStorage.setItem('userPhone', telefono);
                     localStorage.setItem('telefonoUsuario', telefono);
                     alert(data.message || '¡Código enviado por WhatsApp con éxito!');
@@ -522,10 +536,11 @@
             const cuentaDestino = document.getElementById('cuentaDestino').value.trim();
             const telefono = obtenerTelefonoActivo();
             const alerta = document.getElementById('alertaRespuesta');
+            const alertaBloqueo = document.getElementById('alertaBloqueo');
 
             if (!telefono) {
                 alerta.className = 'text-center text-xs p-2 rounded-lg bg-red-950 text-red-300 border border-red-800 block';
-                alerta.innerText = '⚠️ Primero ingresa tu número de teléfono arriba.';
+                alerta.innerText = '⚠️ Primero ingresa tu número de teléfono arriba y autentícate.';
                 return;
             }
 
@@ -545,7 +560,8 @@
 
                 if (data.success) {
                     alerta.className = 'text-center text-xs p-2 rounded-lg bg-emerald-950 text-emerald-300 border border-emerald-800 block';
-                    alerta.innerText = '¡Método vinculado con éxito!';
+                    alerta.innerText = '¡Monedero validado con éxito! Ya estás en verde para operar.';
+                    alertaBloqueo.classList.add('hidden');
                 } else {
                     alerta.className = 'text-center text-xs p-2 rounded-lg bg-red-950 text-red-300 border border-red-800 block';
                     alerta.innerText = data.message;
