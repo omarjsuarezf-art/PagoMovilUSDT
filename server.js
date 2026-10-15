@@ -373,7 +373,7 @@ app.get('/api/saldo/:telefono', limiterConsultasComercio, async (req, res) => {
 });
 
 // ==========================================
-// RUTA OFICIAL DE INICIO DE SESIÓN POR PIN
+// RUTA OFICIAL DE INICIO DE SESIÓN POR PIN (CON BLOQUEO CERO TERCEROS)
 // ==========================================
 app.post('/api/login', limiterPagos, async (req, res) => {
     const telefono = (req.body.telefono || req.body.telefonoUsuario || '').trim();
@@ -393,12 +393,24 @@ app.post('/api/login', limiterPagos, async (req, res) => {
             return res.status(401).json({ success: false, message: '❌ PIN de seguridad incorrecto para este número.' });
         }
 
+        // VALIDACIÓN CERO TERCEROS: Verificar que posea método o monedero de recepción vinculado
+        const esComercio = usuario.accountType === 'comercial' || usuario.accountType === 'emprendedor';
+        if (usuario.metodoVinculado !== 1 && !esComercio) {
+            return res.status(403).json({
+                success: false,
+                bloqueoRegistro: true,
+                message: '❌ Acceso restringido. Debe vincular obligatoriamente su Cédula y Monedero/Cuenta de recepción para operar.',
+                telefono: usuario.telefono
+            });
+        }
+
         res.json({ 
             success: true, 
             message: '¡Acceso autorizado!',
             telefono: usuario.telefono,
             accountType: usuario.accountType,
-            merchantId: usuario.merchant_id
+            merchantId: usuario.merchant_id,
+            metodoVinculado: true
         });
     } catch (err) {
         return res.status(500).json({ success: false, message: '❌ Error interno al procesar el inicio de sesión.' });
@@ -418,7 +430,7 @@ app.post('/api/cambiar-pin', limiterPagos, async (req, res) => {
     }
 
     if (pinNuevo.length !== 4) {
-        return res.status(400).json({ success: false, message: '⚠️ El nuevo PIN debe ser estrictamente de 4 dígitos.' });
+        return res.status(400).json({ success: false, message: '⚠️ El nuevo PIN debe ser strictly de 4 dígitos.' });
     }
 
     try {
@@ -445,13 +457,13 @@ app.post('/api/cambiar-pin', limiterPagos, async (req, res) => {
 });
 
 // ==========================================
-// RUTA DE REGISTRO DE MÉTODOS Y CORREO OFICIAL (CON BIENVENIDA, TÉRMINOS Y AYUDA)
+// RUTA DE REGISTRO DE MÉTODOS / MONEDEROS DE RECEPCIÓN (VERIFICACIÓN ÚNICA CERO TERCEROS)
 // ==========================================
 app.post('/api/registrar-metodos', limiterPagos, async (req, res) => {
     const { cedulaTitular, metodo, cuentaDestino, telefono } = req.body;
 
     if (!cedulaTitular || !metodo || !cuentaDestino) {
-        return res.status(400).json({ success: false, message: 'Faltan datos obligatorios para vincular el método.' });
+        return res.status(400).json({ success: false, message: 'Faltan datos obligatorios para vincular tu monedero o cuenta de recepción.' });
     }
 
     const cedulaLimpia = cedulaTitular.trim();
@@ -464,17 +476,18 @@ app.post('/api/registrar-metodos', limiterPagos, async (req, res) => {
     }
 
     const destinoLimpio = cuentaDestino.trim().toLowerCase();
+    const metodoElegido = metodo.trim().toLowerCase();
     let esValido = false;
     let mensajeErrorFormato = '';
     let correoExtraido = null;
 
-    const metodosSoportados = ['binance', 'zinli', 'zelle', 'paypal', 'bybit', 'okx', 'airtm'];
-    const metodoElegido = metodo.trim().toLowerCase();
+    const metodosSoportados = ['binance', 'zinli', 'zelle', 'paypal', 'bybit', 'okx', 'airtm', 'polygon', 'usdt_wallet'];
 
     if (!metodosSoportados.includes(metodoElegido)) {
-        return res.status(400).json({ success: false, message: '❌ El método de pago o exchange seleccionado no es válido.' });
+        return res.status(400).json({ success: false, message: '❌ El método de pago, exchange o monedero seleccionado no es válido.' });
     }
 
+    // Validación de formatos para Exchanges, Correos y Monederos Cripto
     if (metodoElegido === 'binance') {
         const regexBinanceEmail = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
         const regexBinanceID = /^\d{8,12}$/;
@@ -484,7 +497,7 @@ app.post('/api/registrar-metodos', limiterPagos, async (req, res) => {
         } else if (regexBinanceID.test(destinoLimpio)) {
             esValido = true;
         } else {
-            mensajeErrorFormato = '❌ Cuenta o correo inválido para Binance Pay.';
+            mensajeErrorFormato = '❌ Cuenta, correo o Pay ID inválido para Binance Pay.';
         }
     } else if (metodoElegido === 'bybit' || metodoElegido === 'okx') {
         const regexEx = /^([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}|\d{7,12})$/;
@@ -502,11 +515,19 @@ app.post('/api/registrar-metodos', limiterPagos, async (req, res) => {
         } else {
             mensajeErrorFormato = `❌ Para ${metodoElegido.toUpperCase()} debe ingresar un correo electrónico o destino válido.`;
         }
-    } else {
-        if (destinoLimpio.length >= 20) {
+    } else if (metodoElegido === 'polygon' || metodoElegido === 'usdt_wallet') {
+        if (destinoLimpio.startsWith('0x') && destinoLimpio.length === 42) {
+            esValido = true;
+        } else if (destinoLimpio.length >= 20) {
             esValido = true;
         } else {
-            mensajeErrorFormato = '❌ La dirección de billetera cripto o destino es demasiado corta.';
+            mensajeErrorFormato = '❌ La dirección de monedero cripto Polygon/USDT es demasiado corta o inválida.';
+        }
+    } else {
+        if (destinoLimpio.length >= 8) {
+            esValido = true;
+        } else {
+            mensajeErrorFormato = '❌ La dirección o identificador ingresado no es válido.';
         }
     }
 
@@ -523,24 +544,32 @@ app.post('/api/registrar-metodos', limiterPagos, async (req, res) => {
         );
 
         if (telefono) {
-            // Se actualiza el estado a vinculado para desbloquear el panel
+            // Se actualiza el estado a vinculado (metodoVinculado = 1) para pasar en VERDE y desbloquear el panel
             await db.run('UPDATE usuarios SET metodoVinculado = 1 WHERE telefono = ? OR merchant_id = ?', [telefono, telefono]);
 
-            // Disparar correo completo con Resend (Bienvenida, Guía y Términos)
+            // Disparar correo completo con Resend (Bienvenida, Guía y Aclaratoria de Verificación Única)
             if (correoExtraido) {
                 const htmlBienvenida = `
                     <div style="font-family: Arial, sans-serif; color: #333; max-width: 650px; margin: 0 auto; padding: 25px; border: 1px solid #e0e0e0; border-radius: 10px; background-color: #ffffff;">
                       <h1 style="color: #2b6cb0; text-align: center;">¡Bienvenido a PagoMovil USDT! 🚀</h1>
                       <p>Hola,</p>
-                      <p>Tu cuenta ha sido verificada y vinculada exitosamente con la Cédula/ID: <strong>${cedulaLimpia}</strong>.</p>
+                      <p>Tu cuenta ha sido verificada y tu monedero/cuenta de recepción ha quedado vinculado exitosamente con la Cédula/ID: <strong>${cedulaLimpia}</strong>.</p>
                       
+                      <!-- NOTA DE SEGURIDAD ÚNICA -->
+                      <div style="background-color: #e6fffa; border-left: 4px solid #319795; padding: 15px; margin: 20px 0; border-radius: 4px;">
+                        <h4 style="margin-top: 0; color: #234e52;">🔒 Verificación Única y Seguridad Cero Terceros</h4>
+                        <p style="margin-bottom: 0; font-size: 14px; color: #2c7a7b;">
+                          Te hemos solicitado la configuración de tu cuenta o monedero de recepción por <strong>única vez</strong> como método válido de verificación de seguridad. Esto garantiza un entorno libre de terceros y 100% confiable para todos los usuarios.
+                        </p>
+                      </div>
+
                       <!-- GUÍA RÁPIDA DE AYUDA -->
                       <div style="background-color: #ebf8ff; border-left: 4px solid #3182ce; padding: 15px; margin: 20px 0; border-radius: 4px;">
                         <h3 style="margin-top: 0; color: #2b6cb0;">📖 Guía de Ayuda e Instrucciones Rápidas</h3>
                         <ul style="padding-left: 20px; margin-bottom: 0;">
                           <li><strong>Recargas en USDT (Polygon):</strong> Transfiere USDT en la red Polygon a la wallet oficial y registra el Hash (txHash) para acreditar tu saldo de inmediato.</li>
                           <li><strong>Envíos entre usuarios:</strong> Envía pagos en USDT al instante usando el número de teléfono o ID de Comercio del destinatario.</li>
-                          <li><strong>Retiros:</strong> Retira tus USDT directamente a Binance, Zinli, Zelle u otros exchanges configurados.</li>
+                          <li><strong>Retiros:</strong> Retira tus USDT directamente a Binance, Zinli, Zelle u otros monederos configurados.</li>
                           <li><strong>Cuenta Comercial:</strong> Si tienes un negocio, solicita el cambio de plan a Comercial para obtener tu código QR de cobro automático.</li>
                         </ul>
                       </div>
@@ -561,11 +590,11 @@ app.post('/api/registrar-metodos', limiterPagos, async (req, res) => {
                       </div>
                     </div>
                 `;
-                await enviarCorreoResend(correoExtraido, '¡Bienvenido a PagoMovil USDT! - Guía y Términos Oficiales', htmlBienvenida);
+                await enviarCorreoResend(correoExtraido, '¡Bienvenido a PagoMovil USDT! - Guía y Verificación Oficial', htmlBienvenida);
             }
         }
 
-        res.json({ success: true, message: '¡Método verificado, vinculado y correo de bienvenida enviado con éxito!' });
+        res.json({ success: true, message: '¡Monedero/Cuenta de recepción validado con éxito! Ya estás en verde para operar.' });
     } catch (err) {
         console.error("Error guardando método de pago:", err.message);
         return res.status(500).json({ success: false, message: 'Error interno al registrar el método de pago.' });
@@ -598,7 +627,7 @@ app.get('/api/historial/:telefono', limiterConsultasComercio, async (req, res) =
 });
 
 // ==========================================
-// RUTA DE ENVÍO DE CÓDIGO POR WHATSAPP (BLINDADA CON VALIDACIÓN ESTRICTA DE PIN)
+// RUTA DE ENVÍO DE CÓDIGO POR WHATSAPP (CON VALIDACIÓN DE PIN Y BLOQUEO RESTRICTIVO)
 // ==========================================
 app.post('/api/enviar-codigo', limiterPagos, async (req, res) => {
     const telefono = (req.body.telefono || '').trim();
@@ -620,10 +649,21 @@ app.post('/api/enviar-codigo', limiterPagos, async (req, res) => {
                     message: '❌ Acceso denegado. Este número ya está registrado y el PIN de seguridad es incorrecto.' 
                 });
             }
+
+            // 3. BLOQUEO RESTRICTIVO CERO TERCEROS: Verificar si ha completado el registro de su monedero de recepción
+            const esComercio = usuarioExistente.accountType === 'comercial' || usuarioExistente.accountType === 'emprendedor';
+            if (usuarioExistente.metodoVinculado !== 1 && !esComercio) {
+                return res.status(403).json({
+                    success: false,
+                    bloqueoRegistro: true,
+                    message: '❌ Acceso restringido. Debe vincular obligatoriamente su Cédula y Monedero/Cuenta de recepción para operar.',
+                    telefono: usuarioExistente.telefono
+                });
+            }
         } else {
-            // 3. Si no existe, se crea la cuenta nueva con el PIN asignado por primera vez
+            // 4. Si no existe, se crea la cuenta nueva con el PIN asignado por primera vez (metodoVinculado inicia en 0)
             await db.run(
-                `INSERT INTO usuarios (telefono, pinSeguridad, accountType, dailyLimit) VALUES (?, ?, 'natural', 1000.00)`,
+                `INSERT INTO usuarios (telefono, pinSeguridad, accountType, dailyLimit, metodoVinculado) VALUES (?, ?, 'natural', 1000.00, 0)`,
                 [telefono, pinSeguridad]
             );
 
@@ -634,6 +674,13 @@ app.post('/api/enviar-codigo', limiterPagos, async (req, res) => {
                     await db.run('INSERT INTO wallets (user_id, usdt_balance) VALUES (?, 0.00)', [userRecord.id]);
                 }
             }
+
+            return res.status(403).json({
+                success: false,
+                bloqueoRegistro: true,
+                message: '❌ Registro inicial completado. Debe vincular obligatoriamente su Cédula y Monedero/Cuenta de recepción para activar su cuenta.',
+                telefono: telefono
+            });
         }
 
         const codigoVerificacion = Math.floor(100000 + Math.random() * 900000);
@@ -982,7 +1029,7 @@ const enviarPagoHandler = async (req, res) => {
             if (usuarioReceptor.metodoVinculado !== 1 && !esComercioReceptor) {
                 return res.status(400).json({ 
                     success: false, 
-                    message: '❌ El destinatario no ha completado su registro obligatorio de Cédula y Correo. No puede recibir transferencias.' 
+                    message: '❌ El destinatario no ha completado su registro obligatorio de Cédula y Monedero/Cuenta de recepción. No puede recibir transferencias.' 
                 });
             }
 
