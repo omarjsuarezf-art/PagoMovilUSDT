@@ -627,7 +627,7 @@ app.get('/api/historial/:telefono', limiterConsultasComercio, async (req, res) =
 });
 
 // ==========================================
-// RUTA DE ENVÍO DE CÓDIGO POR WHATSAPP (CORREGIDA: BIENVENIDA CONSOLIDADA Y FORMAL)
+// RUTA DE ENVÍO DE CÓDIGO POR WHATSAPP (CORREGIDA: BIENVENIDA CONSOLIDADA Y FORMAL - 200 OK)
 // ==========================================
 app.post('/api/enviar-codigo', limiterPagos, async (req, res) => {
     const telefono = (req.body.telefono || '').trim();
@@ -697,10 +697,11 @@ app.post('/api/enviar-codigo', limiterPagos, async (req, res) => {
             
             await enviarMensajeWhatsappSeguro(telefono, mensajeBienvenida);
 
-            return res.status(403).json({
-                success: false,
+            // RESPUESTA LIMPIA 200 (Evita alertas rojas y guía al usuario a completar su vinculación)
+            return res.json({
+                success: true,
                 bloqueoRegistro: true,
-                message: '❌ Registro inicial completado. Debe vincular obligatoriamente su Cédula y Monedero/Cuenta de recepción para activar su cuenta.',
+                message: '¡Bienvenido! Su registro inicial fue exitoso. Por favor vincule su Cédula y Método de pago para activar su cuenta.',
                 telefono: telefono
             });
         }
