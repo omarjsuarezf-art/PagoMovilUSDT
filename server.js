@@ -627,7 +627,7 @@ app.get('/api/historial/:telefono', limiterConsultasComercio, async (req, res) =
 });
 
 // ==========================================
-// RUTA DE ENVÍO DE CÓDIGO POR WHATSAPP (CORREGIDA: DIFERENCIA REGISTRO VS LOGIN)
+// RUTA DE ENVÍO DE CÓDIGO POR WHATSAPP (CORREGIDA: BIENVENIDA CONSOLIDADA Y FORMAL)
 // ==========================================
 app.post('/api/enviar-codigo', limiterPagos, async (req, res) => {
     const telefono = (req.body.telefono || '').trim();
@@ -666,7 +666,7 @@ app.post('/api/enviar-codigo', limiterPagos, async (req, res) => {
             }
 
             // Mensaje exclusivo para acceso/login posterior (limpio y corto)
-            const mensajeLogin = `¡Acceso Verificado en Monedero USDT! 🟢\n\nTu línea ha sido autenticada correctamente.\n\n🔢 *Código de verificación:* *${codigoVerificacion}*`;
+            const mensajeLogin = `¡Acceso Verificado en PagoMóvilUSDT! 🟢\n\nTu línea ha sido autenticada correctamente.\n\n🔢 *Código de verificación:* *${codigoVerificacion}*`;
             await enviarMensajeWhatsappSeguro(telefono, mensajeLogin);
 
             return res.json({ 
@@ -692,9 +692,10 @@ app.post('/api/enviar-codigo', limiterPagos, async (req, res) => {
                 }
             }
 
-            // Mensaje exclusivo de registro inicial con PIN y código de bienvenida
-            const mensajeRegistro = `¡Registro Exitoso en Monedero USDT! 🟢\n\nTu línea ha sido validada correctamente y tu PIN de seguridad de 4 dígitos ha quedado configurado.\n\n🔑 *Tu PIN configurado:* ${pinSeguridad}\n🔢 *Código de verificación:* *${codigoVerificacion}*`;
-            await enviarMensajeWhatsappSeguro(telefono, mensajeRegistro);
+            // Mensaje oficial consolidado y elegante de bienvenida inicial con PIN y código de verificación integrados
+            const mensajeBienvenida = `¡Bienvenido a PagoMóvilUSDT! 🟢\n\nEstimado usuario, su registro ha sido procesado exitosamente en nuestra plataforma PagoMóvilUSDT.\n\n🔑 PIN de Seguridad Configurado: ${pinSeguridad}\n🔢 Código de Verificación: ${codigoVerificacion}\n\n🛡️ Por su seguridad, no comparta este código con nadie. Complete su vinculación de identidad en la plataforma para habilitar sus transacciones.`;
+            
+            await enviarMensajeWhatsappSeguro(telefono, mensajeBienvenida);
 
             return res.status(403).json({
                 success: false,
