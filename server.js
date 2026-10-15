@@ -627,7 +627,7 @@ app.get('/api/historial/:telefono', limiterConsultasComercio, async (req, res) =
 });
 
 // ==========================================
-// RUTA DE ENVÍO DE CÓDIGO POR WHATSAPP (CON MENSAJE DETALLADO Y BLOQUEO CERO TERCEROS)
+// RUTA DE ENVÍO DE CÓDIGO POR WHATSAPP (CORREGIDA: DIFERENCIA REGISTRO VS LOGIN)
 // ==========================================
 app.post('/api/enviar-codigo', limiterPagos, async (req, res) => {
     const telefono = (req.body.telefono || '').trim();
@@ -641,8 +641,12 @@ app.post('/api/enviar-codigo', limiterPagos, async (req, res) => {
         // 1. Verificar si el usuario ya existe en la base de datos
         const usuarioExistente = await db.get('SELECT * FROM usuarios WHERE telefono = ? OR merchant_id = ?', [telefono, telefono]);
 
+        const codigoVerificacion = Math.floor(100000 + Math.random() * 900000);
+
         if (usuarioExistente) {
-            // 2. Si el usuario ya existe, el PIN DEBE COINCIDIR EXACTAMENTE
+            // ==========================================
+            // CASO A: EL USUARIO YA EXISTE (INICIO DE SESIÓN / LOGIN)
+            // ==========================================
             if (usuarioExistente.pinSeguridad && usuarioExistente.pinSeguridad !== pinSeguridad) {
                 return res.status(401).json({ 
                     success: false, 
@@ -650,7 +654,7 @@ app.post('/api/enviar-codigo', limiterPagos, async (req, res) => {
                 });
             }
 
-            // 3. BLOQUEO RESTRICTIVO CERO TERCEROS: Verificar si ha completado el registro de su monedero de recepción
+            // Validar bloqueo Cero Terceros (si no ha vinculado monedero)
             const esComercio = usuarioExistente.accountType === 'comercial' || usuarioExistente.accountType === 'emprendedor';
             if (usuarioExistente.metodoVinculado !== 1 && !esComercio) {
                 return res.status(403).json({
@@ -660,8 +664,21 @@ app.post('/api/enviar-codigo', limiterPagos, async (req, res) => {
                     telefono: usuarioExistente.telefono
                 });
             }
+
+            // Mensaje exclusivo para acceso/login posterior (limpio y corto)
+            const mensajeLogin = `¡Acceso Verificado en Monedero USDT! 🟢\n\nTu línea ha sido autenticada correctamente.\n\n🔢 *Código de verificación:* *${codigoVerificacion}*`;
+            await enviarMensajeWhatsappSeguro(telefono, mensajeLogin);
+
+            return res.json({ 
+                success: true, 
+                message: '¡Acceso autorizado y código enviado por WhatsApp con éxito!', 
+                codigoMock: codigoVerificacion 
+            });
+
         } else {
-            // 4. Si no existe, se crea la cuenta nueva con el PIN asignado por primera vez (metodoVinculado inicia en 0)
+            // ==========================================
+            // CASO B: EL USUARIO ES NUEVO (REGISTRO INICIAL)
+            // ==========================================
             await db.run(
                 `INSERT INTO usuarios (telefono, pinSeguridad, accountType, dailyLimit, metodoVinculado) VALUES (?, ?, 'natural', 1000.00, 0)`,
                 [telefono, pinSeguridad]
@@ -675,6 +692,10 @@ app.post('/api/enviar-codigo', limiterPagos, async (req, res) => {
                 }
             }
 
+            // Mensaje exclusivo de registro inicial con PIN y código de bienvenida
+            const mensajeRegistro = `¡Registro Exitoso en Monedero USDT! 🟢\n\nTu línea ha sido validada correctamente y tu PIN de seguridad de 4 dígitos ha quedado configurado.\n\n🔑 *Tu PIN configurado:* ${pinSeguridad}\n🔢 *Código de verificación:* *${codigoVerificacion}*`;
+            await enviarMensajeWhatsappSeguro(telefono, mensajeRegistro);
+
             return res.status(403).json({
                 success: false,
                 bloqueoRegistro: true,
@@ -683,13 +704,6 @@ app.post('/api/enviar-codigo', limiterPagos, async (req, res) => {
             });
         }
 
-        const codigoVerificacion = Math.floor(100000 + Math.random() * 900000);
-        
-        // Mensaje original detallado restaurado tal como lo tenías antes
-        const mensaje = `¡Registro Exitoso en Monedero USDT! 🟢\n\nTu línea ha sido validada correctamente y tu PIN de seguridad de 4 dígitos ha quedado configurado.\n\n🔑 *Tu PIN configurado:* ${pinSeguridad}\n🔢 *Código de verificación:* *${codigoVerificacion}*`;
-
-        await enviarMensajeWhatsappSeguro(telefono, mensaje);
-        res.json({ success: true, message: '¡Acceso autorizado y código enviado por WhatsApp con éxito!', codigoMock: codigoVerificacion });
     } catch (err) {
         console.error("Error en autenticación de usuario:", err);
         return res.status(500).json({ success: false, message: 'Error interno al procesar la autenticación.' });
