@@ -16,8 +16,8 @@
 
     <div class="w-full max-w-md space-y-4">
         
-        <!-- CONTENEDOR PRINCIPAL -->
-        <div class="glass-card rounded-2xl p-6 shadow-2xl relative space-y-4">
+        <!-- CONTENEDOR PRINCIPAL (NACE OCULTO CON 'hidden' PARA EVITAR EL PARPADEO AL CARGAR) -->
+        <div id="contenedorPrincipalPanel" class="hidden glass-card rounded-2xl p-6 shadow-2xl relative space-y-4">
             
             <!-- HEADER -->
             <div class="flex justify-between items-start">
@@ -81,7 +81,7 @@
                 </form>
             </div>
 
-            <!-- CONTENEDOR OPERATIVO (NACE OCULTO POR DEFECTO PARA EVITAR PARPADEOS) -->
+            <!-- CONTENEDOR OPERATIVO -->
             <div id="bloqueOperativoPanel" class="hidden space-y-4">
                 
                 <!-- TARJETA DE SALDO DISPONIBLE Y ACCIONES -->
@@ -447,6 +447,10 @@
                 const data = await res.json();
                 
                 if (data.success) {
+                    // SI LA SESIÓN ES VÁLIDA Y AUTORIZADA: REVELAR EL CONTENEDOR PRINCIPAL
+                    const contenedorPrincipal = document.getElementById('contenedorPrincipalPanel');
+                    if (contenedorPrincipal) contenedorPrincipal.classList.remove('hidden');
+
                     // VERIFICACIÓN DEL MURO DE SEGURIDAD
                     const seccionRegistro = document.getElementById('seccionRegistroObligatorio');
                     const bloqueOperativo = document.getElementById('bloqueOperativoPanel');
@@ -459,7 +463,7 @@
                         const badge = document.getElementById('badgeAccountType');
                         badge.className = "inline-block px-2.5 py-1 rounded-md text-[11px] font-bold tracking-wide uppercase bg-rose-500/20 text-rose-300 border border-rose-500/30";
                         badge.innerText = "REGISTRO INCOMPLETO (PENDIENTE CÉDULA Y CORREO)";
-                        return; // Se detiene aquí y no muestra el panel
+                        return; // Se detiene aquí
                     } else {
                         // SI YA VINCULÓ: ACCESO TOTAL AL PANEL
                         if (seccionRegistro) seccionRegistro.classList.add('hidden');
