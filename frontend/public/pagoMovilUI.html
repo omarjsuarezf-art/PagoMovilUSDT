@@ -282,12 +282,11 @@
             return tel ? tel.trim() : null;
         }
 
-        // VERIFICACIÓN ESTRICTA CONSULTANDO AL SERVIDOR
+        // VERIFICACIÓN SILENCIOSA CONSULTANDO AL SERVIDOR (SIN ALERTAS MOLESTAS)
         async function verificarAccesoPanel() {
             const telefono = obtenerTelefonoActivo();
             if (!telefono) {
-                alert("⚠️ Acceso no autorizado. Debe iniciar sesión.");
-                window.location.href = '/auth';
+                window.location.replace('/auth');
                 return false;
             }
 
@@ -296,8 +295,7 @@
                 const data = await res.json();
 
                 if (!data.success) {
-                    alert("⚠️ Sesión no encontrada. Por favor inicie sesión nuevamente.");
-                    window.location.href = '/auth';
+                    window.location.replace('/auth');
                     return false;
                 }
                 return true;
@@ -362,7 +360,7 @@
 
             const pinNuevo = prompt("🔒 Ingrese su NUEVO PIN de seguridad (4 dígitos):");
             if (!pinNuevo || pinNuevo.length !== 4) {
-                alert("El nuevo PIN debe ser strictly de 4 dígitos.");
+                alert("El nuevo PIN debe ser estrictamente de 4 dígitos.");
                 return;
             }
 
@@ -740,7 +738,7 @@
         function cerrarSesion() {
             localStorage.clear();
             sessionStorage.clear();
-            window.location.href = '/auth';
+            window.location.replace('/auth');
         }
 
         window.onload = cargarDatosPanel;
