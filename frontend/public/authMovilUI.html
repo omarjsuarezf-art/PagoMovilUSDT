@@ -60,8 +60,7 @@
                 <h2 class="text-sm font-semibold text-slate-200">Acceso Rápido por PIN</h2>
                 <div>
                     <label class="block text-xs font-medium text-slate-400 mb-1">Número de Teléfono</label>
-                    <!-- Campo limpio por defecto, sin números pegados de memoria -->
-                    <input type="tel" id="telefono" value="" autocomplete="off" placeholder="Ej: 0412 / 0416 / 0424..." class="w-full px-4 py-2.5 bg-slate-950 border border-slate-700 rounded-xl focus:ring-2 focus:ring-sky-500 focus:outline-none text-sm text-white">
+                    <input type="tel" id="telefono" placeholder="Ej: 0412 / 0416 / 0424..." class="w-full px-4 py-2.5 bg-slate-950 border border-slate-700 rounded-xl focus:ring-2 focus:ring-sky-500 focus:outline-none text-sm text-white">
                 </div>
                 <div>
                     <div class="flex justify-between items-center mb-1">
@@ -70,7 +69,7 @@
                             ¿Olvidaste tu PIN?
                         </button>
                     </div>
-                    <!-- Input de PIN protegido con puntos y fluido -->
+                    <!-- PIN protegido con puntitos, fluido y responsivo -->
                     <input type="password" id="pinSeguridad" maxlength="4" value="" autocomplete="current-password" class="w-full px-4 py-2.5 bg-slate-950 border border-slate-700 rounded-xl focus:ring-2 focus:ring-sky-500 focus:outline-none text-sm text-white font-mono tracking-widest">
                 </div>
                 <button type="button" onclick="enviarCodigoWhatsApp()" class="w-full bg-sky-600 hover:bg-sky-500 active:bg-sky-700 text-white font-bold py-3 rounded-xl text-sm transition duration-200 shadow-md cursor-pointer">
@@ -269,12 +268,13 @@
     <script>
         let html5QrCode = null;
 
-        // INICIO LIMPIO: La casilla del teléfono nace vacía y sin números pegados
+        // COMPRADOR RECURRENTE INTELIGENTE (RECUERDA TELÉFONO DEL CLIENTE)
         window.addEventListener('DOMContentLoaded', () => {
-            const inputTel = document.getElementById('telefono');
-            if (inputTel) inputTel.value = '';
-            const inputPin = document.getElementById('pinSeguridad');
-            if (inputPin) inputPin.value = '';
+            const telGuardado = localStorage.getItem('pagomovil_last_phone') || localStorage.getItem('userPhone') || localStorage.getItem('telefonoUsuario');
+            if (telGuardado) {
+                const inputTel = document.getElementById('telefono');
+                if (inputTel) inputTel.value = telGuardado.trim();
+            }
         });
 
         const TIEMPO_INACTIVIDAD = 10 * 60 * 1000; // 10 Minutos
@@ -597,7 +597,9 @@
 
                 if (response.ok && data.success) {
                     alertaBloqueo.classList.add('hidden');
-                    // Ya no guardamos en localStorage para evitar números fantasmas pegados
+                    localStorage.setItem('userPhone', telefono);
+                    localStorage.setItem('telefonoUsuario', telefono);
+                    localStorage.setItem('pagomovil_last_phone', telefono);
                     alert(data.message || '¡Código enviado por WhatsApp con éxito!');
                 } else {
                     alert(data.message || 'Error al enviar el código.');
