@@ -60,6 +60,7 @@
                 <h2 class="text-sm font-semibold text-slate-200">Acceso Rápido por PIN</h2>
                 <div>
                     <label class="block text-xs font-medium text-slate-400 mb-1">Número de Teléfono</label>
+                    <!-- Teléfono autocompletado inteligentemente para clientes recurrentes -->
                     <input type="tel" id="telefono" placeholder="Ej: 0412 / 0416 / 0424..." class="w-full px-4 py-2.5 bg-slate-950 border border-slate-700 rounded-xl focus:ring-2 focus:ring-sky-500 focus:outline-none text-sm text-white">
                 </div>
                 <div>
@@ -69,8 +70,8 @@
                             ¿Olvidaste tu PIN?
                         </button>
                     </div>
-                    <!-- TYPE PASSWORD LIMPIO: Oculta con puntos/asteriscos pero 100% funcional y fluido -->
-                    <input type="password" id="pinSeguridad" maxlength="4" class="w-full px-4 py-2.5 bg-slate-950 border border-slate-700 rounded-xl focus:ring-2 focus:ring-sky-500 focus:outline-none text-sm text-white font-mono tracking-widest">
+                    <!-- Input de PIN protegido con puntos y fluido -->
+                    <input type="password" id="pinSeguridad" maxlength="4" value="" autocomplete="current-password" class="w-full px-4 py-2.5 bg-slate-950 border border-slate-700 rounded-xl focus:ring-2 focus:ring-sky-500 focus:outline-none text-sm text-white font-mono tracking-widest">
                 </div>
                 <button type="button" onclick="enviarCodigoWhatsApp()" class="w-full bg-sky-600 hover:bg-sky-500 active:bg-sky-700 text-white font-bold py-3 rounded-xl text-sm transition duration-200 shadow-md cursor-pointer">
                     Ingresar con PIN de Seguridad
@@ -268,7 +269,7 @@
     <script>
         let html5QrCode = null;
 
-        // COMPRADOR RECURRENTE (RECUERDA TELÉFONO) & AUTO-LOGOUT
+        // COMPRADOR RECURRENTE INTELIGENTE (RECUERDA TELÉFONO DEL CLIENTE)
         window.addEventListener('DOMContentLoaded', () => {
             const telGuardado = localStorage.getItem('pagomovil_last_phone') || localStorage.getItem('userPhone') || localStorage.getItem('telefonoUsuario');
             if (telGuardado) {
