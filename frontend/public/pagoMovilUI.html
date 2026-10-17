@@ -282,6 +282,82 @@
             return tel ? tel.trim() : null;
         }
 
+        // ==========================================
+        // COMPRADOR RECURRENTE (RECUERDA TELÉFONO) & AUTO-LOGOUT
+        // ==========================================
+        document.addEventListener("DOMContentLoaded", () => {
+            const telefonoActivo = obtenerTelefonoActivo();
+            if (telefonoActivo) {
+                localStorage.setItem("pagomovil_last_phone", telefonoActivo);
+            }
+        });
+
+        const TIEMPO_INACTIVIDAD = 10 * 60 * 1000; // 10 Minutos
+        let temporizadorInactividad;
+
+        function reiniciarTemporizadorInactividad() {
+            clearTimeout(temporizadorInactividad);
+            temporizadorInactividad = setTimeout(cerrarSesionPorInactividad, TIEMPO_INACTIVIDAD);
+        }
+
+        function cerrarSesionPorInactividad() {
+            sessionStorage.clear();
+            alert("⚠️ Tu sesión ha expirado por inactividad tras 10 minutos para proteger tus fondos.");
+            window.location.replace('/auth');
+        }
+
+        ['mousemove', 'keydown', 'click', 'touchstart', 'scroll'].forEach(evento => {
+            window.addEventListener(evento, reiniciarTemporizadorInactividad, true);
+        });
+
+        reiniciarTemporizadorInactividad();
+
+        // RECUPERACIÓN DE PIN CON CÓDIGO OTP POR WHATSAPP
+        async function solicitarRecuperacionPIN() {
+            const telefono = obtenerTelefonoActivo() || prompt("Ingresa tu número de teléfono registrado:");
+            if (!telefono) return alert("Por favor, ingresa tu número de teléfono.");
+
+            if (!confirm(`Se enviará un código de verificación de 6 dígitos vía WhatsApp al número ${telefono}. ¿Deseas continuar?`)) {
+                return;
+            }
+
+            try {
+                const res = await fetch('/api/recuperar-pin-request', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ telefono })
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                    const codigoOTP = prompt("🔑 Ingresa el código de 6 dígitos recibido por WhatsApp:");
+                    if (!codigoOTP) return;
+
+                    const nuevoPin = prompt("🔑 Ingresa tu NUEVO PIN de 4 dígitos:");
+                    if (!nuevoPin || nuevoPin.length !== 4) {
+                        return alert("El PIN debe ser exactamente de 4 dígitos.");
+                    }
+
+                    const resConfirm = await fetch('/api/recuperar-pin-confirm', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ telefono, otp: codigoOTP.trim(), nuevoPin: nuevoPin.trim() })
+                    });
+                    const dataConfirm = await resConfirm.json();
+
+                    if (dataConfirm.success) {
+                        alert("✅ ¡Tu PIN ha sido actualizado con éxito!");
+                    } else {
+                        alert("❌ Error: " + (dataConfirm.message || "Código inválido o expirado."));
+                    }
+                } else {
+                    alert("❌ Error: " + (data.message || "No se pudo enviar el código."));
+                }
+            } catch (error) {
+                alert("Error de conexión con el servidor.");
+            }
+        }
+
         // VERIFICACIÓN SILENCIOSA CONSULTANDO AL SERVIDOR (SIN ALERTAS MOLESTAS)
         async function verificarAccesoPanel() {
             const telefono = obtenerTelefonoActivo();
@@ -740,7 +816,6 @@
 
         // CIERRE DE SESIÓN ESTRICTO Y DEFINITIVO
         function cerrarSesion() {
-            localStorage.clear();
             sessionStorage.clear();
             window.location.replace('/auth');
         }

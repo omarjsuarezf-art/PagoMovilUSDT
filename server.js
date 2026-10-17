@@ -15,6 +15,9 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 
 const app = express();
 
+// MAPA EN MEMORIA PARA RECUPERACIÓN DE PIN CON CÓDIGOS OTP (EXPIRAN EN 5 MINUTOS)
+const codigosRecuperacion = new Map();
+
 // Requerido por Railway/Render para lectura de IPs tras proxy
 app.set('trust proxy', 1);
 
@@ -317,6 +320,75 @@ app.get('/admin', (req, res) => {
         res.sendFile(adminFile);
     } else {
         res.status(404).send(`Error: El archivo no existe en esta ruta exacta: ${adminFile}`);
+    }
+});
+
+// ==========================================
+// RUTAS DE RECUPERACIÓN DE PIN POR CÓDIGO OTP DE WHATSAPP
+// ==========================================
+app.post('/api/recuperar-pin-request', limiterPagos, async (req, res) => {
+    const { telefono } = req.body;
+    if (!telefono) {
+        return res.status(400).json({ success: false, message: 'Teléfono requerido' });
+    }
+
+    try {
+        const user = await db.get('SELECT id, telefono FROM usuarios WHERE telefono = ? OR merchant_id = ?', [telefono, telefono]);
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'El número de teléfono no está registrado' });
+        }
+
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        codigosRecuperacion.set(user.telefono, { otp, timestamp: Date.now() });
+
+        const mensajeWA = `🔑 *RECUPERACIÓN DE PIN - PagoMóvilUSDT*\n\nTu código de verificación de 6 dígitos es: *${otp}*\n\nEl código expira en 5 minutos. Si no solicitaste este código, ignora este mensaje.`;
+        await enviarMensajeWhatsappSeguro(user.telefono, mensajeWA);
+
+        res.json({ success: true, message: 'Código de verificación enviado por WhatsApp' });
+    } catch (error) {
+        console.error('Error al solicitar recuperación de PIN:', error);
+        res.status(500).json({ success: false, message: 'Error interno del servidor' });
+    }
+});
+
+app.post('/api/recuperar-pin-confirm', limiterPagos, async (req, res) => {
+    const { telefono, otp, nuevoPin } = req.body;
+
+    if (!telefono || !otp || !nuevoPin) {
+        return res.status(400).json({ success: false, message: 'Datos incompletos' });
+    }
+
+    if (nuevoPin.length !== 4) {
+        return res.status(400).json({ success: false, message: 'El PIN debe ser estrictamente de 4 dígitos' });
+    }
+
+    const registroOTP = codigosRecuperacion.get(telefono);
+    if (!registroOTP) {
+        return res.status(400).json({ success: false, message: 'No hay solicitud activa de recuperación' });
+    }
+
+    if (Date.now() - registroOTP.timestamp > 5 * 60 * 1000) {
+        codigosRecuperacion.delete(telefono);
+        return res.status(400).json({ success: false, message: 'El código ha expirado' });
+    }
+
+    if (registroOTP.otp !== otp) {
+        return res.status(400).json({ success: false, message: 'El código de 6 dígitos es incorrecto' });
+    }
+
+    try {
+        await db.run('UPDATE usuarios SET pinSeguridad = ? WHERE telefono = ? OR merchant_id = ?', [nuevoPin, telefono, telefono]);
+        codigosRecuperacion.delete(telefono);
+
+        await enviarMensajeWhatsappSeguro(
+            telefono,
+            `🔐 *SEGURIDAD ACTUALIZADA*\n\nTu PIN de seguridad ha sido restablecido con éxito. Ya puedes iniciar sesión con tu nuevo PIN de 4 dígitos.`
+        );
+
+        res.json({ success: true, message: 'PIN actualizado correctamente' });
+    } catch (error) {
+        console.error('Error al actualizar PIN:', error);
+        res.status(500).json({ success: false, message: 'Error al actualizar el PIN' });
     }
 });
 
