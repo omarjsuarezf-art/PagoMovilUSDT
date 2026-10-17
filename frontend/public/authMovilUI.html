@@ -301,10 +301,14 @@
             return tel ? tel.trim() : null;
         }
 
-        // RECUPERACIÓN DE PIN CON CÓDIGO OTP POR WHATSAPP
+        // RECUPERACIÓN DE PIN CORREGIDA Y ROBUSTA (MANEJA OTP DE 6 DÍGITOS Y NUEVO PIN DE 4)
         async function solicitarRecuperacionPIN() {
             const inputTel = document.getElementById('telefono');
-            const telefono = inputTel ? inputTel.value.trim() : prompt("Ingresa tu número de teléfono registrado:");
+            let telefono = inputTel ? inputTel.value.trim() : "";
+            
+            if (!telefono) {
+                telefono = prompt("Ingresa tu número de teléfono registrado:");
+            }
             
             if (!telefono) {
                 alert("Por favor, ingresa tu número de teléfono primero.");
@@ -319,7 +323,7 @@
                 const res = await fetch('/api/recuperar-pin-request', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ telefono })
+                    body: JSON.stringify({ telefono: telefono.trim() })
                 });
                 const data = await res.json();
 
@@ -336,12 +340,20 @@
                     const resConfirm = await fetch('/api/recuperar-pin-confirm', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ telefono, otp: codigoOTP.trim(), nuevoPin: nuevoPin.trim() })
+                        body: JSON.stringify({ 
+                            telefono: telefono.trim(), 
+                            otp: codigoOTP.trim(), 
+                            nuevoPin: nuevoPin.trim() 
+                        })
                     });
                     const dataConfirm = await resConfirm.json();
 
                     if (dataConfirm.success) {
-                        alert("✅ ¡Tu PIN ha sido actualizado con éxito! Ya puedes iniciar sesión.");
+                        alert("✅ ¡Tu PIN ha sido actualizado con éxito! Ya puedes iniciar sesión con tu nuevo PIN.");
+                        // Seteamos el teléfono en el input para comodidad y limpiamos el PIN
+                        if (inputTel) inputTel.value = telefono.trim();
+                        const pinInput = document.getElementById('pinSeguridad');
+                        if (pinInput) pinInput.value = '';
                     } else {
                         alert("❌ Error: " + (dataConfirm.message || "Código inválido o expirado."));
                     }
@@ -349,6 +361,7 @@
                     alert("❌ Error: " + (data.message || "No se pudo enviar el código."));
                 }
             } catch (error) {
+                console.error('Error de red:', error);
                 alert("Error de conexión con el servidor.");
             }
         }
@@ -591,7 +604,6 @@
                 if (response.status === 403 && data.bloqueoRegistro) {
                     alertaBloqueo.classList.remove('hidden');
                     alert(data.message || '⚠️ Acceso restringido. Debe vincular su Cédula y Monedero de recepción abajo.');
-                    // Guardamos el teléfono temporalmente en memoria para que el bloque de abajo sepa quién es
                     localStorage.setItem('userPhone', telefono);
                     localStorage.setItem('telefonoUsuario', telefono);
                     return;
