@@ -301,7 +301,7 @@
             return tel ? tel.trim() : null;
         }
 
-        // RECUPERACIÓN DE PIN CORREGIDA Y ROBUSTA (MANEJA OTP DE 6 DÍGITOS Y NUEVO PIN DE 4)
+        // RECUPERACIÓN DE PIN: Ingreso directo con PIN provisional y advertencia de seguridad
         async function solicitarRecuperacionPIN() {
             const inputTel = document.getElementById('telefono');
             let telefono = inputTel ? inputTel.value.trim() : "";
@@ -331,7 +331,7 @@
                     const codigoOTP = prompt("🔑 Ingresa el código de 6 dígitos recibido por WhatsApp:");
                     if (!codigoOTP) return;
 
-                    const nuevoPin = prompt("🔑 Ingresa tu NUEVO PIN de 4 dígitos:");
+                    const nuevoPin = prompt("🔑 Ingresa tu NUEVO PIN PROVISIONAL de 4 dígitos:");
                     if (!nuevoPin || nuevoPin.length !== 4) {
                         alert("El PIN debe ser estrictamente de 4 dígitos.");
                         return;
@@ -349,11 +349,23 @@
                     const dataConfirm = await resConfirm.json();
 
                     if (dataConfirm.success) {
-                        alert("✅ ¡Tu PIN ha sido actualizado con éxito! Ya puedes iniciar sesión con tu nuevo PIN.");
-                        // Seteamos el teléfono en el input para comodidad y limpiamos el PIN
-                        if (inputTel) inputTel.value = telefono.trim();
-                        const pinInput = document.getElementById('pinSeguridad');
-                        if (pinInput) pinInput.value = '';
+                        // ADVERTENCIA CLARA PARA EL USUARIO SOBRE EL PIN PROVISIONAL Y SEGURIDAD
+                        alert("⚠️ ¡PIN provisional actualizado con éxito!\n\nPor seguridad (evitando accesos si el teléfono fue robado), recuerde cambiar este PIN provisional adentro en la opción 'Cambiar PIN de Seguridad' por uno definitivo.\n\nIngresando al panel...");
+
+                        // Guardamos el teléfono en memoria para iniciar sesión de inmediato
+                        localStorage.setItem('userPhone', telefono.trim());
+                        localStorage.setItem('telefonoUsuario', telefono.trim());
+
+                        // Validamos si la cuenta está lista para entrar directo al panel
+                        const resSaldo = await fetch(`/api/saldo/${encodeURIComponent(telefono.trim())}`);
+                        const dataSaldo = await resSaldo.json();
+
+                        if (dataSaldo.success && dataSaldo.metodoVinculado) {
+                            window.location.href = '/panel';
+                        } else {
+                            if (inputTel) inputTel.value = telefono.trim();
+                            document.getElementById('alertaBloqueo').classList.remove('hidden');
+                        }
                     } else {
                         alert("❌ Error: " + (dataConfirm.message || "Código inválido o expirado."));
                     }
