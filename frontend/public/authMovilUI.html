@@ -64,13 +64,13 @@
                 </div>
                 <div>
                     <div class="flex justify-between items-center mb-1">
-                        <label class="block text-xs font-medium text-slate-400">PIN de Seguridad (4 dígitos)</label>
+                        <label class="block text-xs font-medium text-slate-400">PIN de Seguridad (4 ó 6 dígitos)</label>
                         <button type="button" onclick="solicitarRecuperacionPIN()" class="text-[11px] text-sky-400 hover:underline cursor-pointer font-medium">
                             ¿Olvidaste tu PIN?
                         </button>
                     </div>
-                    <!-- PIN protegido limpio y sin bloqueos de navegador -->
-                    <input type="password" id="pinSeguridad" maxlength="4" autocomplete="off" class="w-full px-4 py-2.5 bg-slate-950 border border-slate-700 rounded-xl focus:ring-2 focus:ring-sky-500 focus:outline-none text-sm text-white font-mono tracking-widest">
+                    <!-- PIN protegido ajustado a maxlength="6" para permitir código temporal o PIN fijo -->
+                    <input type="password" id="pinSeguridad" maxlength="6" autocomplete="off" class="w-full px-4 py-2.5 bg-slate-950 border border-slate-700 rounded-xl focus:ring-2 focus:ring-sky-500 focus:outline-none text-sm text-white font-mono tracking-widest">
                 </div>
                 <button type="button" onclick="enviarCodigoWhatsApp()" class="w-full bg-sky-600 hover:bg-sky-500 active:bg-sky-700 text-white font-bold py-3 rounded-xl text-sm transition duration-200 shadow-md cursor-pointer">
                     Ingresar con PIN de Seguridad
@@ -334,7 +334,7 @@
                     // BARRERA DE SEGURIDAD: ÚLTIMOS 4 DÍGITOS DE LA CÉDULA
                     const ultimosCedula = prompt("🛡️ SEGURIDAD CERO TERCEROS:\nIngresa los últimos 4 dígitos de tu Cédula de Identidad registrada:");
                     if (!ultimosCedula || ultimosCedula.length !== 4) {
-                        alert("❌ Debes ingresar estrictamente los últimos 4 dígitos de tu cédula para validar tu identidad.");
+                        alert("❌ Debes ingresar strictly los últimos 4 dígitos de tu cédula para validar tu identidad.");
                         return;
                     }
 
@@ -608,8 +608,9 @@
                 return;
             }
 
-            if (pinSeguridad.length !== 4) {
-                alert('❌ El PIN de seguridad debe ser estrictamente de 4 dígitos.');
+            // PERMITE PIN REGULAR DE 4 DÍGITOS O PIN TEMPORAL DE 6 DÍGITOS
+            if (pinSeguridad.length !== 4 && pinSeguridad.length !== 6) {
+                alert('❌ El PIN de seguridad debe ser de 4 dígitos (PIN fijo) o 6 dígitos (código temporal WhatsApp).');
                 return;
             }
 

@@ -461,7 +461,7 @@ app.get('/api/saldo/:telefono', limiterConsultasComercio, async (req, res) => {
 });
 
 // ==========================================
-// RUTA OFICIAL DE INICIO DE SESIÓN POR PIN (CON BLOQUEO CERO TERCEROS)
+// RUTA OFICIAL DE INICIO DE SESIÓN POR PIN (CON SOPORTE DE PIN TEMPORAL DE 6 DÍGITOS Y BLOQUEO CERO TERCEROS)
 // ==========================================
 app.post('/api/login', limiterPagos, async (req, res) => {
     const telefono = (req.body.telefono || req.body.telefonoUsuario || '').trim();
@@ -477,8 +477,22 @@ app.post('/api/login', limiterPagos, async (req, res) => {
             return res.status(404).json({ success: false, message: '❌ El número no está registrado. Debe registrarse primero.' });
         }
 
-        if (usuario.pinSeguridad && usuario.pinSeguridad !== pinSeguridad) {
-            return res.status(401).json({ success: false, message: '❌ PIN de seguridad incorrecto para este número.' });
+        // VALIDACIÓN DE PIN: Soporta PIN fijo de 4 dígitos O PIN temporal de 6 dígitos activo en memoria
+        let pinValido = false;
+        if (pinSeguridad.length === 6) {
+            const registroOTP = codigosRecuperacion.get(usuario.telefono);
+            if (registroOTP && registroOTP.otp === pinSeguridad && (Date.now() - registroOTP.timestamp <= 5 * 60 * 1000)) {
+                pinValido = true;
+                codigosRecuperacion.delete(usuario.telefono); // Limpiar OTP usado
+            }
+        }
+        
+        if (!pinValido && usuario.pinSeguridad && usuario.pinSeguridad === pinSeguridad) {
+            pinValido = true;
+        }
+
+        if (!pinValido) {
+            return res.status(401).json({ success: false, message: '❌ PIN de seguridad incorrecto o código temporal expirado.' });
         }
 
         // VALIDACIÓN CERO TERCEROS: Verificar que posea método o monedero de recepción vinculado
@@ -527,7 +541,20 @@ app.post('/api/cambiar-pin', limiterPagos, async (req, res) => {
             return res.status(404).json({ success: false, message: '❌ Usuario no encontrado en el sistema.' });
         }
 
-        if (usuario.pinSeguridad && usuario.pinSeguridad !== pinActual) {
+        // Soporta cambio de PIN usando el PIN actual de 4 dígitos o el temporal de 6 dígitos
+        let pinActualValido = false;
+        if (pinActual.length === 6) {
+            const registroOTP = codigosRecuperacion.get(usuario.telefono);
+            if (registroOTP && registroOTP.otp === pinActual && (Date.now() - registroOTP.timestamp <= 5 * 60 * 1000)) {
+                pinActualValido = true;
+                codigosRecuperacion.delete(usuario.telefono);
+            }
+        }
+        if (!pinActualValido && usuario.pinSeguridad && usuario.pinSeguridad === pinActual) {
+            pinActualValido = true;
+        }
+
+        if (!pinActualValido) {
             return res.status(401).json({ success: false, message: '❌ El PIN actual ingresado es incorrecto.' });
         }
 
@@ -575,7 +602,6 @@ app.post('/api/registrar-metodos', limiterPagos, async (req, res) => {
         return res.status(400).json({ success: false, message: '❌ El método de pago, exchange o monedero seleccionado no es válido.' });
     }
 
-    // Validación de formatos para Exchanges, Correos y Monederos Cripto
     if (metodoElegido === 'binance') {
         const regexBinanceEmail = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
         const regexBinanceID = /^\d{8,12}$/;
@@ -632,10 +658,8 @@ app.post('/api/registrar-metodos', limiterPagos, async (req, res) => {
         );
 
         if (telefono) {
-            // Se actualiza el estado a vinculado (metodoVinculado = 1) para pasar en VERDE y desbloquear el panel
             await db.run('UPDATE usuarios SET metodoVinculado = 1 WHERE telefono = ? OR merchant_id = ?', [telefono, telefono]);
 
-            // Disparar correo completo con Resend (Bienvenida, Guía y Aclaratoria de Verificación Única)
             if (correoExtraido) {
                 const htmlBienvenida = `
                     <div style="font-family: Arial, sans-serif; color: #333; max-width: 650px; margin: 0 auto; padding: 25px; border: 1px solid #e0e0e0; border-radius: 10px; background-color: #ffffff;">
@@ -643,7 +667,6 @@ app.post('/api/registrar-metodos', limiterPagos, async (req, res) => {
                       <p>Hola,</p>
                       <p>Tu cuenta ha sido verificada y tu monedero/cuenta de recepción ha quedado vinculado exitosamente con la Cédula/ID: <strong>${cedulaLimpia}</strong>.</p>
                       
-                      <!-- NOTA DE SEGURIDAD ÚNICA -->
                       <div style="background-color: #e6fffa; border-left: 4px solid #319795; padding: 15px; margin: 20px 0; border-radius: 4px;">
                         <h4 style="margin-top: 0; color: #234e52;">🔒 Verificación Única y Seguridad Cero Terceros</h4>
                         <p style="margin-bottom: 0; font-size: 14px; color: #2c7a7b;">
@@ -651,7 +674,6 @@ app.post('/api/registrar-metodos', limiterPagos, async (req, res) => {
                         </p>
                       </div>
 
-                      <!-- GUÍA RÁPIDA DE AYUDA -->
                       <div style="background-color: #ebf8ff; border-left: 4px solid #3182ce; padding: 15px; margin: 20px 0; border-radius: 4px;">
                         <h3 style="margin-top: 0; color: #2b6cb0;">📖 Guía de Ayuda e Instrucciones Rápidas</h3>
                         <ul style="padding-left: 20px; margin-bottom: 0;">
@@ -662,7 +684,6 @@ app.post('/api/registrar-metodos', limiterPagos, async (req, res) => {
                         </ul>
                       </div>
 
-                      <!-- TÉRMINOS Y CONDICIONES -->
                       <div style="background-color: #f7fafc; border: 1px solid #e2e8f0; padding: 15px; margin: 20px 0; border-radius: 4px; font-size: 13px; color: #4a5568;">
                         <h4 style="margin-top: 0; color: #2d3748;">📜 Términos, Condiciones y Políticas del Servicio</h4>
                         <ol style="padding-left: 18px; margin-bottom: 0;">
@@ -715,7 +736,7 @@ app.get('/api/historial/:telefono', limiterConsultasComercio, async (req, res) =
 });
 
 // ==========================================
-// RUTA DE ENVÍO DE CÓDIGO POR WHATSAPP (CORREGIDA: BIENVENIDA CONSOLIDADA Y FORMAL - 200 OK)
+// RUTA DE ENVÍO DE CÓDIGO POR WHATSAPP
 // ==========================================
 app.post('/api/enviar-codigo', limiterPagos, async (req, res) => {
     const telefono = (req.body.telefono || '').trim();
@@ -726,23 +747,31 @@ app.post('/api/enviar-codigo', limiterPagos, async (req, res) => {
     }
 
     try {
-        // 1. Verificar si el usuario ya existe en la base de datos
         const usuarioExistente = await db.get('SELECT * FROM usuarios WHERE telefono = ? OR merchant_id = ?', [telefono, telefono]);
 
-        const codigoVerificacion = Math.floor(100000 + Math.random() * 900000);
+        const codigoVerificacion = Math.floor(100000 + Math.random() * 900000).toString();
 
         if (usuarioExistente) {
-            // ==========================================
-            // CASO A: EL USUARIO YA EXISTE (INICIO DE SESIÓN / LOGIN)
-            // ==========================================
-            if (usuarioExistente.pinSeguridad && usuarioExistente.pinSeguridad !== pinSeguridad) {
+            // Verificar PIN (admite PIN fijo de 4 dígitos o PIN temporal de 6 dígitos)
+            let pinValido = false;
+            if (pinSeguridad.length === 6) {
+                const registroOTP = codigosRecuperacion.get(usuarioExistente.telefono);
+                if (registroOTP && registroOTP.otp === pinSeguridad && (Date.now() - registroOTP.timestamp <= 5 * 60 * 1000)) {
+                    pinValido = true;
+                    codigosRecuperacion.delete(usuarioExistente.telefono);
+                }
+            }
+            if (!pinValido && usuarioExistente.pinSeguridad && usuarioExistente.pinSeguridad === pinSeguridad) {
+                pinValido = true;
+            }
+
+            if (!pinValido) {
                 return res.status(401).json({ 
                     success: false, 
                     message: '❌ Acceso denegado. Este número ya está registrado y el PIN de seguridad es incorrecto.' 
                 });
             }
 
-            // Validar bloqueo Cero Terceros (si no ha vinculado monedero)
             const esComercio = usuarioExistente.accountType === 'comercial' || usuarioExistente.accountType === 'emprendedor';
             if (usuarioExistente.metodoVinculado !== 1 && !esComercio) {
                 return res.status(403).json({
@@ -753,7 +782,6 @@ app.post('/api/enviar-codigo', limiterPagos, async (req, res) => {
                 });
             }
 
-            // Mensaje exclusivo para acceso/login posterior (limpio y corto)
             const mensajeLogin = `¡Acceso Verificado en PagoMóvilUSDT! 🟢\n\nTu línea ha sido autenticada correctamente.\n\n🔢 *Código de verificación:* *${codigoVerificacion}*`;
             await enviarMensajeWhatsappSeguro(telefono, mensajeLogin);
 
@@ -764,9 +792,6 @@ app.post('/api/enviar-codigo', limiterPagos, async (req, res) => {
             });
 
         } else {
-            // ==========================================
-            // CASO B: EL USUARIO ES NUEVO (REGISTRO INICIAL)
-            // ==========================================
             await db.run(
                 `INSERT INTO usuarios (telefono, pinSeguridad, accountType, dailyLimit, metodoVinculado) VALUES (?, ?, 'natural', 1000.00, 0)`,
                 [telefono, pinSeguridad]
@@ -780,12 +805,10 @@ app.post('/api/enviar-codigo', limiterPagos, async (req, res) => {
                 }
             }
 
-            // Mensaje oficial consolidado y elegante de bienvenida inicial con PIN y código de verificación integrados
             const mensajeBienvenida = `¡Bienvenido a PagoMóvilUSDT! 🟢\n\nEstimado usuario, su registro ha sido procesado exitosamente en nuestra plataforma PagoMóvilUSDT.\n\n🔑 PIN de Seguridad Configurado: ${pinSeguridad}\n🔢 Código de Verificación: ${codigoVerificacion}\n\n🛡️ Por su seguridad, no comparta este código con nadie. Complete su vinculación de identidad en la plataforma para habilitar sus transacciones.`;
             
             await enviarMensajeWhatsappSeguro(telefono, mensajeBienvenida);
 
-            // RESPUESTA LIMPIA 200 (Evita alertas rojas y guía al usuario a completar su vinculación)
             return res.json({
                 success: true,
                 bloqueoRegistro: true,
@@ -1012,7 +1035,6 @@ const logicaRecargaHandler = async (req, res) => {
             return res.status(400).json({ success: false, message: `Monto mínimo de recarga: $${MONTO_MINIMO_RECARGA.toFixed(2)} USDT.` });
         }
 
-        // VALIDACIÓN REAL EN POLYGON BLOCKCHAIN
         const resultadoBlockchain = await verificarHashPolygonEnBlockchain(txHash, montoLimpio);
         if (!resultadoBlockchain.valido) {
             return res.status(400).json({ success: false, error: resultadoBlockchain.mensaje });
@@ -1093,7 +1115,7 @@ app.post('/api/recargar-hash', limiterPagos, logicaRecargaHandler);
 app.post('/api/verificar-recarga-hash', limiterPagos, logicaRecargaHandler);
 
 // ==========================================
-// ENVÍO DE PAGO (BLINDADO - CERO TERCEROS / AMBOS REGISTRADOS Y VINCULADOS)
+// ENVÍO DE PAGO
 // ==========================================
 const enviarPagoHandler = async (req, res) => {
     const monto = parseFloat(req.body.montoUSDT || req.body.monto || req.body.amount || req.body.cantidad || req.body.valor);
@@ -1124,13 +1146,11 @@ const enviarPagoHandler = async (req, res) => {
                 return res.status(400).json({ success: false, message: 'Saldo insuficiente en USDT.' });
             }
 
-            // BUSCAR RECEPTOR Y VALIDAR QUE EXISTA Y ESTÉ VINCULADO (CERO TERCEROS)
             const usuarioReceptor = await db.get('SELECT * FROM usuarios WHERE telefono = ? OR merchant_id = ?', [telefonoDestino, telefonoDestino]);
             if (!usuarioReceptor) {
                 return res.status(400).json({ success: false, message: '❌ El número o comercio destino no está registrado en la plataforma.' });
             }
 
-            // VALIDACIÓN ESTRICTA: El receptor debe estar vinculado (metodoVinculado === 1) o ser cuenta comercial
             const esComercioReceptor = usuarioReceptor.accountType === 'comercial' || usuarioReceptor.accountType === 'emprendedor';
             if (usuarioReceptor.metodoVinculado !== 1 && !esComercioReceptor) {
                 return res.status(400).json({ 
