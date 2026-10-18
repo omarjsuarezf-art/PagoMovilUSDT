@@ -333,13 +333,39 @@ app.get('/admin', (req, res) => {
 // ==========================================
 // RUTAS DE RECUPERACIÓN DE PIN (BLINDADAS CON CÉDULA Y OTP)
 // ==========================================
+app.post('/api/recuperar-pin-request', limiterPagos, async (req, res) => {
+    let telefono = (req.body.telefono || req.body.phone || '').trim();
+
+    if (!telefono) {
+        return res.status(400).json({ success: false, message: 'El número de teléfono es requerido.' });
+    }
+
+    try {
+        const user = await db.get('SELECT id, telefono FROM usuarios WHERE telefono = ? OR merchant_id = ?', [telefono, telefono]);
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'El número de teléfono no está registrado.' });
+        }
+
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        codigosRecuperacion.set(user.telefono, { otp, timestamp: Date.now() });
+
+        const mensajeWA = `🔑 *RECUPERACIÓN DE PIN - PagoMóvilUSDT*\n\nTu código de verificación es: *${otp}*\n\nExpira en 5 minutos.`;
+        
+        enviarMensajeWhatsappSeguro(user.telefono, mensajeWA).catch(() => {});
+
+        return res.json({ success: true, message: 'Código enviado por WhatsApp.' });
+    } catch (error) {
+        return res.status(500).json({ success: false, message: 'Error interno en el servidor.' });
+    }
+});
+
 app.post('/api/recuperar-pin-confirm', limiterPagos, async (req, res) => {
     const telefono = (req.body.telefono || '').trim();
     const otp = (req.body.otp || '').trim();
-    const ultimosCedula = (req.body.ultimosCedula || '').trim();
+    const ultimos4Cedula = (req.body.ultimos4Cedula || req.body.ultimosCedula || '').trim();
     const nuevoPin = (req.body.nuevoPin || '').trim();
 
-    if (!telefono || !otp || !ultimosCedula || !nuevoPin) {
+    if (!telefono || !otp || !ultimos4Cedula || !nuevoPin) {
         return res.status(400).json({ success: false, message: 'Todos los campos de recuperación son obligatorios.' });
     }
 
@@ -347,15 +373,14 @@ app.post('/api/recuperar-pin-confirm', limiterPagos, async (req, res) => {
         return res.status(400).json({ success: false, message: 'El nuevo PIN debe ser estrictamente de 4 dígitos.' });
     }
 
-    if (ultimosCedula.length !== 4) {
-        return res.status(400).json({ success: false, message: 'Debe ingresar exactamente los últimos 4 dígitos de su cédula.' });
+    if (ultimos4Cedula.length !== 4) {
+        return res.status(400).json({ success: false, message: 'Debe ingresar exactamente los últimos 4 dígitos.' });
     }
 
     try {
-        // Verificar si existe el OTP en memoria y si no ha expirado (5 minutos)
         const registroOTP = codigosRecuperacion.get(telefono);
         if (!registroOTP || registroOTP.otp !== otp || (Date.now() - registroOTP.timestamp > 5 * 60 * 1000)) {
-            return res.status(400).json({ success: false, message: '❌ Código de verificación inválido o expirado (máximo 5 minutos).' });
+            return res.status(400).json({ success: false, message: '❌ Código de verificación inválido o expirado.' });
         }
 
         const usuario = await db.get('SELECT * FROM usuarios WHERE telefono = ? OR merchant_id = ?', [telefono, telefono]);
@@ -363,27 +388,21 @@ app.post('/api/recuperar-pin-confirm', limiterPagos, async (req, res) => {
             return res.status(404).json({ success: false, message: '❌ Usuario no encontrado.' });
         }
 
-        // BARRERA DE SEGURIDAD: Verificar que los últimos 4 dígitos coincidan con algún método registrado del usuario
-        // O verificamos contra la cédula vinculada en metodos_pago
-        const metodoVinculado = await db.get('SELECT cedulaTitular FROM metodos_pago WHERE cedulaTitular LIKE ? ORDER BY id DESC LIMIT 1', [`%${ultimosCedula}`]);
-        
-        // Si no hay método o los últimos 4 dígitos no coinciden
-        if (!metodoVinculado || !metodoVinculado.cedulaTitular.endsWith(ultimosCedula)) {
-            return res.status(401).json({ success: false, message: '❌ Los últimos 4 dígitos de la cédula no coinciden con los registros de titularidad.' });
+        const metodoVinculado = await db.get('SELECT cedulaTitular FROM metodos_pago WHERE cedulaTitular LIKE ?', [`%${ultimos4Cedula}`]);
+        if (!metodoVinculado || !metodoVinculado.cedulaTitular.endsWith(ultimos4Cedula)) {
+            return res.status(400).json({ success: false, message: '❌ Los últimos 4 dígitos de la cédula no coinciden.' });
         }
 
-        // Actualizar el nuevo PIN permanente
         await db.run('UPDATE usuarios SET pinSeguridad = ? WHERE id = ?', [nuevoPin, usuario.id]);
-
-        // Limpiar el código OTP usado
+        
         codigosRecuperacion.delete(telefono);
 
         await enviarMensajeWhatsappSeguro(
             usuario.telefono,
-            `🔐 *PIN RESTAURADO CON ÉXITO*\n\nTu PIN de seguridad ha sido actualizado mediante recuperación por WhatsApp y Cédula.\nSi no realizaste esta acción, comunícate con soporte de inmediato.`
+            `✅ *PIN RESTAURADO CON ÉXITO*\n\nTu PIN de seguridad ha sido actualizado mediante recuperación.`
         );
 
-        res.json({ success: true, message: '¡PIN restablecido con éxito!' });
+        return res.json({ success: true, message: 'PIN restablecido con éxito!' });
     } catch (err) {
         console.error('Error al confirmar recuperación de PIN:', err);
         return res.status(500).json({ success: false, message: 'Error interno al procesar el cambio de PIN.' });
