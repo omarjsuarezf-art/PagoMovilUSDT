@@ -239,20 +239,27 @@ async function verificarHashPolygonEnBlockchain(txHash, montoEsperadoMinimo) {
 
 function formatearNumeroWhatsapp(numero) {
     if (!numero) return null;
-    let numLimpio = numero.toString().trim().replace(/\D/g, ''); 
+    let numLimpio = numero.toString().trim().replace(/\D/g, '');
     if (numLimpio.startsWith('0')) {
         numLimpio = numLimpio.substring(1);
     }
-    return numLimpio.startsWith('58') ? `${numLimpio}@c.us` : `58${numLimpio}@c.us`;
+    return numLimpio;
 }
 
 async function enviarMensajeWhatsappSeguro(numero, mensaje) {
     if (!client) return;
     try {
-        let chatId = formatearNumeroWhatsapp(numero);
-        if (chatId) {
-            await client.sendMessage(chatId, mensaje);
-        }
+        let numLimpio = formatearNumeroWhatsapp(numero);
+        if (!numLimpio) return;
+
+        let numConCodigo = numLimpio.startsWith('58') ? numLimpio : `58${numLimpio}`;
+        
+        // Obtener el ID interno real registrado en WhatsApp para evitar el fallo de LID
+        const contactId = await client.getNumberId(numConCodigo);
+        const destinoFinal = contactId ? contactId._serialized : `${numConCodigo}@c.us`;
+
+        await client.sendMessage(destinoFinal, mensaje);
+        console.log(`✅ Mensaje de WhatsApp enviado a ${destinoFinal}`);
     } catch (e) {
         console.error(`⚠️ No se pudo enviar mensaje WhatsApp a ${numero}:`, e.message);
     }
