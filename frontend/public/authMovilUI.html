@@ -334,11 +334,11 @@
                     // BARRERA DE SEGURIDAD: ÚLTIMOS 4 DÍGITOS DE LA CÉDULA
                     const ultimosCedula = prompt("🛡️ SEGURIDAD CERO TERCEROS:\nIngresa los últimos 4 dígitos de tu Cédula de Identidad registrada:");
                     if (!ultimosCedula || ultimosCedula.length !== 4) {
-                        alert("❌ Debes ingresar strictly los últimos 4 dígitos de tu cédula para validar tu identidad.");
+                        alert("❌ Debes ingresar estrictamente los últimos 4 dígitos de tu cédula para validar tu identidad.");
                         return;
                     }
 
-                    const nuevoPin = prompt("🔑 Ingresa tu NUEVO PIN PROVISIONAL de 4 dígitos:");
+                    const nuevoPin = prompt("🔑 Ingresa tu NUEVO PIN DEFINITIVO de 4 dígitos:");
                     if (!nuevoPin || nuevoPin.length !== 4) {
                         alert("El PIN debe ser estrictamente de 4 dígitos.");
                         return;
@@ -357,8 +357,7 @@
                     const dataConfirm = await resConfirm.json();
 
                     if (dataConfirm.success) {
-                        // ADVERTENCIA CLARA PARA EL USUARIO SOBRE EL PIN PROVISIONAL Y SEGURIDAD
-                        alert("⚠️ ¡Identidad verificada y PIN provisional configurado con éxito!\n\nPor seguridad ante posibles robos de dispositivos, recuerde cambiar este PIN provisional adentro en la opción 'Cambiar PIN de Seguridad' por uno definitivo.\n\nIngresando al sistema...");
+                        alert("🎉 ¡Identidad verificada y PIN de seguridad actualizado con éxito!\n\nIngresando al sistema...");
 
                         // Guardamos el teléfono en memoria para iniciar sesión de inmediato
                         localStorage.setItem('userPhone', telefono.trim());
@@ -568,7 +567,7 @@
 
             const pinNuevo = prompt("🔒 Ingrese su NUEVO PIN de seguridad (4 dígitos):");
             if (!pinNuevo || pinNuevo.length !== 4) {
-                alert("El nuevo PIN debe ser estrictamente de 4 dígitos.");
+                alert("El nuevo PIN debe ser strictly de 4 dígitos.");
                 return;
             }
 
@@ -615,7 +614,7 @@
             }
 
             try {
-                const response = await fetch('/api/enviar-codigo', {
+                const response = await fetch('/api/login', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ telefono, pinSeguridad })
@@ -634,9 +633,10 @@
                     alertaBloqueo.classList.add('hidden');
                     localStorage.setItem('userPhone', telefono);
                     localStorage.setItem('telefonoUsuario', telefono);
-                    alert(data.message || '¡Código enviado por WhatsApp con éxito!');
+                    alert(data.message || '¡Acceso correcto!');
+                    window.location.href = '/panel';
                 } else {
-                    alert(data.message || 'Error al enviar el código.');
+                    alert(data.message || 'Error al iniciar sesión.');
                 }
             } catch (error) {
                 console.error('Error de conexión:', error);
