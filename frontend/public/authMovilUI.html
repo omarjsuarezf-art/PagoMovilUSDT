@@ -334,11 +334,11 @@
                     // BARRERA DE SEGURIDAD: ÚLTIMOS 4 DÍGITOS DE LA CÉDULA
                     const ultimosCedula = prompt("🛡️ SEGURIDAD CERO TERCEROS:\nIngresa los últimos 4 dígitos de tu Cédula de Identidad registrada:");
                     if (!ultimosCedula || ultimosCedula.length !== 4) {
-                        alert("❌ Debes ingresar estrictamente los últimos 4 dígitos de tu cédula para validar tu identidad.");
+                        alert("❌ Debes ingresar strictly los últimos 4 dígitos de tu cédula para validar tu identidad.");
                         return;
                     }
 
-                    const nuevoPin = prompt("🔑 Ingresa tu NUEVO PIN permanente de 4 dígitos (tienes 5 minutos):");
+                    const nuevoPin = prompt("🔑 Ingresa tu NUEVO PIN de 4 dígitos:");
                     if (!nuevoPin || nuevoPin.length !== 4) {
                         alert("El PIN debe ser estrictamente de 4 dígitos.");
                         return;
@@ -357,7 +357,8 @@
                     const dataConfirm = await resConfirm.json();
 
                     if (dataConfirm.success) {
-                        alert("✅ ¡Identidad verificada y nuevo PIN configurado con éxito!\n\nIngresando al sistema...");
+                        // ADVERTENCIA CLARA PARA EL USUARIO SOBRE EL PIN PROVISIONAL Y SEGURIDAD
+                        alert("⚠️ ¡Identidad verificada y PIN provisional configurado con éxito!\n\nPor seguridad ante posibles robos de dispositivos, recuerde cambiar este PIN provisional adentro en la opción 'Cambiar PIN de Seguridad' por uno definitivo.\n\nIngresando al sistema...");
 
                         // Guardamos el teléfono en memoria para iniciar sesión de inmediato
                         localStorage.setItem('userPhone', telefono.trim());
