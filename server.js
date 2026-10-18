@@ -324,7 +324,7 @@ app.get('/admin', (req, res) => {
 });
 
 // ==========================================
-// RUTAS DE RECUPERACIÓN DE PIN POR CÓDIGO OTP DE WHATSAPP
+// RUTAS DE RECUPERACIÓN DE PIN (BLINDADAS CON CÉDULA Y OTP)
 // ==========================================
 app.post('/api/recuperar-pin-request', limiterPagos, async (req, res) => {
     const { telefono } = req.body;
@@ -352,10 +352,10 @@ app.post('/api/recuperar-pin-request', limiterPagos, async (req, res) => {
 });
 
 app.post('/api/recuperar-pin-confirm', limiterPagos, async (req, res) => {
-    const { telefono, otp, nuevoPin } = req.body;
+    const { telefono, otp, nuevoPin, ultimosCedula } = req.body;
 
-    if (!telefono || !otp || !nuevoPin) {
-        return res.status(400).json({ success: false, message: 'Datos incompletos' });
+    if (!telefono || !otp || !nuevoPin || !ultimosCedula) {
+        return res.status(400).json({ success: false, message: 'Datos incompletos. Debe ingresar el código OTP y los últimos 4 dígitos de su cédula.' });
     }
 
     if (nuevoPin.length !== 4) {
@@ -377,15 +377,31 @@ app.post('/api/recuperar-pin-confirm', limiterPagos, async (req, res) => {
     }
 
     try {
-        await db.run('UPDATE usuarios SET pinSeguridad = ? WHERE telefono = ? OR merchant_id = ?', [nuevoPin, telefono, telefono]);
+        const usuario = await db.get('SELECT id, telefono FROM usuarios WHERE telefono = ? OR merchant_id = ?', [telefono, telefono]);
+        if (!usuario) {
+            return res.status(404).json({ success: false, message: 'Usuario no encontrado.' });
+        }
+
+        // BARRERA DE SEGURIDAD: Validar los últimos 4 dígitos de la cédula registrada
+        const metodoPago = await db.get('SELECT cedulaTitular FROM metodos_pago ORDER BY id DESC LIMIT 1');
+        if (metodoPago && metodoPago.cedulaTitular) {
+            const cedulaBDLimpia = metodoPago.cedulaTitular.replace(/\D/g, '');
+            const ultimosReales = cedulaBDLimpia.slice(-4);
+            
+            if (ultimosCedula.trim() !== ultimosReales) {
+                return res.status(401).json({ success: false, message: '❌ Los últimos 4 dígitos de la cédula no coinciden. Verificación de seguridad fallida.' });
+            }
+        }
+
+        await db.run('UPDATE usuarios SET pinSeguridad = ? WHERE id = ?', [nuevoPin, usuario.id]);
         codigosRecuperacion.delete(telefono);
 
         await enviarMensajeWhatsappSeguro(
-            telefono,
-            `🔐 *SEGURIDAD ACTUALIZADA*\n\nTu PIN de seguridad ha sido restablecido con éxito. Ya puedes iniciar sesión con tu nuevo PIN de 4 dígitos.`
+            usuario.telefono,
+            `🔐 *SEGURIDAD ACTUALIZADA*\n\nTu PIN de seguridad ha sido restablecido mediante verificación de identidad. Recuerde cambiar este PIN provisional adentro por seguridad.`
         );
 
-        res.json({ success: true, message: 'PIN actualizado correctamente' });
+        res.json({ success: true, message: 'PIN actualizado correctamente mediante verificación' });
     } catch (error) {
         console.error('Error al actualizar PIN:', error);
         res.status(500).json({ success: false, message: 'Error al actualizar el PIN' });
@@ -1187,6 +1203,4 @@ setInterval(async () => {
 }, 24 * 60 * 60 * 1000);
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Servidor corriendo en el puerto ${PORT}`);
-});
+app

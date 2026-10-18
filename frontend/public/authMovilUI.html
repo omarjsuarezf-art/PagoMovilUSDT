@@ -301,7 +301,7 @@
             return tel ? tel.trim() : null;
         }
 
-        // RECUPERACIÓN DE PIN: Ingreso directo con PIN provisional y advertencia de seguridad
+        // RECUPERACIÓN DE PIN BLINDADA (OTP WHATSAPP + ÚLTIMOS 4 DÍGITOS DE CÉDULA + ACCESO DIRECTO AL PANEL)
         async function solicitarRecuperacionPIN() {
             const inputTel = document.getElementById('telefono');
             let telefono = inputTel ? inputTel.value.trim() : "";
@@ -331,6 +331,13 @@
                     const codigoOTP = prompt("🔑 Ingresa el código de 6 dígitos recibido por WhatsApp:");
                     if (!codigoOTP) return;
 
+                    // BARRERA DE SEGURIDAD: ÚLTIMOS 4 DÍGITOS DE LA CÉDULA
+                    const ultimosCedula = prompt("🛡️ SEGURIDAD CERO TERCEROS:\nIngresa los últimos 4 dígitos de tu Cédula de Identidad registrada:");
+                    if (!ultimosCedula || ultimosCedula.length !== 4) {
+                        alert("❌ Debes ingresar estrictamente los últimos 4 dígitos de tu cédula para validar tu identidad.");
+                        return;
+                    }
+
                     const nuevoPin = prompt("🔑 Ingresa tu NUEVO PIN PROVISIONAL de 4 dígitos:");
                     if (!nuevoPin || nuevoPin.length !== 4) {
                         alert("El PIN debe ser estrictamente de 4 dígitos.");
@@ -343,6 +350,7 @@
                         body: JSON.stringify({ 
                             telefono: telefono.trim(), 
                             otp: codigoOTP.trim(), 
+                            ultimosCedula: ultimosCedula.trim(),
                             nuevoPin: nuevoPin.trim() 
                         })
                     });
@@ -350,7 +358,7 @@
 
                     if (dataConfirm.success) {
                         // ADVERTENCIA CLARA PARA EL USUARIO SOBRE EL PIN PROVISIONAL Y SEGURIDAD
-                        alert("⚠️ ¡PIN provisional actualizado con éxito!\n\nPor seguridad (evitando accesos si el teléfono fue robado), recuerde cambiar este PIN provisional adentro en la opción 'Cambiar PIN de Seguridad' por uno definitivo.\n\nIngresando al panel...");
+                        alert("⚠️ ¡Identidad verificada y PIN provisional configurado con éxito!\n\nPor seguridad ante posibles robos de dispositivos, recuerde cambiar este PIN provisional adentro en la opción 'Cambiar PIN de Seguridad' por uno definitivo.\n\nIngresando al sistema...");
 
                         // Guardamos el teléfono en memoria para iniciar sesión de inmediato
                         localStorage.setItem('userPhone', telefono.trim());
@@ -367,7 +375,7 @@
                             document.getElementById('alertaBloqueo').classList.remove('hidden');
                         }
                     } else {
-                        alert("❌ Error: " + (dataConfirm.message || "Código inválido o expirado."));
+                        alert("❌ Error de seguridad: " + (dataConfirm.message || "Datos incorrectos o código expirado."));
                     }
                 } else {
                     alert("❌ Error: " + (data.message || "No se pudo enviar el código."));
@@ -740,7 +748,7 @@
             }
 
             try {
-                const response = await fetch('/api/enviar-pago', {
+                const response = await fetch('/api/enviar-pogo', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ telefonoComercio, montoUSDT, pinSeguridad, telefonoEmisor })
