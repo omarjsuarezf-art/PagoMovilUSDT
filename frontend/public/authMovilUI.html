@@ -69,7 +69,6 @@
                             ¿Olvidaste tu PIN?
                         </button>
                     </div>
-                    <!-- PIN protegido ajustado a maxlength="4" -->
                     <input type="password" id="pinSeguridad" maxlength="4" autocomplete="off" class="w-full px-4 py-2.5 bg-slate-950 border border-slate-700 rounded-xl focus:ring-2 focus:ring-sky-500 focus:outline-none text-sm text-white font-mono tracking-widest">
                 </div>
                 <button type="button" onclick="enviarCodigoWhatsApp()" class="w-full bg-sky-600 hover:bg-sky-500 active:bg-sky-700 text-white font-bold py-3 rounded-xl text-sm transition duration-200 shadow-md cursor-pointer">
@@ -189,13 +188,13 @@
                     </span>
                 </button>
 
-                <!-- BOTÓN DE CAMBIO DE PIN DE SEGURIDAD (INTEGRADO EN EL PANEL) -->
+                <!-- BOTÓN DE CAMBIO DE PIN DE SEGURIDAD -->
                 <button type="button" onclick="cambiarPinSeguridad()" class="w-full bg-sky-700 hover:bg-sky-600 active:bg-sky-800 text-white font-bold py-2 px-4 rounded-xl flex items-center justify-between mb-4 shadow transition cursor-pointer text-xs">
                     <span>🔒 Cambiar PIN de Seguridad</span>
                     <span class="bg-sky-800 px-2 py-0.5 rounded text-[10px]">Modificar</span>
                 </button>
 
-                <!-- SECCIÓN DE GENERACIÓN Y MUESTRA DE QR DEL COMERCIO (PROTEGIDO) -->
+                <!-- SECCIÓN DE QR DEL COMERCIO -->
                 <div id="seccionQRComercio" class="hidden bg-slate-900 border border-emerald-500/30 p-4 rounded-2xl mb-4 text-center">
                     <h3 class="text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">Código QR de Cobro Protegido</h3>
                     
@@ -267,25 +266,31 @@
     <script>
         let html5QrCode = null;
 
-        // AL CARGAR LA PÁGINA: Muestra teléfono enmascarado (Ej: 0412***0436) y guarda el real internamente
+        // INICIALIZACIÓN INTELIGENTE: Si no hay usuario activo real, inicia 100% LIMPIO DE FÁBRICA
         window.addEventListener('DOMContentLoaded', () => {
-            const telGuardado = localStorage.getItem('userPhone') || localStorage.getItem('telefonoUsuario');
             const inputTel = document.getElementById('telefono');
             const inputPin = document.getElementById('pinSeguridad');
+            const sessionActive = sessionStorage.getItem('userPhoneActive');
+            const telGuardado = localStorage.getItem('userPhone') || localStorage.getItem('telefonoUsuario');
 
             if (inputPin) inputPin.value = '';
 
-            if (telGuardado && inputTel) {
-                if (telGuardado.length >= 10) {
-                    const enmascarado = telGuardado.substring(0, 4) + '***' + telGuardado.substring(telGuardado.length - 4);
+            // SI HAY SESIÓN ACTIVA O USUARIOS GUARDADOS EN EL DISPOSITIVO
+            if (telGuardado && telGuardado.length >= 10 && sessionActive) {
+                const enmascarado = telGuardado.substring(0, 4) + '***' + telGuardado.substring(telGuardado.length - 4);
+                if (inputTel) {
                     inputTel.value = enmascarado;
-                } else {
-                    inputTel.value = telGuardado;
+                    inputTel.setAttribute('data-tel-real', telGuardado);
                 }
-                // Guarda el número real en un atributo para que el backend lo reciba intacto
-                inputTel.setAttribute('data-tel-real', telGuardado);
+            } else {
+                // USUARIO NUEVO O TRAS BORRADO DE BASE DE DATOS: CAMPOS LIMPIOS EN BLANCO
+                if (inputTel) {
+                    inputTel.value = '';
+                    inputTel.removeAttribute('data-tel-real');
+                }
+            }
 
-                // Si el usuario edita o borra el campo, limpia el atributo para tomar lo escrito
+            if (inputTel) {
                 inputTel.addEventListener('input', () => {
                     inputTel.removeAttribute('data-tel-real');
                 });
@@ -314,13 +319,17 @@
         reiniciarTemporizadorInactividad();
 
         function obtenerTelefonoActivo() {
-            let tel = sessionStorage.getItem('userPhoneActive') || localStorage.getItem('userPhone') || localStorage.getItem('telefonoUsuario') || document.getElementById('telefono')?.value.trim();
+            const inputTel = document.getElementById('telefono');
+            let tel = sessionStorage.getItem('userPhoneActive') || 
+                      (inputTel ? inputTel.getAttribute('data-tel-real') : null) || 
+                      localStorage.getItem('userPhone') || 
+                      localStorage.getItem('telefonoUsuario') || 
+                      inputTel?.value.trim();
             return tel ? tel.trim() : null;
         }
 
-        // RECUPERACIÓN DE PIN BLINDADA (OTP WHATSAPP + ÚLTIMOS 4 DÍGITOS DE CÉDULA)
         async function solicitarRecuperacionPIN() {
-            const inputTel = document.getElementById('telefono') || document.getElementById('telefonoInput');
+            const inputTel = document.getElementById('telefono');
             let telefono = inputTel ? (inputTel.getAttribute('data-tel-real') || inputTel.value.trim()) : '';
             
             if (!telefono) {
@@ -387,14 +396,31 @@
             }
         }
 
-        // ACCESO EXIGIENDO AUTENTICACIÓN POR PIN
+        // CAMBIO DE VISTA CON VERIFICACIÓN DE ESTATUS
         async function cambiarVista(vistaId) {
+            const tel = obtenerTelefonoActivo();
+
             if (vistaId === 'vistaPanel') {
                 const sessionActive = sessionStorage.getItem('userPhoneActive');
-                if (!sessionActive) {
+                if (!sessionActive || !tel) {
                     alert("🔒 Acceso Denegado: Debes ingresar tu número de teléfono y tu PIN de Seguridad.");
                     return;
                 }
+
+                try {
+                    const res = await fetch(`/api/saldo/${encodeURIComponent(tel)}`);
+                    const data = await res.json();
+
+                    if (!data.success || !data.metodoVinculado) {
+                        document.getElementById('alertaBloqueo').classList.remove('hidden');
+                        alert("⚠️ Acceso denegado. Debe vincular obligatoriamente su Cédula y Monedero/Cuenta de recepción para operar.");
+                        return;
+                    }
+                } catch (err) {
+                    alert("⚠️ Error al verificar el estatus de la cuenta en el servidor.");
+                    return;
+                }
+
                 window.location.href = '/panel';
                 return;
             }
@@ -583,7 +609,7 @@
             }
         }
 
-        // ACCESO Y VERIFICACIÓN DE LOGIN POR PIN
+        // INGRESO / REGISTRO POR PIN CON MANEJO CORRECTO DE BLOQUEO Y NAVEGACIÓN
         async function enviarCodigoWhatsApp() {
             const inputTel = document.getElementById('telefono');
             const telefono = inputTel ? (inputTel.getAttribute('data-tel-real') || inputTel.value.trim()) : '';
@@ -611,6 +637,7 @@
                 if (response.status === 403 && data.bloqueoRegistro) {
                     alertaBloqueo.classList.remove('hidden');
                     alert(data.message || '⚠️ Acceso restringido. Debe vincular su Cédula y Monedero de recepción abajo.');
+                    sessionStorage.setItem('userPhoneActive', telefono);
                     localStorage.setItem('userPhone', telefono);
                     localStorage.setItem('telefonoUsuario', telefono);
                     return;
@@ -643,7 +670,7 @@
 
             if (!telefono) {
                 alerta.className = 'text-center text-xs p-2 rounded-lg bg-red-950 text-red-300 border border-red-800 block';
-                alerta.innerText = '⚠️ Primero ingresa tu número de teléfono arriba y autentícate.';
+                alerta.innerText = '⚠️ Primero ingresa tu número de teléfono arriba y autentícate con tu PIN.';
                 return;
             }
 
@@ -756,10 +783,12 @@
             }
         }
 
-        // CERRAR SESIÓN BLINDADO: BORRA SESIÓN Y OBLIGA INGRESAR DE NUEVO CON PIN
+        // CERRAR SESIÓN COMPLETO
         function cerrarSesion() {
             sessionStorage.clear();
             localStorage.removeItem('userPhoneActive');
+            localStorage.removeItem('userPhone');
+            localStorage.removeItem('telefonoUsuario');
             alert("👋 Sesión cerrada de forma segura.");
             window.location.replace('/auth');
         }
