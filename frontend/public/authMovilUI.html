@@ -267,7 +267,7 @@
     <script>
         let html5QrCode = null;
 
-        // AL CARGAR LA PÁGINA: Muestra teléfono si existe en localStorage
+        // AL CARGAR LA PÁGINA: Muestra teléfono enmascarado (Ej: 0412***0436) y guarda el real internamente
         window.addEventListener('DOMContentLoaded', () => {
             const telGuardado = localStorage.getItem('userPhone') || localStorage.getItem('telefonoUsuario');
             const inputTel = document.getElementById('telefono');
@@ -276,7 +276,19 @@
             if (inputPin) inputPin.value = '';
 
             if (telGuardado && inputTel) {
-                inputTel.value = telGuardado;
+                if (telGuardado.length >= 10) {
+                    const enmascarado = telGuardado.substring(0, 4) + '***' + telGuardado.substring(telGuardado.length - 4);
+                    inputTel.value = enmascarado;
+                } else {
+                    inputTel.value = telGuardado;
+                }
+                // Guarda el número real en un atributo para que el backend lo reciba intacto
+                inputTel.setAttribute('data-tel-real', telGuardado);
+
+                // Si el usuario edita o borra el campo, limpia el atributo para tomar lo escrito
+                inputTel.addEventListener('input', () => {
+                    inputTel.removeAttribute('data-tel-real');
+                });
             }
         });
 
@@ -309,7 +321,7 @@
         // RECUPERACIÓN DE PIN BLINDADA (OTP WHATSAPP + ÚLTIMOS 4 DÍGITOS DE CÉDULA)
         async function solicitarRecuperacionPIN() {
             const inputTel = document.getElementById('telefono') || document.getElementById('telefonoInput');
-            let telefono = inputTel ? inputTel.value.trim() : '';
+            let telefono = inputTel ? (inputTel.getAttribute('data-tel-real') || inputTel.value.trim()) : '';
             
             if (!telefono) {
                 telefono = prompt("Ingresa tu número de teléfono registrado:");
@@ -574,7 +586,7 @@
         // ACCESO Y VERIFICACIÓN DE LOGIN POR PIN
         async function enviarCodigoWhatsApp() {
             const inputTel = document.getElementById('telefono');
-            const telefono = inputTel ? inputTel.value.trim() : '';
+            const telefono = inputTel ? (inputTel.getAttribute('data-tel-real') || inputTel.value.trim()) : '';
             const pinSeguridad = document.getElementById('pinSeguridad').value.trim();
             const alertaBloqueo = document.getElementById('alertaBloqueo');
 
