@@ -268,27 +268,12 @@
     <script>
         let html5QrCode = null;
 
-        // INICIO SEGURO: Muestra el número guardado enmascarado para comodidad y guarda el real en atributo oculto
+        // INICIO LIMPIO: Sin localStorage forzado que pegue números
         window.addEventListener('DOMContentLoaded', () => {
-            const telGuardado = localStorage.getItem('userPhone') || localStorage.getItem('telefonoUsuario');
             const inputTel = document.getElementById('telefono');
+            if (inputTel) inputTel.value = '';
             const inputPin = document.getElementById('pinSeguridad');
-
             if (inputPin) inputPin.value = '';
-
-            if (telGuardado && inputTel) {
-                if (telGuardado.length >= 10) {
-                    const enmascarado = telGuardado.substring(0, 4) + '***' + telGuardado.substring(telGuardado.length - 4);
-                    inputTel.value = enmascarado;
-                } else {
-                    inputTel.value = telGuardado;
-                }
-                inputTel.setAttribute('data-tel-real', telGuardado);
-
-                inputTel.addEventListener('input', () => {
-                    inputTel.removeAttribute('data-tel-real');
-                });
-            }
         });
 
         const TIEMPO_INACTIVIDAD = 10 * 60 * 1000; // 10 Minutos
@@ -312,86 +297,79 @@
         reiniciarTemporizadorInactividad();
 
         function obtenerTelefonoActivo() {
-            const inputTel = document.getElementById('telefono');
-            let tel = (inputTel && inputTel.getAttribute('data-tel-real')) ? inputTel.getAttribute('data-tel-real') : null;
-            if (!tel) {
-                tel = localStorage.getItem('userPhone') || localStorage.getItem('telefonoUsuario') || inputTel?.value.trim();
-            }
+            let tel = localStorage.getItem('userPhone') || localStorage.getItem('telefonoUsuario') || document.getElementById('telefono')?.value.trim();
             return tel ? tel.trim() : null;
         }
 
-        // RECUPERACIÓN DE PIN BLINDADA (OTP WHATSAPP + ÚLTIMOS 4 DÍDIGOS DE CÉDULA + ACCESO DIRECTO AL PANEL)
-        async function solicitarRecuperacionPIN() {
-            const inputTel = document.getElementById('telefono') || document.getElementById('telefonoInput');
-            let telefono = inputTel ? (inputTel.getAttribute('data-tel-real') || inputTel.value.trim()) : '';
-            
-            if (!telefono) {
-                telefono = prompt("Ingresa tu número de teléfono registrado:");
-            }
-            
-            if (!telefono) {
-                alert("Por favor, ingresa tu número de teléfono primero.");
+        // RECUPERACIÓN DE PIN BLINDADA (OTP WHATSAPP + ÚLTIMOS 4 DÍGITOS DE CÉDULA + ACCESO DIRECTO AL PANEL)
+async function solicitarRecuperacionPIN() {
+    const inputTel = document.getElementById('telefono') || document.getElementById('telefonoInput');
+    let telefono = inputTel ? inputTel.value.trim() : '';
+    
+    if (!telefono) {
+        telefono = prompt("Ingresa tu número de teléfono registrado:");
+    }
+    
+    if (!telefono) {
+        alert("Por favor, ingresa tu número de teléfono primero.");
+        return;
+    }
+
+    if (!confirm(`Se enviará un código de verificación de 6 dígitos vía WhatsApp al número ${telefono}. ¿Deseas continuar?`)) {
+        return;
+    }
+
+    try {
+        const res = await fetch('/api/recuperar-pin-request', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ telefono: telefono.trim() })
+        });
+        const data = await res.json();
+
+        if (data.success) {
+            const codigoOTP = prompt("🔑 Ingresa el código de 6 dígitos recibido por WhatsApp:");
+            if (!codigoOTP) return;
+
+            // BARRERA DE SEGURIDAD OBLIGATORIA: ÚLTIMOS 4 DÍGITOS DE LA CÉDULA
+            const ultimos4Cedula = prompt("🛡️ SEGURIDAD CERO TERCEROS:\nIngresa los últimos 4 dígitos de tu Cédula vinculada para validar tu identidad:");
+            if (!ultimos4Cedula || ultimos4Cedula.length !== 4) {
+                alert("❌ Debes ingresar exactamente los últimos 4 dígitos de tu cédula para validar tu identidad.");
                 return;
             }
 
-            if (!confirm(`Se enviará un código de verificación de 6 dígitos vía WhatsApp al número ${telefono}. ¿Deseas continuar?`)) {
+            const nuevoPin = prompt("🔐 Ingresa tu NUEVO PIN de 4 dígitos:");
+            if (!nuevoPin || nuevoPin.length !== 4) {
+                alert("❌ El PIN debe ser strictly de 4 dígitos.");
                 return;
             }
 
-            try {
-                const res = await fetch('/api/recuperar-pin-request', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ telefono: telefono.trim() })
-                });
-                const data = await res.json();
+            const resConfirm = await fetch('/api/recuperar-pin-confirm', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    telefono: telefono.trim(),
+                    otp: codigoOTP.trim(),
+                    ultimos4Cedula: ultimos4Cedula.trim(),
+                    nuevoPin: nuevoPin.trim()
+                })
+            });
+            const dataConfirm = await resConfirm.json();
 
-                if (data.success) {
-                    const codigoOTP = prompt("🔑 Ingresa el código de 6 dígitos recibido por WhatsApp:");
-                    if (!codigoOTP) return;
-
-                    const ultimos4Cedula = prompt("🛡️ SEGURIDAD CERO TERCEROS:\nIngresa los últimos 4 dígitos de tu Cédula vinculada para validar tu identidad:");
-                    if (!ultimos4Cedula || ultimos4Cedula.length !== 4) {
-                        alert("❌ Debes ingresar exactamente los últimos 4 dígitos de tu cédula para validar tu identidad.");
-                        return;
-                    }
-
-                    const nuevoPin = prompt("🔐 Ingresa tu NUEVO PIN de 4 dígitos:");
-                    if (!nuevoPin || nuevoPin.length !== 4) {
-                        alert("❌ El PIN debe ser estrictamente de 4 dígitos.");
-                        return;
-                    }
-
-                    const resConfirm = await fetch('/api/recuperar-pin-confirm', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            telefono: telefono.trim(),
-                            otp: codigoOTP.trim(),
-                            ultimos4Cedula: ultimos4Cedula.trim(),
-                            nuevoPin: nuevoPin.trim()
-                        })
-                    });
-                    const dataConfirm = await resConfirm.json();
-
-                    if (dataConfirm.success) {
-                        alert("🎉 ¡Identidad verificada y PIN restaurado con éxito!\n\nYa puedes ingresar con tu nuevo PIN.");
-                        if (inputTel) {
-                            inputTel.value = telefono.trim();
-                            inputTel.setAttribute('data-tel-real', telefono.trim());
-                        }
-                    } else {
-                        alert(`❌ ${dataConfirm.message || 'Datos incorrectos o código expirado.'}`);
-                    }
-                } else {
-                    alert(`❌ ${data.message || 'Error al solicitar el código.'}`);
-                }
-            } catch (err) {
-                console.error('Error en recuperación:', err);
-                alert("❌ Error de conexión al procesar la recuperación de PIN.");
+            if (dataConfirm.success) {
+                alert("🎉 ¡Identidad verificada y PIN restaurado con éxito!\n\nYa puedes ingresar con tu nuevo PIN.");
+                if (inputTel) inputTel.value = telefono.trim();
+            } else {
+                alert(`❌ ${dataConfirm.message || 'Datos incorrectos o código expirado.'}`);
             }
+        } else {
+            alert(`❌ ${data.message || 'Error al solicitar el código.'}`);
         }
-
+    } catch (err) {
+        console.error('Error en recuperación:', err);
+        alert("❌ Error de conexión al procesar la recuperación de PIN.");
+    }
+}
         async function cambiarVista(vistaId) {
             const tel = obtenerTelefonoActivo();
 
@@ -603,10 +581,9 @@
             }
         }
 
-        // ACCESO Y VERIFICACIÓN POR PIN (LÓGICA BLINDADA Y NATURAL)
+        // ACCESO Y VERIFICACIÓN DE BLOQUEO CERO TERCEROS
         async function enviarCodigoWhatsApp() {
-            const inputTel = document.getElementById('telefono');
-            const telefono = obtenerTelefonoActivo();
+            const telefono = document.getElementById('telefono').value.trim();
             const pinSeguridad = document.getElementById('pinSeguridad').value.trim();
             const alertaBloqueo = document.getElementById('alertaBloqueo');
 
@@ -615,6 +592,7 @@
                 return;
             }
 
+            // PERMITE PIN REGULAR DE 4 DÍGITOS O PIN TEMPORAL DE 6 DÍGITOS
             if (pinSeguridad.length !== 4 && pinSeguridad.length !== 6) {
                 alert('❌ El PIN de seguridad debe ser de 4 dígitos (PIN fijo) o 6 dígitos (código temporal WhatsApp).');
                 return;
@@ -640,12 +618,9 @@
                     alertaBloqueo.classList.add('hidden');
                     localStorage.setItem('userPhone', telefono);
                     localStorage.setItem('telefonoUsuario', telefono);
-                    
-                    // Si el usuario ya está verificado y entró con su PIN, lo llevamos directo al panel de forma fluida
-                    sessionStorage.setItem('sesionActiva', 'true');
-                    window.location.replace('/panel');
+                    alert(data.message || '¡Código enviado por WhatsApp con éxito!');
                 } else {
-                    alert(data.message || 'PIN incorrecto o usuario no registrado.');
+                    alert(data.message || 'Error al enviar el código.');
                 }
             } catch (error) {
                 console.error('Error de conexión:', error);
