@@ -435,14 +435,29 @@ app.get('/api/admin/balance', async (req, res) => {
     }
 });
 
+// NUEVO: RUTA DE LISTADO Y CONTEO DE USUARIOS PARA EL PANEL ADMIN
+app.get('/api/admin/usuarios', async (req, res) => {
+    try {
+        const rows = await db.all(`
+            SELECT usuarios.id, usuarios.telefono, usuarios.accountType, usuarios.merchant_id, wallets.usdt_balance 
+            FROM usuarios 
+            LEFT JOIN wallets ON usuarios.id = wallets.user_id 
+            ORDER BY usuarios.id DESC
+        `);
+        res.json({ success: true, usuarios: rows });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
 app.get('/api/saldo/:telefono', limiterConsultasComercio, async (req, res) => {
     const busqueda = (req.params.telefono || '').trim();
 
     try {
         const row = await db.get(`
-            SELECT usuarios.telefono, usuarios.merchant_id, usuarios.accountType, usuarios.dailyLimit, usuarios.metodoVinculado, wallets.usdt_balance 
-            FROM usuarios 
-            LEFT JOIN wallets ON usuarios.id = wallets.user_id 
+            SELECT usuarios.telefono, usuarios.merchant_id, usuarios.accountType, usuarios.dailyLimit, usuarios.metodoVinculado, wallets.usdt_balance
+            FROM usuarios
+            LEFT JOIN wallets ON usuarios.id = wallets.user_id
             WHERE usuarios.telefono = ? OR usuarios.merchant_id = ?
         `, [busqueda, busqueda]);
 
