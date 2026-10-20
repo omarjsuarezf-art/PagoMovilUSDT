@@ -108,20 +108,7 @@ async function inicializarBaseDatos() {
         try { await db.exec(`ALTER TABLE usuarios ADD COLUMN merchant_id TEXT`); } catch (e) {}
         try { await db.exec(`ALTER TABLE usuarios ADD COLUMN metodoVinculado INTEGER DEFAULT 0`); } catch (e) {}
 
-        // Asegurar existencia del ID de comercio por defecto
-        await db.run(`
-            INSERT INTO usuarios (telefono, pinSeguridad, accountType, dailyLimit) 
-            VALUES ('MERCHANT-ID-49201', '0000', 'comercial', 999999.00) 
-            ON CONFLICT(telefono) DO NOTHING
-        `);
-
-        const merchant = await db.get("SELECT id FROM usuarios WHERE telefono = 'MERCHANT-ID-49201'");
-        if (merchant) {
-            await db.run(
-                "INSERT INTO wallets (user_id, usdt_balance) VALUES (?, 0.00) ON CONFLICT DO NOTHING",
-                [merchant.id]
-            );
-        }
+        
 
     } catch (err) {
         console.error('Error al inicializar SQLite:', err.message);
