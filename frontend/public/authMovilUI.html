@@ -267,14 +267,31 @@
 
     <script>
         let html5QrCode = null;
-
-        // INICIO LIMPIO: Sin localStorage forzado que pegue números
+// INICIO SEGURO: Si hay un número guardado en el dispositivo, lo muestra enmascarado para comodidad
         window.addEventListener('DOMContentLoaded', () => {
+            const telGuardado = localStorage.getItem('userPhone') || localStorage.getItem('telefonoUsuario');
             const inputTel = document.getElementById('telefono');
-            if (inputTel) inputTel.value = '';
             const inputPin = document.getElementById('pinSeguridad');
+
             if (inputPin) inputPin.value = '';
+
+            if (telGuardado && inputTel) {
+                if (telGuardado.length >= 10) {
+                    const enmascarado = telGuardado.substring(0, 4) + '***' + telGuardado.substring(telGuardado.length - 4);
+                    inputTel.value = enmascarado;
+                } else {
+                    inputTel.value = telGuardado;
+                }
+                // Guarda el número real en un atributo oculto para que el backend lo reciba intacto al enviar
+                inputTel.setAttribute('data-tel-real', telGuardado);
+
+                // Si el usuario edita o borra el campo, limpia el atributo para tomar lo nuevo escrito
+                inputTel.addEventListener('input', () => {
+                    inputTel.removeAttribute('data-tel-real');
+                });
+            }
         });
+      
 
         const TIEMPO_INACTIVIDAD = 10 * 60 * 1000; // 10 Minutos
         let temporizadorInactividad;
