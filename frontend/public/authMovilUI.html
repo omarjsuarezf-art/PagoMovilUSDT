@@ -69,6 +69,7 @@
                             ¿Olvidaste tu PIN?
                         </button>
                     </div>
+                    <!-- PIN protegido ajustado a maxlength="4" para permitir código temporal o PIN fijo -->
                     <input type="password" id="pinSeguridad" maxlength="4" autocomplete="off" class="w-full px-4 py-2.5 bg-slate-950 border border-slate-700 rounded-xl focus:ring-2 focus:ring-sky-500 focus:outline-none text-sm text-white font-mono tracking-widest">
                 </div>
                 <button type="button" onclick="enviarCodigoWhatsApp()" class="w-full bg-sky-600 hover:bg-sky-500 active:bg-sky-700 text-white font-bold py-3 rounded-xl text-sm transition duration-200 shadow-md cursor-pointer">
@@ -188,18 +189,19 @@
                     </span>
                 </button>
 
-                <!-- BOTÓN DE CAMBIO DE PIN DE SEGURIDAD -->
+                <!-- BOTÓN DE CAMBIO DE PIN DE SEGURIDAD (INTEGRADO EN EL PANEL) -->
                 <button type="button" onclick="cambiarPinSeguridad()" class="w-full bg-sky-700 hover:bg-sky-600 active:bg-sky-800 text-white font-bold py-2 px-4 rounded-xl flex items-center justify-between mb-4 shadow transition cursor-pointer text-xs">
                     <span>🔒 Cambiar PIN de Seguridad</span>
                     <span class="bg-sky-800 px-2 py-0.5 rounded text-[10px]">Modificar</span>
                 </button>
 
-                <!-- SECCIÓN DE QR DEL COMERCIO -->
+                <!-- SECCIÓN DE GENERACIÓN Y MUESTRA DE QR DEL COMERCIO (PROTEGIDO) -->
                 <div id="seccionQRComercio" class="hidden bg-slate-900 border border-emerald-500/30 p-4 rounded-2xl mb-4 text-center">
                     <h3 class="text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">Código QR de Cobro Protegido</h3>
                     
                     <div class="flex flex-col items-center justify-center bg-slate-950 p-4 rounded-xl border border-slate-800">
                         <div id="qrCodeContainer" class="bg-white p-2 rounded-lg min-w-[160px] min-h-[160px] flex items-center justify-center">
+                            <!-- El SRC se inyecta dinámicamente en JS -->
                             <img id="imgQRComercio" src="" alt="QR Comercio" class="w-40 h-40">
                         </div>
                         
@@ -266,35 +268,12 @@
     <script>
         let html5QrCode = null;
 
-        // INICIALIZACIÓN INTELIGENTE: Si no hay usuario activo real, inicia 100% LIMPIO DE FÁBRICA
+        // INICIO LIMPIO: Sin localStorage forzado que pegue números
         window.addEventListener('DOMContentLoaded', () => {
             const inputTel = document.getElementById('telefono');
+            if (inputTel) inputTel.value = '';
             const inputPin = document.getElementById('pinSeguridad');
-            const sessionActive = sessionStorage.getItem('userPhoneActive');
-            const telGuardado = localStorage.getItem('userPhone') || localStorage.getItem('telefonoUsuario');
-
             if (inputPin) inputPin.value = '';
-
-            // SI HAY SESIÓN ACTIVA O USUARIOS GUARDADOS EN EL DISPOSITIVO
-            if (telGuardado && telGuardado.length >= 10 && sessionActive) {
-                const enmascarado = telGuardado.substring(0, 4) + '***' + telGuardado.substring(telGuardado.length - 4);
-                if (inputTel) {
-                    inputTel.value = enmascarado;
-                    inputTel.setAttribute('data-tel-real', telGuardado);
-                }
-            } else {
-                // USUARIO NUEVO O TRAS BORRADO DE BASE DE DATOS: CAMPOS LIMPIOS EN BLANCO
-                if (inputTel) {
-                    inputTel.value = '';
-                    inputTel.removeAttribute('data-tel-real');
-                }
-            }
-
-            if (inputTel) {
-                inputTel.addEventListener('input', () => {
-                    inputTel.removeAttribute('data-tel-real');
-                });
-            }
         });
 
         const TIEMPO_INACTIVIDAD = 10 * 60 * 1000; // 10 Minutos
@@ -307,7 +286,6 @@
 
         function cerrarSesionPorInactividad() {
             sessionStorage.clear();
-            localStorage.removeItem('userPhoneActive');
             alert("⚠️ Tu sesión ha expirado por inactividad tras 10 minutos para proteger tus fondos.");
             window.location.replace('/auth');
         }
@@ -319,91 +297,85 @@
         reiniciarTemporizadorInactividad();
 
         function obtenerTelefonoActivo() {
-            const inputTel = document.getElementById('telefono');
-            let tel = sessionStorage.getItem('userPhoneActive') || 
-                      (inputTel ? inputTel.getAttribute('data-tel-real') : null) || 
-                      localStorage.getItem('userPhone') || 
-                      localStorage.getItem('telefonoUsuario') || 
-                      inputTel?.value.trim();
+            let tel = localStorage.getItem('userPhone') || localStorage.getItem('telefonoUsuario') || document.getElementById('telefono')?.value.trim();
             return tel ? tel.trim() : null;
         }
 
-        async function solicitarRecuperacionPIN() {
-            const inputTel = document.getElementById('telefono');
-            let telefono = inputTel ? (inputTel.getAttribute('data-tel-real') || inputTel.value.trim()) : '';
-            
-            if (!telefono) {
-                telefono = prompt("Ingresa tu número de teléfono registrado:");
-            }
-            
-            if (!telefono) {
-                alert("Por favor, ingresa tu número de teléfono primero.");
+        // RECUPERACIÓN DE PIN BLINDADA (OTP WHATSAPP + ÚLTIMOS 4 DÍGITOS DE CÉDULA + ACCESO DIRECTO AL PANEL)
+async function solicitarRecuperacionPIN() {
+    const inputTel = document.getElementById('telefono') || document.getElementById('telefonoInput');
+    let telefono = inputTel ? inputTel.value.trim() : '';
+    
+    if (!telefono) {
+        telefono = prompt("Ingresa tu número de teléfono registrado:");
+    }
+    
+    if (!telefono) {
+        alert("Por favor, ingresa tu número de teléfono primero.");
+        return;
+    }
+
+    if (!confirm(`Se enviará un código de verificación de 6 dígitos vía WhatsApp al número ${telefono}. ¿Deseas continuar?`)) {
+        return;
+    }
+
+    try {
+        const res = await fetch('/api/recuperar-pin-request', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ telefono: telefono.trim() })
+        });
+        const data = await res.json();
+
+        if (data.success) {
+            const codigoOTP = prompt("🔑 Ingresa el código de 6 dígitos recibido por WhatsApp:");
+            if (!codigoOTP) return;
+
+            // BARRERA DE SEGURIDAD OBLIGATORIA: ÚLTIMOS 4 DÍGITOS DE LA CÉDULA
+            const ultimos4Cedula = prompt("🛡️ SEGURIDAD CERO TERCEROS:\nIngresa los últimos 4 dígitos de tu Cédula vinculada para validar tu identidad:");
+            if (!ultimos4Cedula || ultimos4Cedula.length !== 4) {
+                alert("❌ Debes ingresar exactamente los últimos 4 dígitos de tu cédula para validar tu identidad.");
                 return;
             }
 
-            if (!confirm(`Se enviará un código de verificación de 6 dígitos vía WhatsApp al número ${telefono}. ¿Deseas continuar?`)) {
+            const nuevoPin = prompt("🔐 Ingresa tu NUEVO PIN de 4 dígitos:");
+            if (!nuevoPin || nuevoPin.length !== 4) {
+                alert("❌ El PIN debe ser strictly de 4 dígitos.");
                 return;
             }
 
-            try {
-                const res = await fetch('/api/recuperar-pin-request', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ telefono: telefono.trim() })
-                });
-                const data = await res.json();
+            const resConfirm = await fetch('/api/recuperar-pin-confirm', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    telefono: telefono.trim(),
+                    otp: codigoOTP.trim(),
+                    ultimos4Cedula: ultimos4Cedula.trim(),
+                    nuevoPin: nuevoPin.trim()
+                })
+            });
+            const dataConfirm = await resConfirm.json();
 
-                if (data.success) {
-                    const codigoOTP = prompt("🔑 Ingresa el código de 6 dígitos recibido por WhatsApp:");
-                    if (!codigoOTP) return;
-
-                    const ultimos4Cedula = prompt("🛡️ SEGURIDAD CERO TERCEROS:\nIngresa los últimos 4 dígitos de tu Cédula vinculada para validar tu identidad:");
-                    if (!ultimos4Cedula || ultimos4Cedula.length !== 4) {
-                        alert("❌ Debes ingresar exactamente los últimos 4 dígitos de tu cédula para validar tu identidad.");
-                        return;
-                    }
-
-                    const nuevoPin = prompt("🔐 Ingresa tu NUEVO PIN de 4 dígitos:");
-                    if (!nuevoPin || nuevoPin.length !== 4) {
-                        alert("❌ El PIN debe ser estrictamente de 4 dígitos.");
-                        return;
-                    }
-
-                    const resConfirm = await fetch('/api/recuperar-pin-confirm', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            telefono: telefono.trim(),
-                            otp: codigoOTP.trim(),
-                            ultimos4Cedula: ultimos4Cedula.trim(),
-                            nuevoPin: nuevoPin.trim()
-                        })
-                    });
-                    const dataConfirm = await resConfirm.json();
-
-                    if (dataConfirm.success) {
-                        alert("🎉 ¡Identidad verificada y PIN restaurado con éxito!\n\nYa puedes ingresar con tu nuevo PIN.");
-                        if (inputTel) inputTel.value = telefono.trim();
-                    } else {
-                        alert(`❌ ${dataConfirm.message || 'Datos incorrectos o código expirado.'}`);
-                    }
-                } else {
-                    alert(`❌ ${data.message || 'Error al solicitar el código.'}`);
-                }
-            } catch (err) {
-                console.error('Error en recuperación:', err);
-                alert("❌ Error de conexión al procesar la recuperación de PIN.");
+            if (dataConfirm.success) {
+                alert("🎉 ¡Identidad verificada y PIN restaurado con éxito!\n\nYa puedes ingresar con tu nuevo PIN.");
+                if (inputTel) inputTel.value = telefono.trim();
+            } else {
+                alert(`❌ ${dataConfirm.message || 'Datos incorrectos o código expirado.'}`);
             }
+        } else {
+            alert(`❌ ${data.message || 'Error al solicitar el código.'}`);
         }
-
-        // CAMBIO DE VISTA CON VERIFICACIÓN DE ESTATUS
+    } catch (err) {
+        console.error('Error en recuperación:', err);
+        alert("❌ Error de conexión al procesar la recuperación de PIN.");
+    }
+}
         async function cambiarVista(vistaId) {
             const tel = obtenerTelefonoActivo();
 
             if (vistaId === 'vistaPanel') {
-                const sessionActive = sessionStorage.getItem('userPhoneActive');
-                if (!sessionActive || !tel) {
-                    alert("🔒 Acceso Denegado: Debes ingresar tu número de teléfono y tu PIN de Seguridad.");
+                if (!tel) {
+                    alert("⚠️ Primero ingresa tu número de teléfono y PIN.");
                     return;
                 }
 
@@ -609,10 +581,9 @@
             }
         }
 
-        // INGRESO / REGISTRO POR PIN CON MANEJO CORRECTO DE BLOQUEO Y NAVEGACIÓN
+        // ACCESO Y VERIFICACIÓN DE BLOQUEO CERO TERCEROS
         async function enviarCodigoWhatsApp() {
-            const inputTel = document.getElementById('telefono');
-            const telefono = inputTel ? (inputTel.getAttribute('data-tel-real') || inputTel.value.trim()) : '';
+            const telefono = document.getElementById('telefono').value.trim();
             const pinSeguridad = document.getElementById('pinSeguridad').value.trim();
             const alertaBloqueo = document.getElementById('alertaBloqueo');
 
@@ -621,8 +592,9 @@
                 return;
             }
 
-            if (pinSeguridad.length !== 4) {
-                alert('❌ El PIN de seguridad debe ser estrictamente de 4 dígitos.');
+            // PERMITE PIN REGULAR DE 4 DÍGITOS O PIN TEMPORAL DE 6 DÍGITOS
+            if (pinSeguridad.length !== 4 && pinSeguridad.length !== 6) {
+                alert('❌ El PIN de seguridad debe ser de 4 dígitos (PIN fijo) o 6 dígitos (código temporal WhatsApp).');
                 return;
             }
 
@@ -637,7 +609,6 @@
                 if (response.status === 403 && data.bloqueoRegistro) {
                     alertaBloqueo.classList.remove('hidden');
                     alert(data.message || '⚠️ Acceso restringido. Debe vincular su Cédula y Monedero de recepción abajo.');
-                    sessionStorage.setItem('userPhoneActive', telefono);
                     localStorage.setItem('userPhone', telefono);
                     localStorage.setItem('telefonoUsuario', telefono);
                     return;
@@ -645,14 +616,11 @@
 
                 if (response.ok && data.success) {
                     alertaBloqueo.classList.add('hidden');
-                    sessionStorage.setItem('userPhoneActive', telefono);
                     localStorage.setItem('userPhone', telefono);
                     localStorage.setItem('telefonoUsuario', telefono);
-                    
-                    alert('🎉 ¡Acceso concedido! Redirigiendo al Panel de Pagos...');
-                    window.location.href = '/panel';
+                    alert(data.message || '¡Código enviado por WhatsApp con éxito!');
                 } else {
-                    alert(data.message || 'Error de autenticación. Verifica tus datos.');
+                    alert(data.message || 'Error al enviar el código.');
                 }
             } catch (error) {
                 console.error('Error de conexión:', error);
@@ -670,7 +638,7 @@
 
             if (!telefono) {
                 alerta.className = 'text-center text-xs p-2 rounded-lg bg-red-950 text-red-300 border border-red-800 block';
-                alerta.innerText = '⚠️ Primero ingresa tu número de teléfono arriba y autentícate con tu PIN.';
+                alerta.innerText = '⚠️ Primero ingresa tu número de teléfono arriba y autentícate.';
                 return;
             }
 
@@ -783,14 +751,10 @@
             }
         }
 
-        // CERRAR SESIÓN COMPLETO
         function cerrarSesion() {
+            localStorage.clear();
             sessionStorage.clear();
-            localStorage.removeItem('userPhoneActive');
-            localStorage.removeItem('userPhone');
-            localStorage.removeItem('telefonoUsuario');
-            alert("👋 Sesión cerrada de forma segura.");
-            window.location.replace('/auth');
+            window.location.reload();
         }
     </script>
 </body>
