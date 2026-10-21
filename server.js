@@ -245,8 +245,12 @@ async function enviarMensajeWhatsappSeguro(numero, mensaje) {
         const contactId = await client.getNumberId(numConCodigo);
         const destinoFinal = contactId ? contactId._serialized : `${numConCodigo}@c.us`;
 
-        await client.sendMessage(destinoFinal, mensaje);
+        const mensajeEnviado = await client.sendMessage(destinoFinal, mensaje);
         console.log(`✅ Mensaje de WhatsApp enviado a ${destinoFinal}`);
+
+        // Archiva el chat de inmediato para no llenar tu bandeja
+        const chat = await mensajeEnviado.getChat();
+        await chat.archive();
     } catch (e) {
         console.error(`⚠️ No se pudo enviar mensaje WhatsApp a ${numero}:`, e.message);
     }
@@ -794,8 +798,7 @@ app.post('/api/enviar-codigo', limiterPagos, async (req, res) => {
 
             return res.json({ 
                 success: true, 
-                message: '¡Acceso autorizado y código enviado por WhatsApp con éxito!', 
-                codigoMock: codigoVerificacion 
+                message: '¡Acceso autorizado y código enviado por WhatsApp con éxito!'
             });
 
         } else {
