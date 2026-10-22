@@ -435,7 +435,7 @@
                             seccionQR.classList.remove('hidden');
                             const aliasDinamico = "MERCHANT-" + btoa(telefono).replace(/=/g, '').substring(0, 6).toUpperCase();
                             document.getElementById('idComercioOculto').innerText = aliasDinamico;
-                            document.getElementById('imgQRComercio').src = `https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=PMUSDT:${aliasDinamico}`;
+                            document.getElementById('imgQRComercio').src = `https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=PMUSDT:${aliasDinamico}&logo=./logo.png&qzone=1`;
                         }
                     } else {
                         if (badge) {

@@ -567,7 +567,7 @@
                         const merchId = data.merchantId || merchSaved || `MERCHANT-${telefono.slice(-6)}`;
                         document.getElementById('txtIdComercio').innerText = `ID Comercio: ${merchId}`;
                         
-                        qrImageUrlActual = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(merchId)}`;
+                        qrImageUrlActual = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(merchId)}&logo=./logo.png&qzone=1`;
                         document.getElementById('qrComercioContainer').innerHTML = `
                             <img src="${qrImageUrlActual}" alt="QR Comercio" class="w-full h-full object-contain" />
                         `;
