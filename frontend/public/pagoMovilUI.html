@@ -208,9 +208,9 @@
                     
                     <div class="space-y-1">
                         <span class="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-extrabold tracking-wider uppercase bg-amber-500/10 text-amber-400 border border-amber-500/20">
-                            Código Dinámico en Caja
+                            CÓDIGO PAGO MÓVIL QR
                         </span>
-                        <h2 class="text-xs font-bold text-amber-300 uppercase tracking-wide">Código QR de Cobro Protegido</h2>
+                        <h2 class="text-xs font-bold text-amber-300 uppercase tracking-wide">CÓDIGO QR DE COBRO PROTEGIDO</h2>
                     </div>
 
                     <div class="bg-white p-4 rounded-2xl inline-block shadow-2xl border-4 border-slate-950 relative group">
@@ -229,8 +229,8 @@
                         <p class="text-[11px] text-slate-400">Escanea con cualquier billetera o cámara para recibir pagos instantáneos.</p>
                     </div>
 
-                    <button onclick="descargarImagenQR()" class="w-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-black py-2.5 rounded-xl text-xs transition flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-amber-500/20">
-                        <i class="fa-solid fa-download"></i> Descargar Código QR
+                    <button onclick="descargarCartelComercialQR()" class="w-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-black py-2.5 rounded-xl text-xs transition flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-amber-500/20">
+                        <i class="fa-solid fa-download"></i> Descargar Cartel para Vitrina / WhatsApp
                     </button>
                 </div>
 
@@ -291,7 +291,7 @@
     <script>
         let html5QrCode = null;
         let intervaloHistorial = null;
-        let qrImageUrlActual = '';
+        let merchantIdActual = '';
 
         // OBTENCIÓN ROBUSTA DEL TELÉFONO ACTIVO
         function obtenerTelefonoActivo() {
@@ -328,52 +328,6 @@
         });
 
         reiniciarTemporizadorInactividad();
-
-        // RECUPERACIÓN DE PIN CON CÓDIGO OTP POR WHATSAPP
-        async function solicitarRecuperacionPIN() {
-            const telefono = obtenerTelefonoActivo() || prompt("Ingresa tu número de teléfono registrado:");
-            if (!telefono) return alert("Por favor, ingresa tu número de teléfono.");
-
-            if (!confirm(`Se enviará un código de verificación de 6 dígitos vía WhatsApp al número ${telefono}. ¿Deseas continuar?`)) {
-                return;
-            }
-
-            try {
-                const res = await fetch('/api/recuperar-pin-request', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ telefono })
-                });
-                const data = await res.json();
-
-                if (data.success) {
-                    const codigoOTP = prompt("🔑 Ingresa el código de 6 dígitos recibido por WhatsApp:");
-                    if (!codigoOTP) return;
-
-                    const nuevoPin = prompt("🔑 Ingresa tu NUEVO PIN de 4 dígitos:");
-                    if (!nuevoPin || nuevoPin.length !== 4) {
-                        return alert("El PIN debe ser exactamente de 4 dígitos.");
-                    }
-
-                    const resConfirm = await fetch('/api/recuperar-pin-confirm', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ telefono, otp: codigoOTP.trim(), nuevoPin: nuevoPin.trim() })
-                    });
-                    const dataConfirm = await resConfirm.json();
-
-                    if (dataConfirm.success) {
-                        alert("✅ ¡Tu PIN ha sido actualizado con éxito!");
-                    } else {
-                        alert("❌ Error: " + (dataConfirm.message || "Código inválido o expirado."));
-                    }
-                } else {
-                    alert("❌ Error: " + (data.message || "No se pudo enviar el código."));
-                }
-            } catch (error) {
-                alert("Error de conexión con el servidor.");
-            }
-        }
 
         // VERIFICACIÓN SILENCIOSA CONSULTANDO AL SERVIDOR (SIN ALERTAS MOLESTAS)
         async function verificarAccesoPanel() {
@@ -540,25 +494,21 @@
                 const data = await res.json();
                 
                 if (data.success) {
-                    // SI LA SESIÓN ES VÁLIDA Y AUTORIZADA: REVELAR EL CONTENEDOR PRINCIPAL
                     const contenedorPrincipal = document.getElementById('contenedorPrincipalPanel');
                     if (contenedorPrincipal) contenedorPrincipal.classList.remove('hidden');
 
-                    // VERIFICACIÓN DEL MURO DE SEGURIDAD
                     const seccionRegistro = document.getElementById('seccionRegistroObligatorio');
                     const bloqueOperativo = document.getElementById('bloqueOperativoPanel');
 
                     if (!data.metodoVinculado) {
-                        // SI NO HA VINCULADO SU CÉDULA/CORREO: FRENO TOTAL
                         if (seccionRegistro) seccionRegistro.classList.remove('hidden');
                         if (bloqueOperativo) bloqueOperativo.classList.add('hidden');
                         
                         const badge = document.getElementById('badgeAccountType');
                         badge.className = "inline-block px-2.5 py-1 rounded-md text-[11px] font-bold tracking-wide uppercase bg-rose-500/20 text-rose-300 border border-rose-500/30";
                         badge.innerText = "REGISTRO INCOMPLETO (PENDIENTE CÉDULA Y CORREO)";
-                        return; // Se detiene aquí
+                        return;
                     } else {
-                        // SI YA VINCULÓ: ACCESO TOTAL AL PANEL
                         if (seccionRegistro) seccionRegistro.classList.add('hidden');
                         if (bloqueOperativo) bloqueOperativo.classList.remove('hidden');
                     }
@@ -581,14 +531,13 @@
                         if (seccionQr) seccionQr.classList.remove('hidden');
                         if (seccionHistorial) seccionHistorial.classList.remove('hidden');
 
-                        const merchId = data.merchantId || merchSaved || `MERCHANT-${telefono.slice(-6)}`;
-                        document.getElementById('txtIdComercio').innerText = `ID Comercio: ${merchId}`;
+                        merchantIdActual = data.merchantId || merchSaved || `MERCHANT-${telefono.slice(-6)}`;
+                        document.getElementById('txtIdComercio').innerText = `ID Comercio: ${merchantIdActual}`;
                         
-                        const payloadQr = `PMUSDT:${merchId}`;
+                        const payloadQr = `PMUSDT:${merchantIdActual}`;
                         const container = document.getElementById('qrComercioContainer');
-                        container.innerHTML = ''; // Limpiar contenedor previo
+                        container.innerHTML = ''; 
 
-                        // RENDERIZADO ROBUSTO LOCAL CON qrcode.js Y RESPALDO AUTOMÁTICO
                         if (typeof QRCode === 'function') {
                             try {
                                 new QRCode(container, {
@@ -599,7 +548,6 @@
                                     colorLight : "#ffffff",
                                     correctLevel: QRCode.CorrectLevel.H
                                 });
-                                qrImageUrlActual = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(payloadQr)}&ecc=H`;
                             } catch (err) {
                                 console.error("Error creando QR local:", err);
                                 renderizarFallbackQR(payloadQr);
@@ -630,35 +578,86 @@
             }
         }
 
-        // Función de respaldo por si el CDN del script local llega a fallar
         function renderizarFallbackQR(payload) {
-            qrImageUrlActual = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(payload)}&ecc=H`;
             const container = document.getElementById('qrComercioContainer');
-            container.innerHTML = `<img src="${qrImageUrlActual}" alt="QR Comercio" class="w-full h-full object-contain rounded-lg" />`;
+            const fallbackUrl = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(payload)}&ecc=H`;
+            container.innerHTML = `<img src="${fallbackUrl}" alt="QR Comercio" class="w-full h-full object-contain rounded-lg" />`;
         }
 
-        // DESCARGA DIRECTA Y LIMPIA SIN MENÚS MOLESTOS
-        async function descargarImagenQR() {
-            if (!qrImageUrlActual) {
-                return alert("⚠️ El código QR aún no está disponible.");
+        // =========================================================================
+        // NUEVA FUNCIÓN: GENERA UN CARTEL PROFESIONAL PARA VITRINA / WHATSAPP CON CANVAS
+        // =========================================================================
+        function descargarCartelComercialQR() {
+            const qrImgElement = document.querySelector('#qrComercioContainer img') || document.querySelector('#qrComercioContainer canvas');
+            if (!qrImgElement || !merchantIdActual) {
+                return alert("⚠️ El código QR aún se está generando, espera un segundo.");
             }
-            try {
-                const response = await fetch(qrImageUrlActual);
-                const blob = await response.blob();
-                const blobUrl = URL.createObjectURL(blob);
 
-                const a = document.createElement('a');
-                a.href = blobUrl;
-                a.download = 'QR_Comercio_MonederoUSDT.png';
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(blobUrl);
+            // Creamos un canvas virtual de alta resolución para el cartel (600x800 px)
+            const canvas = document.createElement('canvas');
+            canvas.width = 600;
+            canvas.height = 750;
+            const ctx = canvas.getContext('2d');
 
-            } catch (err) {
-                console.error("Error al descargar el QR:", err);
-                window.open(qrImageUrlActual, '_blank');
+            // 1. Fondo de la tarjeta (Azul oscuro elegante)
+            ctx.fillStyle = "#080d19";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // 2. Borde exterior dorado/ámbar decorativo
+            ctx.strokeStyle = "#f59e0b";
+            ctx.lineWidth = 6;
+            ctx.strokeRect(20, 20, canvas.width - 40, canvas.height - 40);
+
+            // 3. Encabezado: "CÓDIGO PAGO MÓVIL QR"
+            ctx.fillStyle = "#fbbf24";
+            ctx.font = "bold 20px system-ui, -apple-system, sans-serif";
+            ctx.textAlign = "center";
+            ctx.fillText("CÓDIGO PAGO MÓVIL QR", canvas.width / 2, 80);
+
+            // 4. Subtítulo: "CÓDIGO QR DE COBRO PROTEGIDO"
+            ctx.fillStyle = "#f8fafc";
+            ctx.font = "bold 28px system-ui, -apple-system, sans-serif";
+            ctx.fillText("CÓDIGO QR DE COBRO PROTEGIDO", canvas.width / 2, 125);
+
+            // 5. Cuadro blanco central donde irá el QR
+            ctx.fillStyle = "#ffffff";
+            ctx.roundRect ? ctx.beginPath(), ctx.roundRect(125, 160, 350, 350, 20), ctx.fill() : ctx.fillRect(125, 160, 350, 350);
+
+            // Dibujar la imagen del QR dentro del cuadro blanco
+            let sourceToDraw = qrImgElement;
+            if (qrImgElement.tagName === 'CANVAS') {
+                const tempImg = new Image();
+                tempImg.src = qrImgElement.toDataURL();
+                ctx.drawImage(tempImg, 150, 185, 300, 300);
+            } else {
+                ctx.drawImage(qrImgElement, 150, 185, 300, 300);
             }
+
+            // 6. Insignia con el ID de Comercio exacto (MERCHANT-XXXXXX)
+            ctx.fillStyle = "#020617";
+            ctx.roundRect ? ctx.beginPath(), ctx.roundRect(100, 550, 400, 50, 12), ctx.fill() : ctx.fillRect(100, 550, 400, 50);
+            
+            ctx.strokeStyle = "#10b981";
+            ctx.lineWidth = 2;
+            ctx.strokeRect(100, 550, 400, 50);
+
+            ctx.fillStyle = "#34d399";
+            ctx.font = "bold 22px monospace";
+            ctx.fillText(`ID Comercio: ${merchantIdActual}`, canvas.width / 2, 582);
+
+            // 7. Pie de página instructivo para WhatsApp / Vitrina
+            ctx.fillStyle = "#94a3b8";
+            ctx.font = "16px system-ui, -apple-system, sans-serif";
+            ctx.fillText("Escanea con cualquier billetera o cámara", canvas.width / 2, 650);
+            ctx.fillText("para recibir pagos instantáneos en caja.", canvas.width / 2, 675);
+
+            // Descarga automática del cartel listo
+            const link = document.createElement('a');
+            link.download = `Cartel_QR_${merchantIdActual}.png`;
+            link.href = canvas.toDataURL('image/png');
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
         }
 
         async function cargarHistorial() {
@@ -775,7 +774,6 @@
         async function procesarRetiro(e) {
             e.preventDefault();
             const plataforma = document.getElementById('tipoExchange').value;
-            console.log(plataforma);
             const destino = document.getElementById('destinoRetiro').value.trim();
             const monto = parseFloat(document.getElementById('montoRetiro').value);
             const telefono = obtenerTelefonoActivo();
