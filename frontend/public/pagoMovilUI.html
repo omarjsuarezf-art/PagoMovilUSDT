@@ -572,7 +572,7 @@ document.getElementById('txtIdComercio').innerText = `ID Comercio: ${merchIdActu
 const qrDataTexto = encodeURIComponent(`https://pagomovilusdt.duckdns.org/pagar?id=${merchIdActual}`);
 const logoUrlTexto = encodeURIComponent('https://pagomovilusdt.duckdns.org/logo.png');
 
-qrImageUrlActual = `https://quickchart.io/qr?text=${qrDataTexto}&size=300&ecLevel=H&margin=1&centerImage=${logoUrlTexto}&imageSize=60`;
+qrImageUrlActual = `https://quickchart.io/qr?text=${qrDataTexto}&size=300&ecLevel=H&margin=1&centerImage=${logoUrlTexto}&imageSize=60&format=png`;
 
 document.getElementById('qrComercioContainer').innerHTML = `
     <img src="${qrImageUrlActual}" alt="QR Comercio" class="w-full h-full object-contain rounded-lg" />
