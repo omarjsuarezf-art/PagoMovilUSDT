@@ -215,7 +215,7 @@
 
                     <div class="bg-white p-4 rounded-2xl inline-block shadow-2xl border-4 border-slate-950 relative group">
                         <div id="qrComercioContainer" class="w-44 h-44 flex items-center justify-center mx-auto">
-                            <!-- El QR se renderizará de manera nativa aquí -->
+                            <!-- El QR se renderizará de manera local aquí -->
                         </div>
                         <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition bg-black/40 rounded-xl backdrop-blur-[2px]">
                             <span class="text-white text-[10px] font-bold bg-slate-900/80 px-2 py-1 rounded">Listo para escanear</span>
@@ -585,23 +585,27 @@
                         document.getElementById('txtIdComercio').innerText = `ID Comercio: ${merchId}`;
                         
                         const payloadQr = `PMUSDT:${merchId}`;
-                        qrImageUrlActual = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(payloadQr)}&ecc=H`;
-                        
-                        // RENDERIZADO LOCAL ROBUSTO CON qrcode.js
                         const container = document.getElementById('qrComercioContainer');
-                        container.innerHTML = ''; 
-                        
-                        if (typeof QRCode !== 'undefined') {
-                            new QRCode(container, {
-                                text: payloadQr,
-                                width: 176,
-                                height: 176,
-                                colorDark : "#080d19",
-                                colorLight : "#ffffff",
-                                correctLevel: QRCode.CorrectLevel.H
-                            });
+                        container.innerHTML = ''; // Limpiar contenedor previo
+
+                        // RENDERIZADO ROBUSTO LOCAL CON qrcode.js Y RESPALDO AUTOMÁTICO
+                        if (typeof QRCode === 'function') {
+                            try {
+                                new QRCode(container, {
+                                    text: payloadQr,
+                                    width: 176,
+                                    height: 176,
+                                    colorDark : "#080d19",
+                                    colorLight : "#ffffff",
+                                    correctLevel: QRCode.CorrectLevel.H
+                                });
+                                qrImageUrlActual = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(payloadQr)}&ecc=H`;
+                            } catch (err) {
+                                console.error("Error creando QR local:", err);
+                                renderizarFallbackQR(payloadQr);
+                            }
                         } else {
-                            container.innerHTML = `<img src="${qrImageUrlActual}" alt="QR Comercio" class="w-full h-full object-contain" />`;
+                            renderizarFallbackQR(payloadQr);
                         }
 
                         cargarHistorial();
@@ -624,6 +628,13 @@
             } catch (e) {
                 console.error("Error al cargar datos:", e);
             }
+        }
+
+        // Función de respaldo por si el CDN del script local llega a fallar
+        function renderizarFallbackQR(payload) {
+            qrImageUrlActual = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(payload)}&ecc=H`;
+            const container = document.getElementById('qrComercioContainer');
+            container.innerHTML = `<img src="${qrImageUrlActual}" alt="QR Comercio" class="w-full h-full object-contain rounded-lg" />`;
         }
 
         async function descargarImagenQR() {
@@ -777,13 +788,13 @@
         async function procesarRetiro(e) {
             e.preventDefault();
             const plataforma = document.getElementById('tipoExchange').value;
+            console.log(plataforma);
             const destino = document.getElementById('destinoRetiro').value.trim();
             const monto = parseFloat(document.getElementById('montoRetiro').value);
             const telefono = obtenerTelefonoActivo();
 
             if (!destino || !monto || monto <= 0) return alert('⚠️ Revisa los datos del retiro.');
 
-            // FILTRO DE SEGURIDAD ESTRICTO: VALIDACIÓN 0x EN RED POLYGON
             if (plataforma === 'polygon') {
                 if (!destino.toLowerCase().startsWith('0x') || destino.length < 40) {
                     alert("❌ DIRECCIÓN INVÁLIDA:\n\nPara retirar a la Red Polygon (MetaMask, Phantom, Trust Wallet) la dirección DEBE empezar obligatoriamente por '0x'. Por favor verifica tu wallet.");
