@@ -212,10 +212,14 @@
                         <div class="text-xs text-emerald-400 font-mono font-bold" id="txtIdComercio">PAGO MÓVIL USDT</div>
                         <p class="text-[10px] text-slate-400 mt-1">Escanea para recibir pagos instantáneos en caja.</p>
                     </div>
-                    <button onclick="descargarImagenQR()" class="w-full bg-amber-500 hover:bg-amber-600 text-slate-950 font-black py-2 rounded-xl text-xs transition flex items-center justify-center gap-2 cursor-pointer shadow-md shadow-amber-500/10">
-                        <i class="fa-solid fa-download"></i> Descargar Código QR (PNG)
-                    </button>
-                </div>
+                    <div class="grid grid-cols-2 gap-2 pt-1">
+    <button onclick="descargarPNGDirecto()" class="bg-amber-500 hover:bg-amber-600 text-slate-950 font-black py-2 px-2 rounded-xl text-xs transition flex items-center justify-center gap-1.5 cursor-pointer shadow-md shadow-amber-500/10">
+        <i class="fa-solid fa-download"></i> Descargar PNG
+    </button>
+    <button onclick="compartirWhatsAppDirecto()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 px-2 rounded-xl text-xs transition flex items-center justify-center gap-1.5 cursor-pointer shadow-md shadow-emerald-600/10">
+        <i class="fa-brands fa-whatsapp text-sm"></i> WhatsApp
+    </button>
+</div>
 
                 <!-- SECCIÓN: VENTAS Y MOVIMIENTOS EN VIVO -->
                 <div id="seccionHistorial" class="hidden space-y-3 pt-2">
