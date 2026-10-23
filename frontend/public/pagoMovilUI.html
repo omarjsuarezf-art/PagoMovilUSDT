@@ -230,7 +230,7 @@
                     </div>
 
                     <button onclick="descargarImagenQR()" class="w-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-black py-2.5 rounded-xl text-xs transition flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-amber-500/20">
-                        <i class="fa-solid fa-qrcode"></i> Compartir / Descargar Código QR
+                        <i class="fa-solid fa-download"></i> Descargar Código QR
                     </button>
                 </div>
 
@@ -637,6 +637,7 @@
             container.innerHTML = `<img src="${qrImageUrlActual}" alt="QR Comercio" class="w-full h-full object-contain rounded-lg" />`;
         }
 
+        // DESCARGA DIRECTA Y LIMPIA SIN MENÚS MOLESTOS
         async function descargarImagenQR() {
             if (!qrImageUrlActual) {
                 return alert("⚠️ El código QR aún no está disponible.");
@@ -644,22 +645,8 @@
             try {
                 const response = await fetch(qrImageUrlActual);
                 const blob = await response.blob();
-                const file = new File([blob], "QR_Comercio_MonederoUSDT.png", { type: "image/png" });
-
-                if (navigator.canShare && navigator.canShare({ files: [file] })) {
-                    try {
-                        await navigator.share({
-                            title: 'QR de Cobro - Monedero USDT',
-                            text: 'Escanea este código QR para realizar tu pago instantáneo en caja.',
-                            files: [file]
-                        });
-                        return;
-                    } catch (shareErr) {
-                        if (shareErr.name === 'AbortError') return;
-                    }
-                }
-
                 const blobUrl = URL.createObjectURL(blob);
+
                 const a = document.createElement('a');
                 a.href = blobUrl;
                 a.download = 'QR_Comercio_MonederoUSDT.png';
@@ -669,7 +656,7 @@
                 URL.revokeObjectURL(blobUrl);
 
             } catch (err) {
-                console.error("Error al gestionar el QR:", err);
+                console.error("Error al descargar el QR:", err);
                 window.open(qrImageUrlActual, '_blank');
             }
         }
