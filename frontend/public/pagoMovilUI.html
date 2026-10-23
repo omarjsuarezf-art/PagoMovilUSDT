@@ -302,6 +302,7 @@
         }
 
         function cerrarSesionPorInactividad() {
+            localStorage.clear();
             sessionStorage.clear();
             alert("⚠️ Tu sesión ha expirado por inactividad tras 10 minutos para proteger tus fondos.");
             window.location.replace('/auth');
@@ -554,8 +555,8 @@
                     const seccionQr = document.getElementById('seccionQrComercio');
                     const seccionHistorial = document.getElementById('seccionHistorial');
                     
-                    const merchSaved = localStorage.getItem('merchantId');
-                    const esComercialActivo = (data.accountType === 'comercial' || data.accountType === 'emprendedor' || (data.merchantId && data.merchantId !== 'null') || !!merchSaved);
+                    // EVALUACIÓN ESTRICTA ÚNICAMENTE BASADA EN EL TIPO DE CUENTA DEL SERVIDOR
+                    const esComercialActivo = (data.accountType === 'comercial' || data.accountType === 'emprendedor');
 
                     if (esComercialActivo) {
                         badge.className = "inline-block px-2.5 py-1 rounded-md text-[11px] font-bold tracking-wide uppercase bg-amber-500/20 text-amber-300 border border-amber-500/30";
@@ -564,20 +565,19 @@
                         
                         if (seccionQr) seccionQr.classList.remove('hidden');
                         if (seccionHistorial) seccionHistorial.classList.remove('hidden');
-                     merchIdActual = data.merchantId || merchSaved || `MERCHANT-${telefono.slice(-6)}`;
-document.getElementById('txtIdComercio').innerText = `ID Comercio: ${merchIdActual}`;
+                        
+                        merchIdActual = data.merchant_id || `MERCHANT-${telefono.slice(-6)}`;
+                        document.getElementById('txtIdComercio').innerText = `ID Comercio: ${merchIdActual}`;
 
-// QR ROBUSTO Y PROFESIONAL CON LOGO INCrustado (vía QuickChart API)
-// Configurado con corrección de errores alta (H) y URL segura del logo
-const qrDataTexto = encodeURIComponent(`https://pagomovilusdt.duckdns.org/pagar?id=${merchIdActual}`);
-const logoUrlTexto = encodeURIComponent('https://pagomovilusdt.duckdns.org/logo.png');
+                        // QR ROBUSTO Y PROFESIONAL CON LOGO INCRUSTADO (vía QuickChart API)
+                        const qrDataTexto = encodeURIComponent(`https://pagomovilusdt.duckdns.org/pagar?id=${merchIdActual}`);
+                        const logoUrlTexto = encodeURIComponent('https://pagomovilusdt.duckdns.org/logo.png');
 
-qrImageUrlActual = `https://quickchart.io/qr?text=${qrDataTexto}&size=300&ecLevel=H&margin=1&centerImage=${logoUrlTexto}&imageSize=60&format=png`;
+                        qrImageUrlActual = `https://quickchart.io/qr?text=${qrDataTexto}&size=300&ecLevel=H&margin=1&centerImage=${logoUrlTexto}&imageSize=60&format=png`;
 
-document.getElementById('qrComercioContainer').innerHTML = `
-    <img src="${qrImageUrlActual}" alt="QR Comercio" class="w-full h-full object-contain rounded-lg" />
-`;
-
+                        document.getElementById('qrComercioContainer').innerHTML = `
+                            <img src="${qrImageUrlActual}" alt="QR Comercio" class="w-full h-full object-contain rounded-lg" />
+                        `;
 
                         cargarHistorial();
                         if (!intervaloHistorial) {
@@ -793,8 +793,9 @@ document.getElementById('qrComercioContainer').innerHTML = `
             }
         }
 
-        // CIERRE DE SESIÓN ESTRICTO Y DEFINITIVO
+        // CIERRE DE SESIÓN ESTRICTO Y DEFINITIVO (LIMPIEZA TOTAL)
         function cerrarSesion() {
+            localStorage.clear();
             sessionStorage.clear();
             window.location.replace('/auth');
         }
