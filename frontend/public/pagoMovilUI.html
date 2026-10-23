@@ -212,14 +212,10 @@
                         <div class="text-xs text-emerald-400 font-mono font-bold" id="txtIdComercio">PAGO MÓVIL USDT</div>
                         <p class="text-[10px] text-slate-400 mt-1">Escanea para recibir pagos instantáneos en caja.</p>
                     </div>
-                    <div class="grid grid-cols-2 gap-2 pt-1">
-    <button onclick="descargarPNGDirecto()" class="bg-amber-500 hover:bg-amber-600 text-slate-950 font-black py-2 px-2 rounded-xl text-xs transition flex items-center justify-center gap-1.5 cursor-pointer shadow-md shadow-amber-500/10">
-        <i class="fa-solid fa-download"></i> Descargar PNG
-    </button>
-    <button onclick="compartirWhatsAppDirecto()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 px-2 rounded-xl text-xs transition flex items-center justify-center gap-1.5 cursor-pointer shadow-md shadow-emerald-600/10">
-        <i class="fa-brands fa-whatsapp text-sm"></i> WhatsApp
-    </button>
-</div>
+                    <button onclick="descargarImagenQR()" class="w-full bg-amber-500 hover:bg-amber-600 text-slate-950 font-black py-2 rounded-xl text-xs transition flex items-center justify-center gap-2 cursor-pointer shadow-md shadow-amber-500/10">
+                        <i class="fa-solid fa-share-nodes"></i> Compartir / Descargar Código QR
+                    </button>
+                </div>
 
                 <!-- SECCIÓN: VENTAS Y MOVIMIENTOS EN VIVO -->
                 <div id="seccionHistorial" class="hidden space-y-3 pt-2">
@@ -279,7 +275,6 @@
         let html5QrCode = null;
         let intervaloHistorial = null;
         let qrImageUrlActual = '';
-        let merchIdActual = '';
 
         // OBTENCIÓN ROBUSTA DEL TELÉFONO ACTIVO
         function obtenerTelefonoActivo() {
@@ -306,7 +301,6 @@
         }
 
         function cerrarSesionPorInactividad() {
-            localStorage.clear();
             sessionStorage.clear();
             alert("⚠️ Tu sesión ha expirado por inactividad tras 10 minutos para proteger tus fondos.");
             window.location.replace('/auth');
@@ -559,8 +553,8 @@
                     const seccionQr = document.getElementById('seccionQrComercio');
                     const seccionHistorial = document.getElementById('seccionHistorial');
                     
-                    // EVALUACIÓN ESTRICTA ÚNICAMENTE BASADA EN EL TIPO DE CUENTA DEL SERVIDOR
-                    const esComercialActivo = (data.accountType === 'comercial' || data.accountType === 'emprendedor');
+                    const merchSaved = localStorage.getItem('merchantId');
+                    const esComercialActivo = (data.accountType === 'comercial' || data.accountType === 'emprendedor' || (data.merchantId && data.merchantId !== 'null') || !!merchSaved);
 
                     if (esComercialActivo) {
                         badge.className = "inline-block px-2.5 py-1 rounded-md text-[11px] font-bold tracking-wide uppercase bg-amber-500/20 text-amber-300 border border-amber-500/30";
@@ -569,17 +563,13 @@
                         
                         if (seccionQr) seccionQr.classList.remove('hidden');
                         if (seccionHistorial) seccionHistorial.classList.remove('hidden');
+
+                        const merchId = data.merchantId || merchSaved || `MERCHANT-${telefono.slice(-6)}`;
+                        document.getElementById('txtIdComercio').innerText = `ID Comercio: ${merchId}`;
                         
-                        merchIdActual = data.merchant_id || `MERCHANT-${telefono.slice(-6)}`;
-                        document.getElementById('txtIdComercio').innerText = `ID Comercio: ${merchIdActual}`;
-
-                        // QR ROBUSTO Y PROFESIONAL CON LOGO INCRUSTADO (vía QuickChart API)
-                        const qrDataTexto = encodeURIComponent(`https://pagomovilusdt.duckdns.org/pagar?id=${merchIdActual}`);
-                        const logoUrlTexto = encodeURIComponent('https://pagomovilusdt.duckdns.org/logo.png');
-
-                       qrImageUrlActual = `https://quickchart.io/qr?text=${qrDataTexto}&size=300&ecLevel=H&margin=1&centerImage=${logoUrlTexto}&centerImageWidth=70&centerImageHeight=70&format=png`;
+                        qrImageUrlActual = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(merchId)}`;
                         document.getElementById('qrComercioContainer').innerHTML = `
-                            <img src="${qrImageUrlActual}" alt="QR Comercio" class="w-full h-full object-contain rounded-lg" />
+                            <img src="${qrImageUrlActual}" alt="QR Comercio" class="w-full h-full object-contain" />
                         `;
 
                         cargarHistorial();
@@ -604,35 +594,42 @@
             }
         }
 
-        // DESCARGA DIRECTA DE LA IMAGEN PNG DEL QR AL DISPOSITIVO
-async function descargarPNGDirecto() {
-    if (!qrImageUrlActual) {
-        return alert("⚠️ El código QR aún no está disponible.");
-    }
-    try {
-        const respuesta = await fetch(qrImageUrlActual);
-        const blob = await respuesta.blob();
-        const urlBlob = window.URL.createObjectURL(blob);
+        async function descargarImagenQR() {
+            if (!qrImageUrlActual) {
+                return alert("⚠️ El código QR aún no está disponible.");
+            }
+            try {
+                const response = await fetch(qrImageUrlActual);
+                const blob = await response.blob();
+                const file = new File([blob], "QR_Comercio_MonederoUSDT.png", { type: "image/png" });
 
-        const enlace = document.createElement('a');
-        enlace.href = urlBlob;
-        enlace.download = `QR_Comercio_${merchIdActual || 'USDT'}.png`;
-        document.body.appendChild(enlace);
-        enlace.click();
-        document.body.removeChild(enlace);
-        window.URL.revokeObjectURL(urlBlob);
-    } catch (error) {
-        window.open(qrImageUrlActual, '_blank');
-    }// 2. ENVIAR MENSAJE Y ENLACE EXCLUSIVAMENTE POR WHATSAPP
-function compartirWhatsAppDirecto() {
-    if (!merchIdActual) {
-        return alert("⚠️ El ID del comercio no está listo.");
-    }
-    const mensaje = `*PagoMóvil USDT - Cobro Comercial*\nEscanea mi código QR o ingresa mi ID Comercio para realizar pagos instantáneos en caja:\n\n*ID Comercio:* ${merchIdActual}\n*Pagar aquí:* https://pagomovilusdt.duckdns.org/pagar?id=${merchIdActual}`;
-    const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(mensaje)}`;
-    window.open(whatsappUrl, '_blank');
-}
-}
+                if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                    try {
+                        await navigator.share({
+                            title: 'QR de Cobro - Monedero USDT',
+                            text: 'Escanea este código QR para realizar tu pago instantáneo en caja.',
+                            files: [file]
+                        });
+                        return;
+                    } catch (shareErr) {
+                        if (shareErr.name === 'AbortError') return;
+                    }
+                }
+
+                const blobUrl = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = blobUrl;
+                a.download = 'QR_Comercio_MonederoUSDT.png';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(blobUrl);
+
+            } catch (err) {
+                console.error("Error al gestionar el QR:", err);
+                window.open(qrImageUrlActual, '_blank');
+            }
+        }
 
         async function cargarHistorial() {
             const telefono = obtenerTelefonoActivo();
@@ -817,9 +814,8 @@ function compartirWhatsAppDirecto() {
             }
         }
 
-        // CIERRE DE SESIÓN ESTRICTO Y DEFINITIVO (LIMPIEZA TOTAL)
+        // CIERRE DE SESIÓN ESTRICTO Y DEFINITIVO
         function cerrarSesion() {
-            localStorage.clear();
             sessionStorage.clear();
             window.location.replace('/auth');
         }
