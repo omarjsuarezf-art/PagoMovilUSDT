@@ -585,7 +585,7 @@
         }
 
         // =========================================================================
-        // NUEVA FUNCIÓN: GENERA UN CARTEL PROFESIONAL PARA VITRINA / WHATSAPP CON CANVAS
+        // NUEVA FUNCIÓN: CARTEL PROFESIONAL PARA VITRINA / WHATSAPP (CON CANVAS)
         // =========================================================================
         function descargarCartelComercialQR() {
             const qrImgElement = document.querySelector('#qrComercioContainer img') || document.querySelector('#qrComercioContainer canvas');
@@ -593,49 +593,46 @@
                 return alert("⚠️ El código QR aún se está generando, espera un segundo.");
             }
 
-            // Creamos un canvas virtual de alta resolución para el cartel (600x800 px)
             const canvas = document.createElement('canvas');
             canvas.width = 600;
             canvas.height = 750;
             const ctx = canvas.getContext('2d');
 
-            // 1. Fondo de la tarjeta (Azul oscuro elegante)
             ctx.fillStyle = "#080d19";
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            // 2. Borde exterior dorado/ámbar decorativo
             ctx.strokeStyle = "#f59e0b";
             ctx.lineWidth = 6;
             ctx.strokeRect(20, 20, canvas.width - 40, canvas.height - 40);
 
-            // 3. Encabezado: "CÓDIGO PAGO MÓVIL QR"
             ctx.fillStyle = "#fbbf24";
             ctx.font = "bold 20px system-ui, -apple-system, sans-serif";
             ctx.textAlign = "center";
             ctx.fillText("CÓDIGO PAGO MÓVIL QR", canvas.width / 2, 80);
 
-            // 4. Subtítulo: "CÓDIGO QR DE COBRO PROTEGIDO"
             ctx.fillStyle = "#f8fafc";
             ctx.font = "bold 28px system-ui, -apple-system, sans-serif";
             ctx.fillText("CÓDIGO QR DE COBRO PROTEGIDO", canvas.width / 2, 125);
 
-            // 5. Cuadro blanco central donde irá el QR
             ctx.fillStyle = "#ffffff";
-            ctx.roundRect ? ctx.beginPath(), ctx.roundRect(125, 160, 350, 350, 20), ctx.fill() : ctx.fillRect(125, 160, 350, 350);
+            ctx.fillRect(125, 160, 350, 350);
 
-            // Dibujar la imagen del QR dentro del cuadro blanco
-            let sourceToDraw = qrImgElement;
             if (qrImgElement.tagName === 'CANVAS') {
                 const tempImg = new Image();
                 tempImg.src = qrImgElement.toDataURL();
-                ctx.drawImage(tempImg, 150, 185, 300, 300);
+                tempImg.onload = function() {
+                    ctx.drawImage(tempImg, 150, 185, 300, 300);
+                    finalizarDibujoCartel(canvas, ctx);
+                };
             } else {
                 ctx.drawImage(qrImgElement, 150, 185, 300, 300);
+                finalizarDibujoCartel(canvas, ctx);
             }
+        }
 
-            // 6. Insignia con el ID de Comercio exacto (MERCHANT-XXXXXX)
+        function finalizarDibujoCartel(canvas, ctx) {
             ctx.fillStyle = "#020617";
-            ctx.roundRect ? ctx.beginPath(), ctx.roundRect(100, 550, 400, 50, 12), ctx.fill() : ctx.fillRect(100, 550, 400, 50);
+            ctx.fillRect(100, 550, 400, 50);
             
             ctx.strokeStyle = "#10b981";
             ctx.lineWidth = 2;
@@ -643,15 +640,14 @@
 
             ctx.fillStyle = "#34d399";
             ctx.font = "bold 22px monospace";
+            ctx.textAlign = "center";
             ctx.fillText(`ID Comercio: ${merchantIdActual}`, canvas.width / 2, 582);
 
-            // 7. Pie de página instructivo para WhatsApp / Vitrina
             ctx.fillStyle = "#94a3b8";
             ctx.font = "16px system-ui, -apple-system, sans-serif";
             ctx.fillText("Escanea con cualquier billetera o cámara", canvas.width / 2, 650);
             ctx.fillText("para recibir pagos instantáneos en caja.", canvas.width / 2, 675);
 
-            // Descarga automática del cartel listo
             const link = document.createElement('a');
             link.download = `Cartel_QR_${merchantIdActual}.png`;
             link.href = canvas.toDataURL('image/png');
