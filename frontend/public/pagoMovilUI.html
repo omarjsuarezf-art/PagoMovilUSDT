@@ -623,7 +623,15 @@ async function descargarPNGDirecto() {
         window.URL.revokeObjectURL(urlBlob);
     } catch (error) {
         window.open(qrImageUrlActual, '_blank');
+    }// 2. ENVIAR MENSAJE Y ENLACE EXCLUSIVAMENTE POR WHATSAPP
+function compartirWhatsAppDirecto() {
+    if (!merchIdActual) {
+        return alert("⚠️ El ID del comercio no está listo.");
     }
+    const mensaje = `*PagoMóvil USDT - Cobro Comercial*\nEscanea mi código QR o ingresa mi ID Comercio para realizar pagos instantáneos en caja:\n\n*ID Comercio:* ${merchIdActual}\n*Pagar aquí:* https://pagomovilusdt.duckdns.org/pagar?id=${merchIdActual}`;
+    const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(mensaje)}`;
+    window.open(whatsappUrl, '_blank');
+}
 }
 
         async function cargarHistorial() {
