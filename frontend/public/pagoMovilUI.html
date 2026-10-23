@@ -573,8 +573,7 @@
                         const qrDataTexto = encodeURIComponent(`https://pagomovilusdt.duckdns.org/pagar?id=${merchIdActual}`);
                         const logoUrlTexto = encodeURIComponent('https://pagomovilusdt.duckdns.org/logo.png');
 
-                        qrImageUrlActual = `https://quickchart.io/qr?text=${qrDataTexto}&size=300&ecLevel=H&margin=1&centerImage=${logoUrlTexto}&centerImageWidth=60&centerImageHeight=60&format=png`;
-
+                       qrImageUrlActual = `https://quickchart.io/qr?text=${qrDataTexto}&size=300&ecLevel=H&margin=1&centerImage=${logoUrlTexto}&centerImageWidth=70&centerImageHeight=70&format=png`;
                         document.getElementById('qrComercioContainer').innerHTML = `
                             <img src="${qrImageUrlActual}" alt="QR Comercio" class="w-full h-full object-contain rounded-lg" />
                         `;
@@ -602,28 +601,36 @@
         }
 
         // DESCARGA DIRECTA DE LA IMAGEN PNG DEL QR AL DISPOSITIVO
-        async function descargarImagenQR() {
-            if (!qrImageUrlActual) {
-                return alert("⚠️ El código QR aún no está disponible.");
-            }
+async function descargarImagenQR() {
+    if (!qrImageUrlActual) {
+        return alert("⚠️ El código QR aún no está disponible.");
+    }
 
-            try {
-                const respuesta = await fetch(qrImageUrlActual);
-                const blob = await respuesta.blob();
-                const urlBlob = window.URL.createObjectURL(blob);
+    // 1. DESCARGA DIRECTA DEL PNG EN EL DISPOSITIVO
+    try {
+        const respuesta = await fetch(qrImageUrlActual);
+        const blob = await respuesta.blob();
+        const urlBlob = window.URL.createObjectURL(blob);
 
-                const enlace = document.createElement('a');
-                enlace.href = urlBlob;
-                enlace.download = `QR_Comercio_${merchIdActual || 'USDT'}.png`;
-                document.body.appendChild(enlace);
-                enlace.click();
-                document.body.removeChild(enlace);
-                window.URL.revokeObjectURL(urlBlob);
+        const enlace = document.createElement('a');
+        enlace.href = urlBlob;
+        enlace.download = `QR_Comercio_${merchIdActual || 'USDT'}.png`;
+        document.body.appendChild(enlace);
+        enlace.click();
+        document.body.removeChild(enlace);
+        window.URL.revokeObjectURL(urlBlob);
+    } catch (error) {
+        window.open(qrImageUrlActual, '_blank');
+    }
 
-            } catch (error) {
-                window.open(qrImageUrlActual, '_blank');
-            }
-        }
+    // 2. COMPARTIR POR WHATSAPP EN VENTANA APARTE
+    const mensaje = `*PagoMóvil USDT - Cobro Comercial*\nEscanea mi código QR o ingresa mi ID Comercio para realizar pagos instantáneos en caja:\n\n*ID Comercio:* ${merchIdActual}\n*Pagar aquí:* https://pagomovilusdt.duckdns.org/pagar?id=${merchIdActual}`;
+    const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(mensaje)}`;
+    
+    setTimeout(() => {
+        window.open(whatsappUrl, '_blank');
+    }, 500);
+}
 
         async function cargarHistorial() {
             const telefono = obtenerTelefonoActivo();
