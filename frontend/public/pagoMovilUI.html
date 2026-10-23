@@ -275,6 +275,7 @@
         let html5QrCode = null;
         let intervaloHistorial = null;
         let qrImageUrlActual = '';
+        let merchIdActual = '';
 
         // OBTENCIÓN ROBUSTA DEL TELÉFONO ACTIVO
         function obtenerTelefonoActivo() {
@@ -436,7 +437,7 @@
 
             const pinNuevo = prompt("🔒 Ingrese su NUEVO PIN de seguridad (4 dígitos):");
             if (!pinNuevo || pinNuevo.length !== 4) {
-                alert("El nuevo PIN debe ser estrictamente de 4 dígitos.");
+                alert("El nuevo PIN debe ser strictly de 4 dígitos.");
                 return;
             }
 
@@ -564,10 +565,10 @@
                         if (seccionQr) seccionQr.classList.remove('hidden');
                         if (seccionHistorial) seccionHistorial.classList.remove('hidden');
 
-                        const merchId = data.merchantId || merchSaved || `MERCHANT-${telefono.slice(-6)}`;
-                        document.getElementById('txtIdComercio').innerText = `ID Comercio: ${merchId}`;
+                        merchIdActual = data.merchantId || merchSaved || `MERCHANT-${telefono.slice(-6)}`;
+                        document.getElementById('txtIdComercio').innerText = `ID Comercio: ${merchIdActual}`;
                         
-                        qrImageUrlActual = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(merchId)}&logo=./logo.png&qzone=1`;
+                        qrImageUrlActual = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(merchIdActual)}&logo=https%3A%2F%2Fpagomovilusdt.duckdns.org%2Flogo.png&qzone=1`;
                         document.getElementById('qrComercioContainer').innerHTML = `
                             <img src="${qrImageUrlActual}" alt="QR Comercio" class="w-full h-full object-contain" />
                         `;
@@ -595,40 +596,12 @@
         }
 
         async function descargarImagenQR() {
-            if (!qrImageUrlActual) {
+            if (!merchIdActual && !qrImageUrlActual) {
                 return alert("⚠️ El código QR aún no está disponible.");
             }
-            try {
-                const response = await fetch(qrImageUrlActual);
-                const blob = await response.blob();
-                const file = new File([blob], "QR_Comercio_MonederoUSDT.png", { type: "image/png" });
-
-                if (navigator.canShare && navigator.canShare({ files: [file] })) {
-                    try {
-                        await navigator.share({
-                            title: 'QR de Cobro - Monedero USDT',
-                            text: 'Escanea este código QR para realizar tu pago instantáneo en caja.',
-                            files: [file]
-                        });
-                        return;
-                    } catch (shareErr) {
-                        if (shareErr.name === 'AbortError') return;
-                    }
-                }
-
-                const blobUrl = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = blobUrl;
-                a.download = 'QR_Comercio_MonederoUSDT.png';
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(blobUrl);
-
-            } catch (err) {
-                console.error("Error al gestionar el QR:", err);
-                window.open(qrImageUrlActual, '_blank');
-            }
+            const mensaje = `*PagoMóvil USDT - Cobro Comercial*\nEscanea mi código QR o ingresa mi ID Comercio para realizar pagos instantáneos en caja:\n\n*ID Comercio:* ${merchIdActual}\n*Pagar aquí:* https://pagomovilusdt.duckdns.org/pagar?id=${merchIdActual}`;
+            const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(mensaje)}`;
+            window.open(whatsappUrl, '_blank');
         }
 
         async function cargarHistorial() {
