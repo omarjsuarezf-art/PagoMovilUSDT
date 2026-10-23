@@ -585,7 +585,7 @@
         }
 
         // =========================================================================
-        // FUNCIÓN BLINDADA: CARTEL PROFESIONAL CON QR CARGADO POR API OFICIAL SEGURA
+        // FUNCIÓN INTELIGENTE: DESCARGA LIMPIA EN PC Y COMPARTIR NATIVO EN MÓVIL
         // =========================================================================
         function descargarCartelComercialQR() {
             if (!merchantIdActual) {
@@ -620,7 +620,7 @@
             ctx.fillStyle = "#ffffff";
             ctx.fillRect(125, 160, 350, 350);
 
-            // 5. Carga síncrona/asíncrona segura del QR mediante API externa para evitar blanco en móviles
+            // 5. Carga segura del QR mediante API externa para evitar blanco
             const payloadQr = `PMUSDT:${merchantIdActual}`;
             const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(payloadQr)}&ecc=H`;
 
@@ -629,7 +629,6 @@
             imgQR.src = qrApiUrl;
 
             imgQR.onload = function() {
-                // Dibujar el QR nítido dentro del cuadro blanco
                 ctx.drawImage(imgQR, 150, 185, 300, 300);
 
                 // 6. Insignia del ID de Comercio
@@ -651,11 +650,14 @@
                 ctx.fillText("Escanea con cualquier billetera o cámara", canvas.width / 2, 650);
                 ctx.fillText("para recibir pagos instantáneos en caja.", canvas.width / 2, 675);
 
-                // 8. Salida inteligente: Si es móvil abre WhatsApp/Compartir directo, si es PC descarga
                 canvas.toBlob(async (blob) => {
                     const file = new File([blob], `Cartel_QR_${merchantIdActual}.png`, { type: "image/png" });
 
-                    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                    // Detectar si el usuario está usando un celular o tablet real
+                    const esDispositivoMobil = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
+
+                    // Si es celular, usa el menú nativo para compartir directo a WhatsApp
+                    if (esDispositivoMobil && navigator.canShare && navigator.canShare({ files: [file] })) {
                         try {
                             await navigator.share({
                                 title: 'Cartel de Cobro - Pago Móvil USDT',
@@ -668,6 +670,7 @@
                         }
                     }
 
+                    // Si está en la PC, realiza la descarga automática limpia de inmediato
                     const link = document.createElement('a');
                     link.download = `Cartel_QR_${merchantIdActual}.png`;
                     link.href = canvas.toDataURL('image/png');
