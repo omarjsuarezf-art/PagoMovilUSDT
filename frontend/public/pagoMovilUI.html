@@ -213,7 +213,7 @@
                         <p class="text-[10px] text-slate-400 mt-1">Escanea para recibir pagos instantáneos en caja.</p>
                     </div>
                     <button onclick="descargarImagenQR()" class="w-full bg-amber-500 hover:bg-amber-600 text-slate-950 font-black py-2 rounded-xl text-xs transition flex items-center justify-center gap-2 cursor-pointer shadow-md shadow-amber-500/10">
-                        <i class="fa-solid fa-share-nodes"></i> Compartir / Descargar Código QR
+                        <i class="fa-solid fa-download"></i> Descargar Código QR (PNG)
                     </button>
                 </div>
 
@@ -573,7 +573,7 @@
                         const qrDataTexto = encodeURIComponent(`https://pagomovilusdt.duckdns.org/pagar?id=${merchIdActual}`);
                         const logoUrlTexto = encodeURIComponent('https://pagomovilusdt.duckdns.org/logo.png');
 
-                        qrImageUrlActual = `https://quickchart.io/qr?text=${qrDataTexto}&size=300&ecLevel=H&margin=1&centerImage=${logoUrlTexto}&imageSize=60&format=png`;
+                        qrImageUrlActual = `https://quickchart.io/qr?text=${qrDataTexto}&size=300&ecLevel=H&margin=1&centerImage=${logoUrlTexto}&centerImageWidth=60&centerImageHeight=60&format=png`;
 
                         document.getElementById('qrComercioContainer').innerHTML = `
                             <img src="${qrImageUrlActual}" alt="QR Comercio" class="w-full h-full object-contain rounded-lg" />
@@ -601,13 +601,28 @@
             }
         }
 
+        // DESCARGA DIRECTA DE LA IMAGEN PNG DEL QR AL DISPOSITIVO
         async function descargarImagenQR() {
-            if (!merchIdActual && !qrImageUrlActual) {
+            if (!qrImageUrlActual) {
                 return alert("⚠️ El código QR aún no está disponible.");
             }
-            const mensaje = `*PagoMóvil USDT - Cobro Comercial*\nEscanea mi código QR o ingresa mi ID Comercio para realizar pagos instantáneos en caja:\n\n*ID Comercio:* ${merchIdActual}\n*Pagar aquí:* https://pagomovilusdt.duckdns.org/pagar?id=${merchIdActual}`;
-            const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(mensaje)}`;
-            window.open(whatsappUrl, '_blank');
+
+            try {
+                const respuesta = await fetch(qrImageUrlActual);
+                const blob = await respuesta.blob();
+                const urlBlob = window.URL.createObjectURL(blob);
+
+                const enlace = document.createElement('a');
+                enlace.href = urlBlob;
+                enlace.download = `QR_Comercio_${merchIdActual || 'USDT'}.png`;
+                document.body.appendChild(enlace);
+                enlace.click();
+                document.body.removeChild(enlace);
+                window.URL.revokeObjectURL(urlBlob);
+
+            } catch (error) {
+                window.open(qrImageUrlActual, '_blank');
+            }
         }
 
         async function cargarHistorial() {
