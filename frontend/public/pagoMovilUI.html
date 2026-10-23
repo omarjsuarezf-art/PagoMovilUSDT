@@ -287,7 +287,7 @@
         </div>
     </div>
 
-    <!-- SCRIPT DE FUNCIONAMIENTO BLINDADO -->
+    <!-- SCRIPT DE FUNCIONAMIENTO BLINDADO Y SEGURO -->
     <script>
         let html5QrCode = null;
         let intervaloHistorial = null;
@@ -300,13 +300,14 @@
         }
 
         // ==========================================
-        // COMPRADOR RECURRENTE (RECUERDA TELÉFONO) & AUTO-LOGOUT
+        // SEGURIDAD MÁXIMA: CIERRE DE SESIÓN AUTOMÁTICO AL CERRAR O ABRIR PÁGINA
         // ==========================================
-        document.addEventListener("DOMContentLoaded", () => {
-            const telefonoActivo = obtenerTelefonoActivo();
-            if (telefonoActivo) {
-                localStorage.setItem("pagomovil_last_phone", telefonoActivo);
-            }
+        window.addEventListener('beforeunload', () => {
+            // Limpia los datos de sesión para que al reabrir el tlf no quede expuesto
+            localStorage.removeItem('userPhone');
+            localStorage.removeItem('telefonoUsuario');
+            localStorage.removeItem('usuarioTelefono');
+            localStorage.removeItem('merchantId');
         });
 
         const TIEMPO_INACTIVIDAD = 10 * 60 * 1000; // 10 Minutos
@@ -318,9 +319,8 @@
         }
 
         function cerrarSesionPorInactividad() {
-            sessionStorage.clear();
+            cerrarSesion();
             alert("⚠️ Tu sesión ha expirado por inactividad tras 10 minutos para proteger tus fondos.");
-            window.location.replace('/auth');
         }
 
         ['mousemove', 'keydown', 'click', 'touchstart', 'scroll'].forEach(evento => {
@@ -329,7 +329,7 @@
 
         reiniciarTemporizadorInactividad();
 
-        // VERIFICACIÓN SILENCIOSA CONSULTANDO AL SERVIDOR (SIN ALERTAS MOLESTAS)
+        // VERIFICACIÓN SILENCIOSA CONSULTANDO AL SERVIDOR
         async function verificarAccesoPanel() {
             const telefono = obtenerTelefonoActivo();
             if (!telefono) {
@@ -597,16 +597,13 @@
             canvas.height = 750;
             const ctx = canvas.getContext('2d');
 
-            // 1. Fondo de la tarjeta (Azul oscuro elegante)
             ctx.fillStyle = "#080d19";
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            // 2. Borde exterior dorado/ámbar
             ctx.strokeStyle = "#f59e0b";
             ctx.lineWidth = 6;
             ctx.strokeRect(20, 20, canvas.width - 40, canvas.height - 40);
 
-            // 3. Encabezados exactos que solicitaste
             ctx.fillStyle = "#fbbf24";
             ctx.font = "bold 20px system-ui, -apple-system, sans-serif";
             ctx.textAlign = "center";
@@ -616,11 +613,9 @@
             ctx.font = "bold 28px system-ui, -apple-system, sans-serif";
             ctx.fillText("CÓDIGO QR DE COBRO PROTEGIDO", canvas.width / 2, 125);
 
-            // 4. Cuadro blanco central
             ctx.fillStyle = "#ffffff";
             ctx.fillRect(125, 160, 350, 350);
 
-            // 5. Carga segura del QR mediante API externa para evitar blanco
             const payloadQr = `PMUSDT:${merchantIdActual}`;
             const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(payloadQr)}&ecc=H`;
 
@@ -631,7 +626,6 @@
             imgQR.onload = function() {
                 ctx.drawImage(imgQR, 150, 185, 300, 300);
 
-                // 6. Insignia del ID de Comercio
                 ctx.fillStyle = "#020617";
                 ctx.fillRect(100, 550, 400, 50);
                 
@@ -644,7 +638,6 @@
                 ctx.textAlign = "center";
                 ctx.fillText(`ID Comercio: ${merchantIdActual}`, canvas.width / 2, 582);
 
-                // 7. Pie de página
                 ctx.fillStyle = "#94a3b8";
                 ctx.font = "16px system-ui, -apple-system, sans-serif";
                 ctx.fillText("Escanea con cualquier billetera o cámara", canvas.width / 2, 650);
@@ -653,10 +646,8 @@
                 canvas.toBlob(async (blob) => {
                     const file = new File([blob], `Cartel_QR_${merchantIdActual}.png`, { type: "image/png" });
 
-                    // Detectar si el usuario está usando un celular o tablet real
                     const esDispositivoMobil = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
 
-                    // Si es celular, usa el menú nativo para compartir directo a WhatsApp
                     if (esDispositivoMobil && navigator.canShare && navigator.canShare({ files: [file] })) {
                         try {
                             await navigator.share({
@@ -670,7 +661,6 @@
                         }
                     }
 
-                    // Si está en la PC, realiza la descarga automática limpia de inmediato
                     const link = document.createElement('a');
                     link.download = `Cartel_QR_${merchantIdActual}.png`;
                     link.href = canvas.toDataURL('image/png');
@@ -869,6 +859,10 @@
 
         // CIERRE DE SESIÓN ESTRICTO Y DEFINITIVO
         function cerrarSesion() {
+            localStorage.removeItem('userPhone');
+            localStorage.removeItem('telefonoUsuario');
+            localStorage.removeItem('usuarioTelefono');
+            localStorage.removeItem('merchantId');
             sessionStorage.clear();
             window.location.replace('/auth');
         }
