@@ -6,6 +6,8 @@
     <title>Pasarela Segura - Pago Móvil y USDT</title>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    <!-- Librería robusta para generación local de códigos QR -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         body { background-color: #080d19; color: #f8fafc; font-family: system-ui, -apple-system, sans-serif; }
@@ -200,20 +202,35 @@
                     </form>
                 </div>
 
-                <!-- SECCIÓN PRINCIPAL COMERCIO: QR DE COBRO + BOTÓN DESCARGAR / COMPARTIR -->
-                <div id="seccionQrComercio" class="hidden bg-slate-900/80 border border-amber-500/30 rounded-xl p-4 text-center space-y-3">
-                    <p class="text-xs font-bold text-amber-400 uppercase tracking-wide">Código QR de Cobro Protegido</p>
-                    <div class="bg-white p-3 rounded-xl inline-block shadow-lg">
-                        <div id="qrComercioContainer" class="w-40 h-40 bg-slate-950 flex items-center justify-center text-xs text-amber-400 font-mono text-center p-2 rounded-lg">
-                            Cargando QR...
+                <!-- SECCIÓN PRINCIPAL COMERCIO: QR ROBUSTO DE COBRO + BOTÓN DESCARGAR / COMPARTIR -->
+                <div id="seccionQrComercio" class="hidden bg-slate-900/90 border border-amber-500/30 rounded-2xl p-5 text-center space-y-4 shadow-xl relative overflow-hidden">
+                    <div class="absolute -top-10 -right-10 w-32 h-32 bg-amber-500/5 rounded-full blur-2xl pointer-events-none"></div>
+                    
+                    <div class="space-y-1">
+                        <span class="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-extrabold tracking-wider uppercase bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                            Código Dinámico en Caja
+                        </span>
+                        <h2 class="text-xs font-bold text-amber-300 uppercase tracking-wide">Código QR de Cobro Protegido</h2>
+                    </div>
+
+                    <div class="bg-white p-4 rounded-2xl inline-block shadow-2xl border-4 border-slate-950 relative group">
+                        <div id="qrComercioContainer" class="w-44 h-44 flex items-center justify-center mx-auto">
+                            <!-- El QR se renderizará de manera nativa aquí -->
+                        </div>
+                        <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition bg-black/40 rounded-xl backdrop-blur-[2px]">
+                            <span class="text-white text-[10px] font-bold bg-slate-900/80 px-2 py-1 rounded">Listo para escanear</span>
                         </div>
                     </div>
-                    <div>
-                        <div class="text-xs text-emerald-400 font-mono font-bold" id="txtIdComercio">PAGO MÓVIL USDT</div>
-                        <p class="text-[10px] text-slate-400 mt-1">Escanea para recibir pagos instantáneos en caja.</p>
+
+                    <div class="space-y-1">
+                        <div class="text-xs text-emerald-400 font-mono font-bold bg-slate-950 py-1.5 px-3 rounded-xl border border-slate-800 inline-block" id="txtIdComercio">
+                            PAGO MÓVIL USDT
+                        </div>
+                        <p class="text-[11px] text-slate-400">Escanea con cualquier billetera o cámara para recibir pagos instantáneos.</p>
                     </div>
-                    <button onclick="descargarImagenQR()" class="w-full bg-amber-500 hover:bg-amber-600 text-slate-950 font-black py-2 rounded-xl text-xs transition flex items-center justify-center gap-2 cursor-pointer shadow-md shadow-amber-500/10">
-                        <i class="fa-solid fa-share-nodes"></i> Compartir / Descargar Código QR
+
+                    <button onclick="descargarImagenQR()" class="w-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-black py-2.5 rounded-xl text-xs transition flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-amber-500/20">
+                        <i class="fa-solid fa-qrcode"></i> Compartir / Descargar Código QR
                     </button>
                 </div>
 
@@ -567,10 +584,25 @@
                         const merchId = data.merchantId || merchSaved || `MERCHANT-${telefono.slice(-6)}`;
                         document.getElementById('txtIdComercio').innerText = `ID Comercio: ${merchId}`;
                         
-                        qrImageUrlActual = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(merchId)}`;
-                        document.getElementById('qrComercioContainer').innerHTML = `
-                            <img src="${qrImageUrlActual}" alt="QR Comercio" class="w-full h-full object-contain" />
-                        `;
+                        const payloadQr = `PMUSDT:${merchId}`;
+                        qrImageUrlActual = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(payloadQr)}&ecc=H`;
+                        
+                        // RENDERIZADO LOCAL ROBUSTO CON qrcode.js
+                        const container = document.getElementById('qrComercioContainer');
+                        container.innerHTML = ''; 
+                        
+                        if (typeof QRCode !== 'undefined') {
+                            new QRCode(container, {
+                                text: payloadQr,
+                                width: 176,
+                                height: 176,
+                                colorDark : "#080d19",
+                                colorLight : "#ffffff",
+                                correctLevel: QRCode.CorrectLevel.H
+                            });
+                        } else {
+                            container.innerHTML = `<img src="${qrImageUrlActual}" alt="QR Comercio" class="w-full h-full object-contain" />`;
+                        }
 
                         cargarHistorial();
                         if (!intervaloHistorial) {
