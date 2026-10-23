@@ -601,12 +601,10 @@
         }
 
         // DESCARGA DIRECTA DE LA IMAGEN PNG DEL QR AL DISPOSITIVO
-async function descargarImagenQR() {
+async function descargarPNGDirecto() {
     if (!qrImageUrlActual) {
         return alert("⚠️ El código QR aún no está disponible.");
     }
-
-    // 1. DESCARGA DIRECTA DEL PNG EN EL DISPOSITIVO
     try {
         const respuesta = await fetch(qrImageUrlActual);
         const blob = await respuesta.blob();
@@ -622,14 +620,6 @@ async function descargarImagenQR() {
     } catch (error) {
         window.open(qrImageUrlActual, '_blank');
     }
-
-    // 2. COMPARTIR POR WHATSAPP EN VENTANA APARTE
-    const mensaje = `*PagoMóvil USDT - Cobro Comercial*\nEscanea mi código QR o ingresa mi ID Comercio para realizar pagos instantáneos en caja:\n\n*ID Comercio:* ${merchIdActual}\n*Pagar aquí:* https://pagomovilusdt.duckdns.org/pagar?id=${merchIdActual}`;
-    const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(mensaje)}`;
-    
-    setTimeout(() => {
-        window.open(whatsappUrl, '_blank');
-    }, 500);
 }
 
         async function cargarHistorial() {
