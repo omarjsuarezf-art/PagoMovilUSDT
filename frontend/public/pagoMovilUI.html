@@ -437,7 +437,7 @@
 
             const pinNuevo = prompt("🔒 Ingrese su NUEVO PIN de seguridad (4 dígitos):");
             if (!pinNuevo || pinNuevo.length !== 4) {
-                alert("El nuevo PIN debe ser strictly de 4 dígitos.");
+                alert("El nuevo PIN debe ser estrictamente de 4 dígitos.");
                 return;
             }
 
@@ -568,7 +568,9 @@
                         merchIdActual = data.merchantId || merchSaved || `MERCHANT-${telefono.slice(-6)}`;
                         document.getElementById('txtIdComercio').innerText = `ID Comercio: ${merchIdActual}`;
                         
-                        qrImageUrlActual = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(merchIdActual)}&logo=https%3A%2F%2Fpagomovilusdt.duckdns.org%2Flogo.png&qzone=1`;
+                        // CORRECCIÓN DE DOBLE ENCODE DEL LOGO PARA LA API DE QR
+                        qrImageUrlActual = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(merchIdActual)}&logo=` + encodeURIComponent('https://pagomovilusdt.duckdns.org/logo.png') + `&qzone=1`;
+                        
                         document.getElementById('qrComercioContainer').innerHTML = `
                             <img src="${qrImageUrlActual}" alt="QR Comercio" class="w-full h-full object-contain" />
                         `;
