@@ -63,18 +63,17 @@
                         <label class="block text-[11px] text-slate-400 mb-1">Método / Exchange de Preferencia</label>
                         <select id="regMetodo" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500">
                             <option value="binance">Binance Pay</option>
-                            <option value="paypal">PayPal</option>
-                            <option value="zelle">Zelle</option>
-                            <option value="zinli">Zinli</option>
-                            <option value="airtm">AirTM</option>
                             <option value="bybit">Bybit</option>
                             <option value="okx">OKX</option>
+                            <option value="polygon">Wallet USDT (Red Polygon)</option>
+                            <option value="trc20">Wallet USDT (Red TRC20 - Tron)</option>
+                            <option value="bep20">Wallet USDT (Red BEP20 - BSC)</option>
                         </select>
                     </div>
 
                     <div>
                         <label class="block text-[11px] text-slate-400 mb-1">Correo Electrónico o Cuenta Destino</label>
-                        <input type="text" id="regCuentaDestino" placeholder="Ej: tu_correo@gmail.com" required class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500 font-mono">
+                        <input type="text" id="regCuentaDestino" placeholder="Ej: tu_correo@gmail.com o 0x..." required class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500 font-mono">
                     </div>
 
                     <button type="submit" id="btnGuardarRegistro" class="w-full bg-amber-500 hover:bg-amber-600 text-slate-950 font-black py-2.5 rounded-xl transition text-xs cursor-pointer flex items-center justify-center gap-2 shadow-lg shadow-amber-500/10">
@@ -158,7 +157,7 @@
                     </form>
                 </div>
 
-                <!-- SECCIÓN RETIRAR A EXCHANGE / BILLETERA -->
+                <!-- SECCIÓN RETIRAR A EXCHANGE / BILLETERA (ACTUALIZADA Y LIMPIA) -->
                 <div id="seccionRetiro" class="hidden bg-slate-900/80 border border-slate-800 rounded-xl p-4 space-y-3">
                     <h2 class="text-xs font-bold text-emerald-400 uppercase tracking-wide">Retirar USDT / Cripto</h2>
                     
@@ -176,20 +175,17 @@
                         <div>
                             <label class="block text-[11px] text-slate-400 mb-1">Seleccionar Destino / Plataforma</label>
                             <select id="tipoExchange" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500">
-                                <option value="paypal">PayPal (Correo Electrónico)</option>
                                 <option value="binance">Binance Pay (Pay ID / Email / Teléfono)</option>
-                                <option value="zelle">Zelle (Correo / Teléfono)</option>
-                                <option value="airtm">AirTM (Correo electrónico)</option>
+                                <option value="bybit">Bybit UID / Email</option>
+                                <option value="okx">OKX Pay (UID / Email)</option>
+                                <option value="polygon">Wallet USDT (Red Polygon)</option>
                                 <option value="trc20">Wallet USDT (Red TRC20 - Tron)</option>
                                 <option value="bep20">Wallet USDT (Red BEP20 - BSC)</option>
-                                <option value="polygon">Wallet USDT (Red Polygon)</option>
-                                <option value="payeer">Payeer (ID de Cuenta / Correo)</option>
-                                <option value="bybit">Bybit UID / Email</option>
                             </select>
                         </div>
                         <div>
                             <label class="block text-[11px] text-slate-400 mb-1">Dirección / UID / Correo de Destino</label>
-                            <input type="text" id="destinoRetiro" placeholder="Ej: correo@paypal.com o 0x..." required class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 font-mono">
+                            <input type="text" id="destinoRetiro" placeholder="Ej: usuario@correo.com o 0x..." required class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 font-mono">
                         </div>
                         <div>
                             <label class="block text-[11px] text-slate-400 mb-1">Monto a Retirar (USDT)</label>

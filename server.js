@@ -607,7 +607,7 @@ app.post('/api/registrar-metodos', limiterPagos, async (req, res) => {
     let mensajeErrorFormato = '';
     let correoExtraido = null;
 
-    const metodosSoportados = ['binance', 'zinli', 'zelle', 'paypal', 'bybit', 'okx', 'airtm', 'polygon', 'usdt_wallet'];
+    const metodosSoportados = ['binance', 'bybit', 'okx', 'polygon', 'trc20', 'bep20', 'usdt_wallet'];
 
     if (!metodosSoportados.includes(metodoElegido)) {
         return res.status(400).json({ success: false, message: '❌ El método de pago, exchange o monedero seleccionado no es válido.' });
@@ -632,7 +632,13 @@ app.post('/api/registrar-metodos', limiterPagos, async (req, res) => {
         } else {
             mensajeErrorFormato = `❌ Cuenta o correo inválido para ${metodoElegido.toUpperCase()}.`;
         }
-    } else if (['zinli', 'paypal', 'airtm', 'zelle'].includes(metodoElegido)) {
+   } else if (['polygon', 'trc20', 'bep20', 'usdt_wallet'].includes(metodoElegido)) {
+    if (destinoLimpio.length >= 10) {
+        esValido = true;
+    } else {
+        mensajeErrorFormato = '❌ La dirección de monedero USDT es demasiado corta o inválida.';
+    }
+}
         const regexCorreoGeneral = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
         if (regexCorreoGeneral.test(destinoLimpio) || (metodoElegido === 'zelle' && destinoLimpio.length >= 10)) {
             esValido = true;
