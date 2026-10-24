@@ -304,13 +304,6 @@ app.get('/recarga', (req, res) => {
     res.sendFile(path.join(publicPath, 'recargaMovilUI.html'));
 });
 
-app.get('/recargamovil.html', (req, res) => {
-    res.sendFile(path.join(publicPath, 'recargaMovilUI.html'));
-});
-
-app.get('/recargamovil', (req, res) => {
-    res.sendFile(path.join(publicPath, 'recargaMovilUI.html'));
-});
 
 app.get('/admin', (req, res) => {
     const adminFile = path.join(publicPath, 'admin.html');
