@@ -325,7 +325,7 @@
 
         reiniciarTemporizadorInactividad();
 
-        // VERIFICACIÓN SILENCIOSA CONSULTANDO AL SERVIDOR
+        // VERIFICACIÓN BLINDADA CONSULTANDO AL SERVIDOR (SIN EXPULSIONES FALSAS)
         async function verificarAccesoPanel() {
             const telefono = obtenerTelefonoActivo();
             if (!telefono) {
@@ -335,16 +335,20 @@
 
             try {
                 const res = await fetch(`/api/saldo/${encodeURIComponent(telefono)}`);
+                if (!res.ok) {
+                    return true;
+                }
                 const data = await res.json();
 
-                if (!data.success) {
+                if (data && data.success) {
+                    return true;
+                } else {
                     window.location.replace('/auth');
                     return false;
                 }
-                return true;
             } catch (err) {
-                console.error("Error validando acceso:", err);
-                return true;
+                console.error("Error de red validando acceso, permitiendo estabilidad:", err);
+                return true; 
             }
         }
 
