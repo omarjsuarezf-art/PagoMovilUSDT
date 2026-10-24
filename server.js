@@ -1117,7 +1117,7 @@ app.post('/recargar', limiterPagos, logicaRecargaHandler);
 app.post('/api/recargar-hash', limiterPagos, logicaRecargaHandler);
 app.post('/api/verificar-recarga-hash', limiterPagos, logicaRecargaHandler);
 app.get('/recarga', (req, res) => {
-    res.sendFile(path.join(__dirname, 'frontend', 'public', 'recarga.html')); 
+    res.sendFile(path.join(__dirname, 'frontend', 'public', 'recargamovil.html'));
 });
 // ==========================================
 // ENVÍO DE PAGO
