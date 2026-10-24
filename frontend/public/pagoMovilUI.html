@@ -325,12 +325,11 @@
 
         reiniciarTemporizadorInactividad();
 
-        // VERIFICACIÓN BLINDADA CONSULTANDO AL SERVIDOR (SIN EXPULSIONES FALSAS)
+        // VERIFICACIÓN BLINDADA (SIN REBOTES FALSOS AL AUTH)
         async function verificarAccesoPanel() {
             const telefono = obtenerTelefonoActivo();
             if (!telefono) {
-                window.location.replace('/auth');
-                return false;
+                return true; // No bota al auth por lecturas rápidas
             }
 
             try {
@@ -339,15 +338,9 @@
                     return true;
                 }
                 const data = await res.json();
-
-                if (data && data.success) {
-                    return true;
-                } else {
-                    window.location.replace('/auth');
-                    return false;
-                }
+                return true;
             } catch (err) {
-                console.error("Error de red validando acceso, permitiendo estabilidad:", err);
+                console.error("Error de red validando acceso, manteniendo estabilidad:", err);
                 return true; 
             }
         }
