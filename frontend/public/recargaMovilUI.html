@@ -183,7 +183,7 @@
     async function cargarHistorial() {
         let phone = document.getElementById('phoneNumber').value.trim();
         if (!phone) {
-            phone = (localStorage.getItem('userPhone') || localStorage.getItem('telefonoUsuario') || localStorage.getItem('usuarioTelefono') || '').trim();
+            phone = (localStorage.getItem('userPhone') || localStorage.getItem('usuarioTelefono') || '').trim();
         }
         
         const tbody = document.getElementById('tablaHistorial');
@@ -278,11 +278,8 @@
     });
 
     window.onload = () => {
-        // Lee todas las variantes posibles en que el sistema guarda el teléfono para evitar falsos rebotes
-        const phone = (localStorage.getItem('userPhone') || localStorage.getItem('telefonoUsuario') || localStorage.getItem('usuarioTelefono') || '').trim();
+        const phone = (localStorage.getItem('userPhone') || localStorage.getItem('usuarioTelefono') || '').trim();
         if (phone) {
-            // Aseguramos que quede sincronizado en userPhone para que el formulario lo lea sin fallo
-            localStorage.setItem('userPhone', phone);
             document.getElementById('phoneNumber').value = phone;
             cargarHistorial();
         } else {

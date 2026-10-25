@@ -304,6 +304,13 @@ app.get('/recarga', (req, res) => {
     res.sendFile(path.join(publicPath, 'recargaMovilUI.html'));
 });
 
+app.get('/recargamovil.html', (req, res) => {
+    res.sendFile(path.join(publicPath, 'recargaMovilUI.html'));
+});
+
+app.get('/recargamovil', (req, res) => {
+    res.sendFile(path.join(publicPath, 'recargaMovilUI.html'));
+});
 
 app.get('/admin', (req, res) => {
     const adminFile = path.join(publicPath, 'admin.html');
@@ -600,7 +607,7 @@ app.post('/api/registrar-metodos', limiterPagos, async (req, res) => {
     let mensajeErrorFormato = '';
     let correoExtraido = null;
 
-    const metodosSoportados = ['binance', 'bybit', 'okx', 'polygon', 'trc20', 'bep20', 'usdt_wallet'];
+    const metodosSoportados = ['binance', 'zinli', 'zelle', 'paypal', 'bybit', 'okx', 'airtm', 'polygon', 'usdt_wallet'];
 
     if (!metodosSoportados.includes(metodoElegido)) {
         return res.status(400).json({ success: false, message: '❌ El método de pago, exchange o monedero seleccionado no es válido.' });
@@ -625,11 +632,13 @@ app.post('/api/registrar-metodos', limiterPagos, async (req, res) => {
         } else {
             mensajeErrorFormato = `❌ Cuenta o correo inválido para ${metodoElegido.toUpperCase()}.`;
         }
-   } else if (['trc20', 'bep20'].includes(metodoElegido)) {
-        if (destinoLimpio.length >= 10) {
+    } else if (['zinli', 'paypal', 'airtm', 'zelle'].includes(metodoElegido)) {
+        const regexCorreoGeneral = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+        if (regexCorreoGeneral.test(destinoLimpio) || (metodoElegido === 'zelle' && destinoLimpio.length >= 10)) {
             esValido = true;
+            if (destinoLimpio.includes('@')) correoExtraido = destinoLimpio;
         } else {
-            mensajeErrorFormato = '❌ La dirección de monedero USDT es demasiado corta o inválida.';
+            mensajeErrorFormato = `❌ Para ${metodoElegido.toUpperCase()} debe ingresar un correo electrónico o destino válido.`;
         }
     } else if (metodoElegido === 'polygon' || metodoElegido === 'usdt_wallet') {
         if (destinoLimpio.startsWith('0x') && destinoLimpio.length === 42) {
@@ -639,8 +648,13 @@ app.post('/api/registrar-metodos', limiterPagos, async (req, res) => {
         } else {
             mensajeErrorFormato = '❌ La dirección de monedero cripto Polygon/USDT es demasiado corta o inválida.';
         }
-}
-    
+    } else {
+        if (destinoLimpio.length >= 8) {
+            esValido = true;
+        } else {
+            mensajeErrorFormato = '❌ La dirección o identificador ingresado no es válido.';
+        }
+    }
 
     if (!esValido) {
         return res.status(400).json({ success: false, message: mensajeErrorFormato });
@@ -1109,9 +1123,7 @@ app.post('/api/recargar', limiterPagos, logicaRecargaHandler);
 app.post('/recargar', limiterPagos, logicaRecargaHandler);
 app.post('/api/recargar-hash', limiterPagos, logicaRecargaHandler);
 app.post('/api/verificar-recarga-hash', limiterPagos, logicaRecargaHandler);
-app.get('/recarga', (req, res) => {
-    res.sendFile(path.join(__dirname, 'frontend', 'public', 'recargamovil.html'));
-});
+
 // ==========================================
 // ENVÍO DE PAGO
 // ==========================================
