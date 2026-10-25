@@ -285,7 +285,7 @@
         </div>
     </div>
 
-    <!-- SCRIPT DE FUNCIONAMIENTO BLINDADO CON BOTÓN DE UPGRADE CORREGIDO -->
+    <!-- SCRIPT DE FUNCIONAMIENTO BLINDADO CON EMBLEMA CENTRAL INCORPORADO -->
     <script>
         let html5QrCode = null;
         let intervaloHistorial = null;
@@ -529,6 +529,7 @@
 
                         if (typeof QRCode === 'function') {
                             try {
+                                // 1. Generamos el QR base en Nivel H (Alta tolerancia a fallos de hasta 30%)
                                 new QRCode(container, {
                                     text: payloadQr,
                                     width: 176,
@@ -538,14 +539,16 @@
                                     correctLevel: QRCode.CorrectLevel.H
                                 });
 
+                                // 2. Inyectamos el emblema central corporativo con 300ms de retardo seguro
                                 setTimeout(() => {
                                     const canvas = container.querySelector('canvas');
                                     if (canvas) {
                                         const ctx = canvas.getContext('2d');
                                         const size = canvas.width;
-                                        const logoSize = size * 0.24;
+                                        const logoSize = size * 0.26; // 26% del tamaño central
                                         const centerPos = (size - logoSize) / 2;
 
+                                        // Fondo blanco elegante para aislar el emblema y garantizar lectura 100%
                                         ctx.fillStyle = '#ffffff';
                                         ctx.beginPath();
                                         if (ctx.roundRect) {
@@ -555,16 +558,19 @@
                                         }
                                         ctx.fill();
                                         ctx.strokeStyle = '#f59e0b';
-                                        ctx.lineWidth = 2;
+                                        ctx.lineWidth = 2.5;
                                         ctx.stroke();
 
+                                        // Dibujar icono o emblema representativo central
                                         ctx.fillStyle = '#080d19';
-                                        ctx.font = `bold ${Math.floor(logoSize * 0.55)}px system-ui`;
+                                        ctx.font = `bold ${Math.floor(logoSize * 0.6)}px system-ui, sans-serif`;
                                         ctx.textAlign = 'center';
                                         ctx.textBaseline = 'middle';
                                         ctx.fillText('💳', size / 2, size / 2);
+                                    } else {
+                                        console.warn("Canvas QR no disponible todavía.");
                                     }
-                                }, 150);
+                                }, 300);
 
                             } catch (err) {
                                 console.error("Error creando QR local:", err);
@@ -582,7 +588,7 @@
                         badge.className = "inline-block px-2.5 py-1 rounded-md text-[11px] font-bold tracking-wide uppercase bg-blue-500/20 text-blue-300 border border-blue-500/30";
                         badge.innerText = `CUENTA NATURAL (LÍMITE $${data.dailyLimit || 1000} USDT)`;
                         
-                        if (seccionUpgrade) seccionUpgrade.classList.remove('hidden'); // <-- ¡AHORA SÍ SE MUESTRA PERFECTAMENTE!
+                        if (seccionUpgrade) seccionUpgrade.classList.remove('hidden'); // Botón de upgrade visible en cuenta natural
                         if (seccionQr) seccionQr.classList.add('hidden');
                         if (seccionHistorial) seccionHistorial.classList.add('hidden');
                         
