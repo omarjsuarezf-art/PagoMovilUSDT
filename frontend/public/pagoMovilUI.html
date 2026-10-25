@@ -200,7 +200,7 @@
                     </form>
                 </div>
 
-                <!-- SECCIÓN PRINCIPAL COMERCIO: QR ROBUSTO DE COBRO + LOGO REAL CENTRAL + BOTÓN DESCARGAR -->
+                <!-- SECCIÓN PRINCIPAL COMERCIO: QR ROBUSTO DE COBRO + LOGO CIRCULAR LIMPIO + BOTÓN DESCARGAR -->
                 <div id="seccionQrComercio" class="hidden bg-slate-900/90 border border-amber-500/30 rounded-2xl p-5 text-center space-y-4 shadow-xl relative overflow-hidden">
                     <div class="absolute -top-10 -right-10 w-32 h-32 bg-amber-500/5 rounded-full blur-2xl pointer-events-none"></div>
                     
@@ -212,9 +212,9 @@
                     </div>
 
                     <div class="bg-white p-4 rounded-2xl inline-block shadow-2xl border-4 border-slate-950 relative group">
-                        <!-- Contenedor relativo para alojar el QR y el logo real centrado flotante -->
+                        <!-- Contenedor relativo para alojar el QR y el logo circular flotante sin marcos molestos -->
                         <div id="qrComercioContainer" class="w-44 h-44 flex items-center justify-center mx-auto relative">
-                            <!-- El QR y el logo real se renderizarán aquí -->
+                            <!-- El QR y el logo se renderizarán aquí -->
                         </div>
                         <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition bg-black/40 rounded-xl backdrop-blur-[2px]">
                             <span class="text-white text-[10px] font-bold bg-slate-900/80 px-2 py-1 rounded">Listo para escanear</span>
@@ -286,7 +286,7 @@
         </div>
     </div>
 
-    <!-- SCRIPT DE FUNCIONAMIENTO BLINDADO CON LOGO REAL INCORPORADO -->
+    <!-- SCRIPT DE FUNCIONAMIENTO BLINDADO CON LOGO LIMPIO CIRCULAR -->
     <script>
         let html5QrCode = null;
         let intervaloHistorial = null;
@@ -540,17 +540,17 @@
                                     correctLevel: QRCode.CorrectLevel.H
                                 });
 
-                                // 2. Inyección elegante y nativa de tu logo.png real al centro con CSS Absoluto
+                                // 2. Inyección limpia y sin marcos molestos (Solo el círculo verde y su emblema flotando puro)
                                 setTimeout(() => {
                                     if (!container.querySelector('.logo-flotante-qr')) {
                                         const logoWrapper = document.createElement('div');
-                                        logoWrapper.className = "logo-flotante-qr absolute inset-0 m-auto w-12 h-12 bg-white border-2 border-amber-500 rounded-xl overflow-hidden flex items-center justify-center shadow-xl select-none";
+                                        logoWrapper.className = "logo-flotante-qr absolute inset-0 m-auto w-12 h-12 bg-transparent rounded-full overflow-hidden flex items-center justify-center select-none";
                                         logoWrapper.style.zIndex = "50";
                                         
                                         const imgLogo = document.createElement('img');
                                         imgLogo.src = '/logo.png';
                                         imgLogo.alt = 'Logo';
-                                        imgLogo.className = "w-full h-full object-cover";
+                                        imgLogo.className = "w-full h-full object-contain";
                                         
                                         logoWrapper.appendChild(imgLogo);
                                         container.appendChild(logoWrapper);
@@ -595,7 +595,7 @@
         }
 
         // =========================================================================
-        // FUNCIÓN INTELIGENTE: DESCARGA LIMPIA EN PC Y CARTEL CON LOGO REAL
+        // FUNCIÓN INTELIGENTE: DESCARGA LIMPIA EN PC Y CARTEL CON LOGO PURO
         // =========================================================================
         function descargarCartelComercialQR() {
             if (!merchantIdActual) {
@@ -636,34 +636,23 @@
             imgQR.onload = function() {
                 ctx.drawImage(imgQR, 150, 185, 300, 300);
 
-                // Cargamos el logo real en el cartel descargable
+                // Cargamos el logo real en el cartel descargable limpio sin cajas blancas
                 const logoCartel = new Image();
                 logoCartel.crossOrigin = "anonymous";
                 logoCartel.src = '/logo.png';
 
                 logoCartel.onload = function() {
-                    const lSize = 80;
+                    const lSize = 75;
                     const lPos = (canvas.width - lSize) / 2;
                     
-                    ctx.fillStyle = "#ffffff";
-                    ctx.beginPath();
-                    if (ctx.roundRect) {
-                        ctx.roundRect(lPos - 4, 295 - 4, lSize + 8, lSize + 8, 14);
-                    } else {
-                        ctx.rect(lPos - 4, 295 - 4, lSize + 8, lSize + 8);
-                    }
-                    ctx.fill();
-                    ctx.strokeStyle = "#f59e0b";
-                    ctx.lineWidth = 3;
-                    ctx.stroke();
-
+                    // Dibujo directo del logo sin fondos cuadrados ni marcos
                     ctx.drawImage(logoCartel, lPos, 295, lSize, lSize);
 
                     finalizarCartel(canvas);
                 };
 
                 logoCartel.onerror = function() {
-                    finalizarCartel(canvas); // Si falla por red, genera el cartel igual
+                    finalizarCartel(canvas);
                 };
             };
 
