@@ -927,24 +927,6 @@ app.post('/api/upgrade-account', limiterPagos, async (req, res) => {
     }
 });
 
-// ==========================================
-// RUTA DE RESET RÁPIDO PARA PRUEBAS (DEV - BORRADO COMPLETO)
-// ==========================================
-app.get('/api/dev/reset-all', async (req, res) => {
-    const numerosPrueba = ['04126039718', '04123400436'];
-    try {
-        for (const telefono of numerosPrueba) {
-            const user = await db.get('SELECT id FROM usuarios WHERE telefono = ?', [telefono]);
-            if (user) {
-                await db.run('DELETE FROM wallets WHERE user_id = ?', [user.id]);
-                await db.run('DELETE FROM usuarios WHERE id = ?', [user.id]);
-            }
-        }
-        res.json({ success: true, message: '¡Listo! Números de prueba ELIMINADOS por completo. Ya puedes registrar cualquier PIN desde cero.' });
-    } catch (err) {
-        res.status(500).json({ success: false, error: err.message });
-    }
-});
 
 // ==========================================
 // PROCESAMIENTO DE RETIROS DIRECTOS
