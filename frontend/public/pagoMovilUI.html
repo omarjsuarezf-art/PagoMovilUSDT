@@ -200,7 +200,7 @@
                     </form>
                 </div>
 
-                <!-- SECCIÓN PRINCIPAL COMERCIO: QR ROBUSTO DE COBRO + EMBLEMA CENTRAL + BOTÓN DESCARGAR -->
+                <!-- SECCIÓN PRINCIPAL COMERCIO: QR ROBUSTO DE COBRO + LOGO REAL CENTRAL + BOTÓN DESCARGAR -->
                 <div id="seccionQrComercio" class="hidden bg-slate-900/90 border border-amber-500/30 rounded-2xl p-5 text-center space-y-4 shadow-xl relative overflow-hidden">
                     <div class="absolute -top-10 -right-10 w-32 h-32 bg-amber-500/5 rounded-full blur-2xl pointer-events-none"></div>
                     
@@ -212,8 +212,9 @@
                     </div>
 
                     <div class="bg-white p-4 rounded-2xl inline-block shadow-2xl border-4 border-slate-950 relative group">
-                        <div id="qrComercioContainer" class="w-44 h-44 flex items-center justify-center mx-auto">
-                            <!-- El QR con emblema central se renderizará aquí -->
+                        <!-- Contenedor relativo para alojar el QR y el logo real centrado flotante -->
+                        <div id="qrComercioContainer" class="w-44 h-44 flex items-center justify-center mx-auto relative">
+                            <!-- El QR y el logo real se renderizarán aquí -->
                         </div>
                         <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition bg-black/40 rounded-xl backdrop-blur-[2px]">
                             <span class="text-white text-[10px] font-bold bg-slate-900/80 px-2 py-1 rounded">Listo para escanear</span>
@@ -285,7 +286,7 @@
         </div>
     </div>
 
-    <!-- SCRIPT DE FUNCIONAMIENTO BLINDADO CON EMBLEMA CENTRAL INCORPORADO -->
+    <!-- SCRIPT DE FUNCIONAMIENTO BLINDADO CON LOGO REAL INCORPORADO -->
     <script>
         let html5QrCode = null;
         let intervaloHistorial = null;
@@ -539,38 +540,22 @@
                                     correctLevel: QRCode.CorrectLevel.H
                                 });
 
-                                // 2. Inyectamos el emblema central corporativo con 300ms de retardo seguro
+                                // 2. Inyección elegante y nativa de tu logo.png real al centro con CSS Absoluto
                                 setTimeout(() => {
-                                    const canvas = container.querySelector('canvas');
-                                    if (canvas) {
-                                        const ctx = canvas.getContext('2d');
-                                        const size = canvas.width;
-                                        const logoSize = size * 0.26; // 26% del tamaño central
-                                        const centerPos = (size - logoSize) / 2;
-
-                                        // Fondo blanco elegante para aislar el emblema y garantizar lectura 100%
-                                        ctx.fillStyle = '#ffffff';
-                                        ctx.beginPath();
-                                        if (ctx.roundRect) {
-                                            ctx.roundRect(centerPos - 4, centerPos - 4, logoSize + 8, logoSize + 8, 8);
-                                        } else {
-                                            ctx.rect(centerPos - 4, centerPos - 4, logoSize + 8, logoSize + 8);
-                                        }
-                                        ctx.fill();
-                                        ctx.strokeStyle = '#f59e0b';
-                                        ctx.lineWidth = 2.5;
-                                        ctx.stroke();
-
-                                        // Dibujar icono o emblema representativo central
-                                        ctx.fillStyle = '#080d19';
-                                        ctx.font = `bold ${Math.floor(logoSize * 0.6)}px system-ui, sans-serif`;
-                                        ctx.textAlign = 'center';
-                                        ctx.textBaseline = 'middle';
-                                        ctx.fillText('💳', size / 2, size / 2);
-                                    } else {
-                                        console.warn("Canvas QR no disponible todavía.");
+                                    if (!container.querySelector('.logo-flotante-qr')) {
+                                        const logoWrapper = document.createElement('div');
+                                        logoWrapper.className = "logo-flotante-qr absolute inset-0 m-auto w-12 h-12 bg-white border-2 border-amber-500 rounded-xl overflow-hidden flex items-center justify-center shadow-xl select-none";
+                                        logoWrapper.style.zIndex = "50";
+                                        
+                                        const imgLogo = document.createElement('img');
+                                        imgLogo.src = '/logo.png';
+                                        imgLogo.alt = 'Logo';
+                                        imgLogo.className = "w-full h-full object-cover";
+                                        
+                                        logoWrapper.appendChild(imgLogo);
+                                        container.appendChild(logoWrapper);
                                     }
-                                }, 300);
+                                }, 200);
 
                             } catch (err) {
                                 console.error("Error creando QR local:", err);
@@ -610,7 +595,7 @@
         }
 
         // =========================================================================
-        // FUNCIÓN INTELIGENTE: DESCARGA LIMPIA EN PC Y CARTEL CON EMBLEMA CENTRAL
+        // FUNCIÓN INTELIGENTE: DESCARGA LIMPIA EN PC Y CARTEL CON LOGO REAL
         // =========================================================================
         function descargarCartelComercialQR() {
             if (!merchantIdActual) {
@@ -651,72 +636,86 @@
             imgQR.onload = function() {
                 ctx.drawImage(imgQR, 150, 185, 300, 300);
 
-                ctx.fillStyle = "#ffffff";
-                ctx.beginPath();
-                if (ctx.roundRect) {
-                    ctx.roundRect(265, 300, 70, 70, 12);
-                } else {
-                    ctx.rect(265, 300, 70, 70);
-                }
-                ctx.fill();
-                ctx.strokeStyle = "#f59e0b";
-                ctx.lineWidth = 3;
-                ctx.stroke();
+                // Cargamos el logo real en el cartel descargable
+                const logoCartel = new Image();
+                logoCartel.crossOrigin = "anonymous";
+                logoCartel.src = '/logo.png';
 
-                ctx.fillStyle = "#080d19";
-                ctx.font = "bold 32px system-ui";
-                ctx.textAlign = "center";
-                ctx.textBaseline = "middle";
-                ctx.fillText("💳", canvas.width / 2, 335);
-
-                ctx.fillStyle = "#020617";
-                ctx.fillRect(100, 550, 400, 50);
-                
-                ctx.strokeStyle = "#10b981";
-                ctx.lineWidth = 2;
-                ctx.strokeRect(100, 550, 400, 50);
-
-                ctx.fillStyle = "#34d399";
-                ctx.font = "bold 22px monospace";
-                ctx.textAlign = "center";
-                ctx.textBaseline = "alphabetic";
-                ctx.fillText(`ID Comercio: ${merchantIdActual}`, canvas.width / 2, 582);
-
-                ctx.fillStyle = "#94a3b8";
-                ctx.font = "16px system-ui, -apple-system, sans-serif";
-                ctx.fillText("Escanea con cualquier billetera o cámara", canvas.width / 2, 650);
-                ctx.fillText("para recibir pagos instantáneos en caja.", canvas.width / 2, 675);
-
-                canvas.toBlob(async (blob) => {
-                    const file = new File([blob], `Cartel_QR_${merchantIdActual}.png`, { type: "image/png" });
-
-                    const esDispositivoMobil = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
-
-                    if (esDispositivoMobil && navigator.canShare && navigator.canShare({ files: [file] })) {
-                        try {
-                            await navigator.share({
-                                title: 'Cartel de Cobro - Pago Móvil USDT',
-                                text: `Aquí tienes tu cartel oficial de cobro para la vitrina o WhatsApp (ID: ${merchantIdActual}).`,
-                                files: [file]
-                            });
-                            return;
-                        } catch (err) {
-                            if (err.name === 'AbortError') return;
-                        }
+                logoCartel.onload = function() {
+                    const lSize = 80;
+                    const lPos = (canvas.width - lSize) / 2;
+                    
+                    ctx.fillStyle = "#ffffff";
+                    ctx.beginPath();
+                    if (ctx.roundRect) {
+                        ctx.roundRect(lPos - 4, 295 - 4, lSize + 8, lSize + 8, 14);
+                    } else {
+                        ctx.rect(lPos - 4, 295 - 4, lSize + 8, lSize + 8);
                     }
+                    ctx.fill();
+                    ctx.strokeStyle = "#f59e0b";
+                    ctx.lineWidth = 3;
+                    ctx.stroke();
 
-                    const link = document.createElement('a');
-                    link.download = `Cartel_QR_${merchantIdActual}.png`;
-                    link.href = canvas.toDataURL('image/png');
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                }, 'image/png');
+                    ctx.drawImage(logoCartel, lPos, 295, lSize, lSize);
+
+                    finalizarCartel(canvas);
+                };
+
+                logoCartel.onerror = function() {
+                    finalizarCartel(canvas); // Si falla por red, genera el cartel igual
+                };
             };
 
             imgQR.onerror = function() {
                 alert("❌ Error al generar la imagen del código QR. Inténtalo de nuevo.");
             };
+        }
+
+        function finalizarCartel(canvas) {
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = "#020617";
+            ctx.fillRect(100, 550, 400, 50);
+            
+            ctx.strokeStyle = "#10b981";
+            ctx.lineWidth = 2;
+            ctx.strokeRect(100, 550, 400, 50);
+
+            ctx.fillStyle = "#34d399";
+            ctx.font = "bold 22px monospace";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "alphabetic";
+            ctx.fillText(`ID Comercio: ${merchantIdActual}`, canvas.width / 2, 582);
+
+            ctx.fillStyle = "#94a3b8";
+            ctx.font = "16px system-ui, -apple-system, sans-serif";
+            ctx.fillText("Escanea con cualquier billetera o cámara", canvas.width / 2, 650);
+            ctx.fillText("para recibir pagos instantáneos en caja.", canvas.width / 2, 675);
+
+            canvas.toBlob(async (blob) => {
+                const file = new File([blob], `Cartel_QR_${merchantIdActual}.png`, { type: "image/png" });
+                const esDispositivoMobil = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
+
+                if (esDispositivoMobil && navigator.canShare && navigator.canShare({ files: [file] })) {
+                    try {
+                        await navigator.share({
+                            title: 'Cartel de Cobro - Pago Móvil USDT',
+                            text: `Aquí tienes tu cartel oficial de cobro para la vitrina o WhatsApp (ID: ${merchantIdActual}).`,
+                            files: [file]
+                        });
+                        return;
+                    } catch (err) {
+                        if (err.name === 'AbortError') return;
+                    }
+                }
+
+                const link = document.createElement('a');
+                link.download = `Cartel_QR_${merchantIdActual}.png`;
+                link.href = canvas.toDataURL('image/png');
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }, 'image/png');
         }
 
         async function cargarHistorial() {
