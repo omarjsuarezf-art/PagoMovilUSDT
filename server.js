@@ -631,7 +631,7 @@ app.post('/api/registrar-metodos', limiterPagos, async (req, res) => {
         } else {
             mensajeErrorFormato = `❌ Cuenta o correo inválido para ${metodoElegido.toUpperCase()}.`;
         }
-    } else if (metodoElegido === 'airtm') {
+} else if (metodoElegido === 'airtm') {
     const regexCorreoGeneral = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
     if (regexCorreoGeneral.test(destinoLimpio)) {
         esValido = true;
@@ -646,13 +646,6 @@ app.post('/api/registrar-metodos', limiterPagos, async (req, res) => {
         mensajeErrorFormato = '❌ La dirección de monedero cripto es demasiado corta o inválida.';
     }
 }
-    } else {
-        if (destinoLimpio.length >= 8) {
-            esValido = true;
-        } else {
-            mensajeErrorFormato = '❌ La dirección o identificador ingresado no es válido.';
-        }
-    }
 
     if (!esValido) {
         return res.status(400).json({ success: false, message: mensajeErrorFormato });
