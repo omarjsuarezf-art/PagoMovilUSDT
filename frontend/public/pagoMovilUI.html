@@ -287,7 +287,7 @@
         </div>
     </div>
 
-    <!-- SCRIPT DE FUNCIONAMIENTO BLINDADO Y SEGURO -->
+    <!-- SCRIPT DE FUNCIONAMIENTO BLINDADO Y SEGURO (SIN BEFOREUNLOAD AGRESIVO) -->
     <script>
         let html5QrCode = null;
         let intervaloHistorial = null;
@@ -298,17 +298,6 @@
             let tel = localStorage.getItem('userPhone') || localStorage.getItem('telefonoUsuario') || localStorage.getItem('usuarioTelefono');
             return tel ? tel.trim() : null;
         }
-
-        // ==========================================
-        // SEGURIDAD MÁXIMA: CIERRE DE SESIÓN AUTOMÁTICO AL CERRAR O ABRIR PÁGINA
-        // ==========================================
-        window.addEventListener('beforeunload', () => {
-            // Limpia los datos de sesión para que al reabrir el tlf no quede expuesto
-            localStorage.removeItem('userPhone');
-            localStorage.removeItem('telefonoUsuario');
-            localStorage.removeItem('usuarioTelefono');
-            localStorage.removeItem('merchantId');
-        });
 
         const TIEMPO_INACTIVIDAD = 10 * 60 * 1000; // 10 Minutos
         let temporizadorInactividad;
@@ -857,7 +846,7 @@
             }
         }
 
-        // CIERRE DE SESIÓN ESTRICTO Y DEFINITIVO
+        // CIERRE DE SESIÓN ESTRICTO Y DEFINITIVO (EXPLÍCITO POR BOTÓN)
         function cerrarSesion() {
             localStorage.removeItem('userPhone');
             localStorage.removeItem('telefonoUsuario');
