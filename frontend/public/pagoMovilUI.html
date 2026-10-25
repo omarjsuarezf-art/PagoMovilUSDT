@@ -200,7 +200,7 @@
                     </form>
                 </div>
 
-                <!-- SECCIÓN PRINCIPAL COMERCIO: QR ROBUSTO DE COBRO + BOTÓN DESCARGAR / COMPARTIR -->
+                <!-- SECCIÓN PRINCIPAL COMERCIO: QR ROBUSTO DE COBRO + EMBLEMA CENTRAL + BOTÓN DESCARGAR -->
                 <div id="seccionQrComercio" class="hidden bg-slate-900/90 border border-amber-500/30 rounded-2xl p-5 text-center space-y-4 shadow-xl relative overflow-hidden">
                     <div class="absolute -top-10 -right-10 w-32 h-32 bg-amber-500/5 rounded-full blur-2xl pointer-events-none"></div>
                     
@@ -213,7 +213,7 @@
 
                     <div class="bg-white p-4 rounded-2xl inline-block shadow-2xl border-4 border-slate-950 relative group">
                         <div id="qrComercioContainer" class="w-44 h-44 flex items-center justify-center mx-auto">
-                            <!-- El QR se renderizará de manera local aquí -->
+                            <!-- El QR con emblema central se renderizará aquí -->
                         </div>
                         <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition bg-black/40 rounded-xl backdrop-blur-[2px]">
                             <span class="text-white text-[10px] font-bold bg-slate-900/80 px-2 py-1 rounded">Listo para escanear</span>
@@ -285,7 +285,7 @@
         </div>
     </div>
 
-    <!-- SCRIPT DE FUNCIONAMIENTO BLINDADO CON TOLERANCIA DE SEGUNDO PLANO -->
+    <!-- SCRIPT DE FUNCIONAMIENTO BLINDADO CON EMBLEMA CENTRAL INCORPORADO -->
     <script>
         let html5QrCode = null;
         let intervaloHistorial = null;
@@ -529,6 +529,7 @@
 
                         if (typeof QRCode === 'function') {
                             try {
+                                // 1. Generamos el QR base en Nivel H (Alta tolerancia a fallos de hasta 30%)
                                 new QRCode(container, {
                                     text: payloadQr,
                                     width: 176,
@@ -537,6 +538,38 @@
                                     colorLight : "#ffffff",
                                     correctLevel: QRCode.CorrectLevel.H
                                 });
+
+                                // 2. Inyectamos el emblema central corporativo con precisión quirúrgica
+                                setTimeout(() => {
+                                    const canvas = container.querySelector('canvas');
+                                    if (canvas) {
+                                        const ctx = canvas.getContext('2d');
+                                        const size = canvas.width;
+                                        const logoSize = size * 0.24; // 24% del tamaño central
+                                        const centerPos = (size - logoSize) / 2;
+
+                                        // Fondo blanco elegante para aislar el emblema y garantizar lectura 100%
+                                        ctx.fillStyle = '#ffffff';
+                                        ctx.beginPath();
+                                        if (ctx.roundRect) {
+                                            ctx.roundRect(centerPos - 4, centerPos - 4, logoSize + 8, logoSize + 8, 8);
+                                        } else {
+                                            ctx.rect(centerPos - 4, centerPos - 4, logoSize + 8, logoSize + 8);
+                                        }
+                                        ctx.fill();
+                                        ctx.strokeStyle = '#f59e0b';
+                                        ctx.lineWidth = 2;
+                                        ctx.stroke();
+
+                                        // Dibujar icono o emblema representativo central
+                                        ctx.fillStyle = '#080d19';
+                                        ctx.font = `bold ${Math.floor(logoSize * 0.55)}px system-ui`;
+                                        ctx.textAlign = 'center';
+                                        ctx.textBaseline = 'middle';
+                                        ctx.fillText('💳', size / 2, size / 2);
+                                    }
+                                }, 150);
+
                             } catch (err) {
                                 console.error("Error creando QR local:", err);
                                 renderizarFallbackQR(payloadQr);
@@ -574,7 +607,7 @@
         }
 
         // =========================================================================
-        // FUNCIÓN INTELIGENTE: DESCARGA LIMPIA EN PC Y COMPARTIR NATIVO EN MÓVIL
+        // FUNCIÓN INTELIGENTE: DESCARGA LIMPIA EN PC Y CARTEL CON EMBLEMA CENTRAL
         // =========================================================================
         function descargarCartelComercialQR() {
             if (!merchantIdActual) {
@@ -613,7 +646,27 @@
             imgQR.src = qrApiUrl;
 
             imgQR.onload = function() {
+                // Dibujar QR base
                 ctx.drawImage(imgQR, 150, 185, 300, 300);
+
+                // Emblema flotante central en el cartel descargable
+                ctx.fillStyle = "#ffffff";
+                ctx.beginPath();
+                if (ctx.roundRect) {
+                    ctx.roundRect(265, 300, 70, 70, 12);
+                } else {
+                    ctx.rect(265, 300, 70, 70);
+                }
+                ctx.fill();
+                ctx.strokeStyle = "#f59e0b";
+                ctx.lineWidth = 3;
+                ctx.stroke();
+
+                ctx.fillStyle = "#080d19";
+                ctx.font = "bold 32px system-ui";
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+                ctx.fillText("💳", canvas.width / 2, 335);
 
                 ctx.fillStyle = "#020617";
                 ctx.fillRect(100, 550, 400, 50);
@@ -625,6 +678,7 @@
                 ctx.fillStyle = "#34d399";
                 ctx.font = "bold 22px monospace";
                 ctx.textAlign = "center";
+                ctx.textBaseline = "alphabetic";
                 ctx.fillText(`ID Comercio: ${merchantIdActual}`, canvas.width / 2, 582);
 
                 ctx.fillStyle = "#94a3b8";
