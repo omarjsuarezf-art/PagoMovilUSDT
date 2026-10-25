@@ -49,7 +49,7 @@
                     </div>
                     <h2 class="text-sm font-bold text-white">Completa tu Registro de Usuario</h2>
                     <p class="text-[11px] text-slate-400 leading-snug">
-                        Para habilitar las funciones de pago, recarga y retiros, debes vincular tu cédula y un correo electrónico donde recibirás tu guía de uso y términos oficiales.
+                        Para habilitar las funciones de pago, recarga y retiros, debes vincular tu cédula y tu plataforma o red cripto de preferencia.
                     </p>
                 </div>
 
@@ -62,19 +62,19 @@
                     <div>
                         <label class="block text-[11px] text-slate-400 mb-1">Método / Exchange de Preferencia</label>
                         <select id="regMetodo" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500">
-                            <option value="binance">Binance Pay</option>
-                            <option value="paypal">PayPal</option>
-                            <option value="zelle">Zelle</option>
-                            <option value="zinli">Zinli</option>
-                            <option value="airtm">AirTM</option>
-                            <option value="bybit">Bybit</option>
-                            <option value="okx">OKX</option>
+                            <option value="binance">Binance Pay (Pay ID / Email / Teléfono)</option>
+                            <option value="airtm">AirTM (Correo electrónico)</option>
+                            <option value="bybit">Bybit UID / Email</option>
+                            <option value="okx">OKX (UID / Email / Teléfono)</option>
+                            <option value="trc20">Wallet USDT (Red TRC20 - Tron)</option>
+                            <option value="bep20">Wallet USDT (Red BEP20 - BSC)</option>
+                            <option value="polygon">Wallet USDT (Red Polygon)</option>
                         </select>
                     </div>
 
                     <div>
-                        <label class="block text-[11px] text-slate-400 mb-1">Correo Electrónico o Cuenta Destino</label>
-                        <input type="text" id="regCuentaDestino" placeholder="Ej: tu_correo@gmail.com" required class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500 font-mono">
+                        <label class="block text-[11px] text-slate-400 mb-1">Correo Electrónico, UID o Cuenta Destino</label>
+                        <input type="text" id="regCuentaDestino" placeholder="Ej: correo@binance.com o 0x..." required class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500 font-mono">
                     </div>
 
                     <button type="submit" id="btnGuardarRegistro" class="w-full bg-amber-500 hover:bg-amber-600 text-slate-950 font-black py-2.5 rounded-xl transition text-xs cursor-pointer flex items-center justify-center gap-2 shadow-lg shadow-amber-500/10">
@@ -176,20 +176,18 @@
                         <div>
                             <label class="block text-[11px] text-slate-400 mb-1">Seleccionar Destino / Plataforma</label>
                             <select id="tipoExchange" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500">
-                                <option value="paypal">PayPal (Correo Electrónico)</option>
                                 <option value="binance">Binance Pay (Pay ID / Email / Teléfono)</option>
-                                <option value="zelle">Zelle (Correo / Teléfono)</option>
                                 <option value="airtm">AirTM (Correo electrónico)</option>
+                                <option value="bybit">Bybit UID / Email</option>
+                                <option value="okx">OKX (UID / Email / Teléfono)</option>
                                 <option value="trc20">Wallet USDT (Red TRC20 - Tron)</option>
                                 <option value="bep20">Wallet USDT (Red BEP20 - BSC)</option>
                                 <option value="polygon">Wallet USDT (Red Polygon)</option>
-                                <option value="payeer">Payeer (ID de Cuenta / Correo)</option>
-                                <option value="bybit">Bybit UID / Email</option>
                             </select>
                         </div>
                         <div>
                             <label class="block text-[11px] text-slate-400 mb-1">Dirección / UID / Correo de Destino</label>
-                            <input type="text" id="destinoRetiro" placeholder="Ej: correo@paypal.com o 0x..." required class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 font-mono">
+                            <input type="text" id="destinoRetiro" placeholder="Ej: correo@binance.com o 0x..." required class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 font-mono">
                         </div>
                         <div>
                             <label class="block text-[11px] text-slate-400 mb-1">Monto a Retirar (USDT)</label>
@@ -287,7 +285,7 @@
         </div>
     </div>
 
-    <!-- SCRIPT DE FUNCIONAMIENTO BLINDADO Y SEGURO (SIN BEFOREUNLOAD AGRESIVO) -->
+    <!-- SCRIPT DE FUNCIONAMIENTO BLINDADO CON TOLERANCIA DE SEGUNDO PLANO -->
     <script>
         let html5QrCode = null;
         let intervaloHistorial = null;
@@ -299,24 +297,26 @@
             return tel ? tel.trim() : null;
         }
 
-        const TIEMPO_INACTIVIDAD = 10 * 60 * 1000; // 10 Minutos
-        let temporizadorInactividad;
+        // =========================================================================
+        // SEGURIDAD INTELIGENTE: TOLERANCIA DE SEGUNDO PLANO (PARA IR A BINANCE Y VOLVER)
+        // =========================================================================
+        let tiempoOcultoInicio = null;
+        const TOLERANCIA_SEGUNDO_PLANO = 3 * 60 * 1000; // 3 Minutos de gracia
 
-        function reiniciarTemporizadorInactividad() {
-            clearTimeout(temporizadorInactividad);
-            temporizadorInactividad = setTimeout(cerrarSesionPorInactividad, TIEMPO_INACTIVIDAD);
-        }
-
-        function cerrarSesionPorInactividad() {
-            cerrarSesion();
-            alert("⚠️ Tu sesión ha expirado por inactividad tras 10 minutos para proteger tus fondos.");
-        }
-
-        ['mousemove', 'keydown', 'click', 'touchstart', 'scroll'].forEach(evento => {
-            window.addEventListener(evento, reiniciarTemporizadorInactividad, true);
+        document.addEventListener("visibilitychange", () => {
+            if (document.hidden) {
+                tiempoOcultoInicio = Date.now();
+            } else {
+                if (tiempoOcultoInicio) {
+                    let tiempoFuera = Date.now() - tiempoOcultoInicio;
+                    if (tiempoFuera > TOLERANCIA_SEGUNDO_PLANO) {
+                        alert("🔒 Tu sesión ha expirado por seguridad tras estar en segundo plano.");
+                        cerrarSesion();
+                    }
+                    tiempoOcultoInicio = null;
+                }
+            }
         });
-
-        reiniciarTemporizadorInactividad();
 
         // VERIFICACIÓN SILENCIOSA CONSULTANDO AL SERVIDOR
         async function verificarAccesoPanel() {
@@ -425,7 +425,7 @@
             }
         }
 
-        // VINCULAR DATOS OBLIGATORIOS (CÉDULA Y CORREO)
+        // VINCULAR DATOS OBLIGATORIOS (CÉDULA Y CORREO/DESTINO)
         async function vincularDatosObligatorios(e) {
             e.preventDefault();
             const telefono = obtenerTelefonoActivo();
@@ -440,7 +440,7 @@
 
             const btn = document.getElementById('btnGuardarRegistro');
             btn.disabled = true;
-            btn.innerText = "Verificando y enviando correo...";
+            btn.innerText = "Verificando y guardando...";
 
             try {
                 const res = await fetch('/api/registrar-metodos', {
@@ -457,7 +457,7 @@
                 const data = await res.json();
 
                 if (data.success) {
-                    alert("✅ ¡Registro completado con éxito! Se ha enviado la guía y términos a tu correo electrónico.");
+                    alert("✅ ¡Registro completado con éxito!");
                     cargarDatosPanel();
                 } else {
                     alert(`❌ ${data.message || 'No se pudieron vincular los datos.'}`);
@@ -495,7 +495,7 @@
                         
                         const badge = document.getElementById('badgeAccountType');
                         badge.className = "inline-block px-2.5 py-1 rounded-md text-[11px] font-bold tracking-wide uppercase bg-rose-500/20 text-rose-300 border border-rose-500/30";
-                        badge.innerText = "REGISTRO INCOMPLETO (PENDIENTE CÉDULA Y CORREO)";
+                        badge.innerText = "REGISTRO INCOMPLETO (PENDIENTE CÉDULA Y MÉTODO)";
                         return;
                     } else {
                         if (seccionRegistro) seccionRegistro.classList.add('hidden');
@@ -846,7 +846,7 @@
             }
         }
 
-        // CIERRE DE SESIÓN ESTRICTO Y DEFINITIVO (EXPLÍCITO POR BOTÓN)
+        // CIERRE DE SESIÓN ESTRICTO Y DEFINITIVO (EXPLÍCITO POR BOTÓN O SEGURIDAD)
         function cerrarSesion() {
             localStorage.removeItem('userPhone');
             localStorage.removeItem('telefonoUsuario');

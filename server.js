@@ -606,9 +606,8 @@ app.post('/api/registrar-metodos', limiterPagos, async (req, res) => {
     let esValido = false;
     let mensajeErrorFormato = '';
     let correoExtraido = null;
-
-    const metodosSoportados = ['binance', 'zinli', 'zelle', 'paypal', 'bybit', 'okx', 'airtm', 'polygon', 'usdt_wallet'];
-
+    const metodosSoportados = ['binance', 'airtm', 'bybit', 'okx', 'trc20', 'bep20', 'polygon'];
+   
     if (!metodosSoportados.includes(metodoElegido)) {
         return res.status(400).json({ success: false, message: '❌ El método de pago, exchange o monedero seleccionado no es válido.' });
     }
@@ -632,22 +631,21 @@ app.post('/api/registrar-metodos', limiterPagos, async (req, res) => {
         } else {
             mensajeErrorFormato = `❌ Cuenta o correo inválido para ${metodoElegido.toUpperCase()}.`;
         }
-    } else if (['zinli', 'paypal', 'airtm', 'zelle'].includes(metodoElegido)) {
-        const regexCorreoGeneral = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-        if (regexCorreoGeneral.test(destinoLimpio) || (metodoElegido === 'zelle' && destinoLimpio.length >= 10)) {
-            esValido = true;
-            if (destinoLimpio.includes('@')) correoExtraido = destinoLimpio;
-        } else {
-            mensajeErrorFormato = `❌ Para ${metodoElegido.toUpperCase()} debe ingresar un correo electrónico o destino válido.`;
-        }
-    } else if (metodoElegido === 'polygon' || metodoElegido === 'usdt_wallet') {
-        if (destinoLimpio.startsWith('0x') && destinoLimpio.length === 42) {
-            esValido = true;
-        } else if (destinoLimpio.length >= 20) {
-            esValido = true;
-        } else {
-            mensajeErrorFormato = '❌ La dirección de monedero cripto Polygon/USDT es demasiado corta o inválida.';
-        }
+    } else if (metodoElegido === 'airtm') {
+    const regexCorreoGeneral = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    if (regexCorreoGeneral.test(destinoLimpio)) {
+        esValido = true;
+        correoExtraido = destinoLimpio;
+    } else {
+        mensajeErrorFormato = '❌ Para AirTM debe ingresar un correo electrónico válido.';
+    }
+} else if (['trc20', 'bep20', 'polygon'].includes(metodoElegido)) {
+    if (destinoLimpio.length >= 20) {
+        esValido = true;
+    } else {
+        mensajeErrorFormato = '❌ La dirección de monedero cripto es demasiado corta o inválida.';
+    }
+}
     } else {
         if (destinoLimpio.length >= 8) {
             esValido = true;
