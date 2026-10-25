@@ -257,33 +257,71 @@ async function enviarMensajeWhatsappSeguro(numero, mensaje) {
 }
 
 // ==========================================
-// CLIENTE DE WHATSAPP (LOCAL LIMPIO)
+// CLIENTE DE WHATSAPP (GREEN-API HTTP 24/7)
 // ==========================================
-const client = new Client({
-    authStrategy: new LocalAuth(),
-    puppeteer: {
-        args: [
-            '--no-sandbox',
-            '--disable-setuid-sandbox',
-            '--disable-dev-shm-usage',
-            '--disable-accelerated-2d-canvas',
-            '--no-first-run',
-            '--no-zygote',
-            '--disable-gpu'
-        ]
+const idInstance = process.env.GREEN_API_ID_INSTANCE;
+const apiTokenInstance = process.env.GREEN_API_TOKEN_INSTANCE;
+
+function formatearNumeroWhatsapp(numero) {
+    if (!numero) return null;
+    let numLimpio = numero.toString().trim().replace(/\D/g, '');
+    if (numLimpio.startsWith('0')) {
+        numLimpio = numLimpio.substring(1);
     }
-});
+    return numLimpio;
+}
 
-client.on('qr', (qr) => {
-    console.log('Escanea este código QR con tu WhatsApp:');
-    qrcode.generate(qr, { small: true });
-});
+async function enviarMensajeWhatsappSeguro(numero, mensaje) {
+    if (!idInstance || !apiTokenInstance) {
+        console.error('⚠️ Credenciales de Green-API no configuradas en el archivo .env');
+        return;
+    }
 
-client.on('ready', () => {
-    console.log('¡Cliente de WhatsApp conectado y listo para enviar mensajes!');
-});
+    try {
+        let numLimpio = formatearNumeroWhatsapp(numero);
+        if (!numLimpio) return;
 
-client.initialize();
+        let chatId = numLimpio.startsWith('58') ? `${numLimpio}@c.us` : `58${numLimpio}@c.us`;
+
+        const data = JSON.stringify({
+            chatId: chatId,
+            message: mensaje
+        });
+
+        const options = {
+            hostname: `api.green-api.com`,
+            port: 443,
+            path: `/waInstance${idInstance}/sendMessage/${apiTokenInstance}`,
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Content-Length': data.length
+            }
+        };
+
+        const req = https.request(options, (res) => {
+            let responseBody = '';
+            res.on('data', (chunk) => { responseBody += chunk; });
+            res.on('end', () => {
+                if (res.statusCode >= 200 && res.statusCode < 300) {
+                    console.log(`✅ Mensaje de Green-API enviado con éxito a ${chatId}`);
+                } else {
+                    console.error(`⚠️ Error al enviar WhatsApp vía Green-API (${res.statusCode}):`, responseBody);
+                }
+            });
+        });
+
+        req.on('error', (error) => {
+            console.error(`⚠️ Error de conexión con Green-API:`, error.message);
+        });
+
+        req.write(data);
+        req.end();
+
+    } catch (e) {
+        console.error(`⚠️ Excepción al enviar mensaje WhatsApp a ${numero}:`, e.message);
+    }
+}
 
 // ==========================================
 // RUTAS DE PÁGINAS (VISTAS - FLUJO OBLIGATORIO DE AUTH)
