@@ -285,7 +285,7 @@
         </div>
     </div>
 
-    <!-- SCRIPT DE FUNCIONAMIENTO BLINDADO CON EMBLEMA CENTRAL INCORPORADO -->
+    <!-- SCRIPT DE FUNCIONAMIENTO BLINDADO CON BOTÓN DE UPGRADE CORREGIDO -->
     <script>
         let html5QrCode = null;
         let intervaloHistorial = null;
@@ -529,7 +529,6 @@
 
                         if (typeof QRCode === 'function') {
                             try {
-                                // 1. Generamos el QR base en Nivel H (Alta tolerancia a fallos de hasta 30%)
                                 new QRCode(container, {
                                     text: payloadQr,
                                     width: 176,
@@ -539,16 +538,14 @@
                                     correctLevel: QRCode.CorrectLevel.H
                                 });
 
-                                // 2. Inyectamos el emblema central corporativo con precisión quirúrgica
                                 setTimeout(() => {
                                     const canvas = container.querySelector('canvas');
                                     if (canvas) {
                                         const ctx = canvas.getContext('2d');
                                         const size = canvas.width;
-                                        const logoSize = size * 0.24; // 24% del tamaño central
+                                        const logoSize = size * 0.24;
                                         const centerPos = (size - logoSize) / 2;
 
-                                        // Fondo blanco elegante para aislar el emblema y garantizar lectura 100%
                                         ctx.fillStyle = '#ffffff';
                                         ctx.beginPath();
                                         if (ctx.roundRect) {
@@ -561,7 +558,6 @@
                                         ctx.lineWidth = 2;
                                         ctx.stroke();
 
-                                        // Dibujar icono o emblema representativo central
                                         ctx.fillStyle = '#080d19';
                                         ctx.font = `bold ${Math.floor(logoSize * 0.55)}px system-ui`;
                                         ctx.textAlign = 'center';
@@ -585,10 +581,11 @@
                     } else {
                         badge.className = "inline-block px-2.5 py-1 rounded-md text-[11px] font-bold tracking-wide uppercase bg-blue-500/20 text-blue-300 border border-blue-500/30";
                         badge.innerText = `CUENTA NATURAL (LÍMITE $${data.dailyLimit || 1000} USDT)`;
-                        if (seccionUpgrade) seccionUpgrade.classList.add('hidden');
                         
+                        if (seccionUpgrade) seccionUpgrade.classList.remove('hidden'); // <-- ¡AHORA SÍ SE MUESTRA PERFECTAMENTE!
                         if (seccionQr) seccionQr.classList.add('hidden');
                         if (seccionHistorial) seccionHistorial.classList.add('hidden');
+                        
                         if (intervaloHistorial) {
                             clearInterval(intervaloHistorial);
                             intervaloHistorial = null;
@@ -646,10 +643,8 @@
             imgQR.src = qrApiUrl;
 
             imgQR.onload = function() {
-                // Dibujar QR base
                 ctx.drawImage(imgQR, 150, 185, 300, 300);
 
-                // Emblema flotante central en el cartel descargable
                 ctx.fillStyle = "#ffffff";
                 ctx.beginPath();
                 if (ctx.roundRect) {
