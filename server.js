@@ -183,35 +183,19 @@ function calcularComisionRetiro(monto) {
     return comisionCalculada < MINIMO_COMISION_RETIRO ? MINIMO_COMISION_RETIRO : Number(comisionCalculada.toFixed(2));
 }
 
-
 // ==========================================
-// VALIDADOR AUTOMÁTICO BLOCKCHAIN (POLYGON - RPC DIRECTO)
+// VALIDADOR AUTOMÁTICO BLOCKCHAIN (POLYGONSCAN API OFICIAL)
 // ==========================================
 async function verificarHashPolygonEnBlockchain(txHash, montoEsperadoMinimo) {
     return new Promise((resolve) => {
-        if (!txHash || txHash.length < 10) {
+        if (!txHash || txHash.trim().length < 10) {
             return resolve({ valido: false, mensaje: '❌ Hash de transacción de Polygon inválido.' });
         }
 
-        const dataJson = JSON.stringify({
-            jsonrpc: "2.0",
-            method: "eth_getTransactionReceipt",
-            params: [txHash.trim()],
-            id: 1
-        });
+        const cleanHash = txHash.trim();
+        const url = `https://api.polygonscan.com/api?module=proxy&action=eth_getTransactionReceipt&txhash=${cleanHash}`;
 
-        const options = {
-            hostname: 'polygon-rpc.com',
-            port: 443,
-            path: '/',
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Content-Length': dataJson.length
-            }
-        };
-
-        const req = https.request(options, (res) => {
+        https.get(url, (res) => {
             let data = '';
             res.on('data', (chunk) => { data += chunk; });
             res.on('end', () => {
@@ -219,13 +203,13 @@ async function verificarHashPolygonEnBlockchain(txHash, montoEsperadoMinimo) {
                     const respuesta = JSON.parse(data);
                     
                     if (!respuesta || !respuesta.result) {
-                        return resolve({ valido: false, mensaje: '❌ La transacción aún no ha sido confirmada o el Hash no existe.' });
+                        return resolve({ valido: false, mensaje: '❌ La transacción todavía se está propagando en la red o el Hash es incorrecto.' });
                     }
 
                     const receipt = respuesta.result;
                     
                     if (receipt.status !== '0x1') {
-                        return resolve({ valido: false, mensaje: '❌ La transacción en Polygon falló o fue revertida.' });
+                        return resolve({ valido: false, mensaje: '❌ La transacción en la red Polygon falló o fue revertida.' });
                     }
 
                     const contratoUSDT = (typeof POLYGON_USDT_CONTRACT !== 'undefined' ? POLYGON_USDT_CONTRACT : '0xc2132d05d31c914a87c6611c10748aeb04b58e8f').toLowerCase();
@@ -253,25 +237,22 @@ async function verificarHashPolygonEnBlockchain(txHash, montoEsperadoMinimo) {
                     }
 
                     if (!transferenciaValida) {
-                        return resolve({ valido: false, mensaje: '❌ La transferencia de USDT en este Hash no fue dirigida a la wallet oficial.' });
+                        return resolve({ valido: false, mensaje: '❌ El contrato o la wallet de destino en este Hash no corresponden a la plataforma.' });
                     }
 
                     return resolve({ valido: true, mensaje: '✅ Transacción verificada correctamente en Polygon.' });
                 } catch (e) {
-                    console.error("Error crítico en validador RPC:", e.message);
-                    return resolve({ valido: false, mensaje: '❌ Error interno al procesar la respuesta de la red.' });
+                    console.error("Error analizando JSON de Polygonscan:", e.message);
+                    return resolve({ valido: false, mensaje: '❌ Error interno al procesar el recibo de la red.' });
                 }
             });
+        }).on('error', (err) => {
+            console.error("Error de red con Polygonscan:", err.message);
+            return resolve({ valido: false, mensaje: '❌ Error de conexión con el explorador de Polygon.' });
         });
-
-        req.on('error', (err) => {
-            return resolve({ valido: false, mensaje: '❌ Error de conexión con el nodo de la red Polygon.' });
-        });
-
-        req.write(dataJson);
-        req.end();
     });
 }
+
 function formatearNumeroWhatsapp(numero) {
     if (!numero) return null;
     let numLimpio = numero.toString().trim().replace(/\D/g, '');
