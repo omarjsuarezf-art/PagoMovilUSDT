@@ -257,11 +257,8 @@ async function enviarMensajeWhatsappSeguro(numero, mensaje) {
 }
 
 // ==========================================
-// CLIENTE DE WHATSAPP (GREEN-API HTTP 24/7)
+// FUNCIÓN ÚNICA Y SEGURA DE ENVÍO POR GREEN-API
 // ==========================================
-const idInstance = process.env.GREEN_API_ID_INSTANCE;
-const apiTokenInstance = process.env.GREEN_API_TOKEN_INSTANCE;
-
 function formatearNumeroWhatsapp(numero) {
     if (!numero) return null;
     let numLimpio = numero.toString().trim().replace(/\D/g, '');
@@ -272,6 +269,9 @@ function formatearNumeroWhatsapp(numero) {
 }
 
 async function enviarMensajeWhatsappSeguro(numero, mensaje) {
+    const idInstance = process.env.GREEN_API_ID_INSTANCE;
+    const apiTokenInstance = process.env.GREEN_API_TOKEN_INSTANCE;
+
     if (!idInstance || !apiTokenInstance) {
         console.error('⚠️ Credenciales de Green-API no configuradas en el archivo .env');
         return;
@@ -281,6 +281,7 @@ async function enviarMensajeWhatsappSeguro(numero, mensaje) {
         let numLimpio = formatearNumeroWhatsapp(numero);
         if (!numLimpio) return;
 
+        // Asegurar formato internacional completo (ej: 58412...)
         let chatId = numLimpio.startsWith('58') ? `${numLimpio}@c.us` : `58${numLimpio}@c.us`;
 
         const data = JSON.stringify({
@@ -288,14 +289,17 @@ async function enviarMensajeWhatsappSeguro(numero, mensaje) {
             message: mensaje
         });
 
+        // Extraer los primeros dígitos de la instancia para armar el host correcto (ej: 7107)
+        const serverPrefix = idInstance.toString().substring(0, 4);
+
         const options = {
-            hostname: `api.green-api.com`,
+            hostname: `${serverPrefix}.api.green-api.com`,
             port: 443,
             path: `/waInstance${idInstance}/sendMessage/${apiTokenInstance}`,
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Content-Length': data.length
+                'Content-Length': Buffer.byteLength(data)
             }
         };
 
@@ -322,7 +326,6 @@ async function enviarMensajeWhatsappSeguro(numero, mensaje) {
         console.error(`⚠️ Excepción al enviar mensaje WhatsApp a ${numero}:`, e.message);
     }
 }
-
 // ==========================================
 // RUTAS DE PÁGINAS (VISTAS - FLUJO OBLIGATORIO DE AUTH)
 // ==========================================
