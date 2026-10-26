@@ -192,7 +192,7 @@ async function verificarHashPolygonEnBlockchain(txHash, montoEsperadoMinimo) {
             return resolve({ valido: false, mensaje: '❌ Hash de transacción de Polygon inválido.' });
         }
 
-        const url = `https://api.polygonscan.com/api?module=proxy&action=eth_getTransactionByHash&txhash=${txHash.trim()}`;
+        const url = `https://api.polygonscan.com/api?module=proxy&action=eth_getTransactionReceipt&txhash=${txHash.trim()}`;
 
         https.get(url, (res) => {
             let data = '';
@@ -201,21 +201,52 @@ async function verificarHashPolygonEnBlockchain(txHash, montoEsperadoMinimo) {
                 try {
                     const respuesta = JSON.parse(data);
                     if (!respuesta || !respuesta.result) {
-                        return resolve({ valido: false, mensaje: '❌ La transacción no existe o no ha sido confirmada en la red Polygon.' });
+                        return resolve({ valido: false, mensaje: '❌ La transacción no existe o aún no ha sido confirmada en la red Polygon.' });
                     }
 
-                    const tx = respuesta.result;
-                    if (!tx.blockNumber) {
-                        return resolve({ valido: false, mensaje: '❌ La transacción en Polygon aún está pendiente o no confirmada.' });
+                    const receipt = respuesta.result;
+                    
+                    // Verificar que la transacción fue exitosa (status '0x1')
+                    if (receipt.status !== '0x1') {
+                        return resolve({ valido: false, mensaje: '❌ La transacción en Polygon falló o fue revertida en la red.' });
                     }
 
-                    if (PLATFORM_POLYGON_WALLET && tx.to && tx.to.toLowerCase() !== PLATFORM_POLYGON_WALLET) {
-                        return resolve({ valido: false, mensaje: '❌ El destinatario de esta transacción en Polygon no corresponde a la wallet oficial de la plataforma.' });
+                    // El contrato oficial de USDT en Polygon
+                    const contratoUSDT = POLYGON_USDT_CONTRACT.toLowerCase();
+                    const walletOficial = PLATFORM_POLYGON_WALLET.toLowerCase();
+                    let transferenciaValida = false;
+
+                    // Recorrer los logs (eventos) emitidos por la transacción
+                    if (receipt.logs && Array.isArray(receipt.logs)) {
+                        for (const log of receipt.logs) {
+                            // Validar que el log pertenezca al contrato de USDT y sea un evento Transfer
+                            // Topic[0] del Transfer de ERC-20 es siempre: 0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef
+                            if (
+                                log.address && 
+                                log.address.toLowerCase() === contratoUSDT &&
+                                log.topics && 
+                                log.topics[0] === '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef' &&
+                                log.topics.length >= 3
+                            ); {
+                                // El topic[2] contiene la dirección de destino padded a 32 bytes (los últimos 40 caracteres corresponden a la wallet)
+                                const topicTo = log.topics[2];
+                                const destinoWallet = '0x' + topicTo.slice(26).toLowerCase();
+
+                                if (walletOficial && destinoWallet === walletOficial) {
+                                    transferenciaValida = true;
+                                    break;
+                                }
+                            }
+                        }
                     }
 
-                    return resolve({ valido: true, mensaje: '✅ Transacción verificada en Polygon correctamente.', dataTx: tx });
+                    if (!transferenciaValida) {
+                        return resolve({ valido: false, mensaje: '❌ La transferencia de USDT en este Hash no fue dirigida a la wallet oficial de la plataforma.' });
+                    }
+
+                    return resolve({ valido: true, mensaje: '✅ Transacción de USDT verificada en Polygon correctamente.', dataReceipt: receipt });
                 } catch (e) {
-                    return resolve({ valido: false, mensaje: '❌ Error al procesar la respuesta de la blockchain de Polygon.' });
+                    return resolve({ valido: false, mensaje: '❌ Error al procesar la respuesta del recibo en la blockchain de Polygon.' });
                 }
             });
         }).on('error', (err) => {
