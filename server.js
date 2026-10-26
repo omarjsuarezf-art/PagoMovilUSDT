@@ -383,7 +383,7 @@ app.post('/api/recuperar-pin-request', limiterPagos, async (req, res) => {
 
         const mensajeWA = `🔑 *RECUPERACIÓN DE PIN - PagoMóvilUSDT*\n\nTu código de verificación es: *${otp}*\n\nExpira en 5 minutos.`;
         
-        enviarMensajeWhatsappSeguro(user.telefono, mensajeWA).catch(() => {});
+        envianMensajewhatsappSeguro(telefono, mensajeWA).catch(() => {});
 
         return res.json({ success: true, message: 'Código enviado por WhatsApp.' });
     } catch (error) {
