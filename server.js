@@ -189,26 +189,40 @@ function calcularComisionRetiro(monto) {
 async function verificarHashPolygonEnBlockchain(txHash, montoEsperadoMinimo) {
     return new Promise((resolve) => {
         if (!txHash || txHash.trim().length < 10) {
-            return resolve({ valido: false, mensaje: '❌ Hash de transacción de Polygon inválido o muy corto.' });
+            return resolve({ valido: false, mensaje: '❌ Hash de transacción de Polygon inválido.' });
         }
 
-        const cleanHash = txHash.trim();
-        const walletOficialConfig = process.env.PLATFORM_POLYGON_WALLET;
-        const walletOficial = (walletOficialConfig && walletOficialConfig.trim() !== '' ? walletOficialConfig : '0x0950Cd97BD1417Dc513716d3a75D470a33599Bff').toLowerCase();
-        
-        const apiKeyConfig = process.env.POLYGONSCAN_API_KEY || '';
-        const apiKeyParam = apiKeyConfig.trim() !== '' ? `&apikey=${apiKeyConfig.trim()}` : '';
+        const cleanHash = txHash.trim().startsWith('0x') ? txHash.trim() : `0x${txHash.trim()}`;
+        const walletOficial = (process.env.PLATFORM_POLYGON_WALLET || '0x0950Cd97BD1417Dc513716d3a75D470a33599Bff').toLowerCase();
+        const contratoUSDT = POLYGON_USDT_CONTRACT.toLowerCase();
 
-        const url = `https://api.etherscan.io/v2/api?chainid=137&module=proxy&action=eth_getTransactionReceipt&txhash=${cleanHash}${apiKeyParam}`;
+        // Usamos nodo RPC oficial de Polygon (Alta disponibilidad)
+        const rpcData = JSON.stringify({
+            jsonrpc: "2.0",
+            method: "eth_getTransactionReceipt",
+            params: [cleanHash],
+            id: 1
+        });
 
-        https.get(url, (res) => {
+        const options = {
+            hostname: 'polygon-rpc.com',
+            port: 443,
+            path: '/',
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Content-Length': rpcData.length
+            }
+        };
+
+        const req = https.request(options, (res) => {
             let data = '';
             res.on('data', (chunk) => { data += chunk; });
             res.on('end', () => {
                 try {
                     const respuesta = JSON.parse(data);
                     if (!respuesta || !respuesta.result) {
-                        return resolve({ valido: false, mensaje: '❌ La transacción aún se está propagando en la red.' });
+                        return resolve({ valido: false, mensaje: '❌ La transacción aún no se refleja en la red o el Hash es incorrecto.' });
                     }
 
                     const receipt = respuesta.result;
@@ -216,19 +230,17 @@ async function verificarHashPolygonEnBlockchain(txHash, montoEsperadoMinimo) {
                         return resolve({ valido: false, mensaje: '❌ La transacción falló en la red Polygon.' });
                     }
 
-                    const contratoUSDT = POLYGON_USDT_CONTRACT.toLowerCase();
                     let transferenciaValida = false;
 
                     if (receipt.logs && Array.isArray(receipt.logs)) {
                         receipt.logs.forEach((log) => {
                             if (log.topics && log.topics.length >= 3) {
                                 const topic0 = log.topics[0];
-                                // Evento Transfer de ERC-20
+                                // Evento Transfer ERC-20: Transfer(address,address,uint256)
                                 if (topic0 === '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef') {
                                     const logContrato = log.address ? log.address.toLowerCase() : '';
                                     const destinoWallet = '0x' + log.topics[2].slice(26).toLowerCase();
 
-                                    // Forzamos .toLowerCase() a ambas puntas para evitar falsos negativos por mayúsculas
                                     if (logContrato === contratoUSDT && destinoWallet === walletOficial) {
                                         transferenciaValida = true;
                                     }
@@ -246,16 +258,21 @@ async function verificarHashPolygonEnBlockchain(txHash, montoEsperadoMinimo) {
 
                     return resolve({ valido: true, mensaje: '✅ Transacción verificada correctamente en Polygon.' });
                 } catch (e) {
-                    console.error("Error procesando JSON:", e.message);
-                    return resolve({ valido: false, mensaje: '❌ Error interno al procesar el recibo de la blockchain.' });
+                    console.error("Error parseando RPC:", e.message);
+                    return resolve({ valido: false, mensaje: '❌ Error interno procesando la respuesta del nodo blockchain.' });
                 }
             });
-        }).on('error', (err) => {
-            return resolve({ valido: false, mensaje: '❌ Error de red conectando con Polygonscan.' });
         });
+
+        req.on('error', (err) => {
+            console.error("Error de red RPC:", err.message);
+            return resolve({ valido: false, mensaje: '❌ Error de conexión con el nodo de Polygon.' });
+        });
+
+        req.write(rpcData);
+        req.end();
     });
 }
-
 function formatearNumeroWhatsapp(numero) {
     if (!numero) return null;
     let numLimpio = numero.toString().trim().replace(/\D/g, '');
