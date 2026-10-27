@@ -183,8 +183,9 @@ function calcularComisionRetiro(monto) {
     return comisionCalculada < MINIMO_COMISION_RETIRO ? MINIMO_COMISION_RETIRO : Number(comisionCalculada.toFixed(2));
 }
 
+
 // ==========================================
-// VALIDADOR AUTOMÁTICO BLOCKCHAIN (POLYGONSCAN API OFICIAL)
+// VALIDADOR AUTOMÁTICO BLOCKCHAIN (POLYGONSCAN API OFICIAL BLINDADO)
 // ==========================================
 async function verificarHashPolygonEnBlockchain(txHash, montoEsperadoMinimo) {
     return new Promise((resolve) => {
@@ -194,11 +195,9 @@ async function verificarHashPolygonEnBlockchain(txHash, montoEsperadoMinimo) {
 
         const cleanHash = txHash.trim();
         
-        // 1. Tomamos la wallet oficial del .env o usamos la de respaldo absoluta por seguridad en producción
         const walletOficialConfig = process.env.PLATFORM_POLYGON_WALLET;
         const walletOficial = (walletOficialConfig && walletOficialConfig.trim() !== '' ? walletOficialConfig : '0x0950Cd97BD1417Dc513716d3a75D470a33599Bff').toLowerCase();
         
-        // 2. Tomamos la API Key del .env (si existe) o dejamos la consulta limpia sin ella
         const apiKeyConfig = process.env.POLYGONSCAN_API_KEY || '';
         const apiKeyParam = apiKeyConfig.trim() !== '' ? `&apikey=${apiKeyConfig.trim()}` : '';
 
@@ -208,6 +207,15 @@ async function verificarHashPolygonEnBlockchain(txHash, montoEsperadoMinimo) {
             let data = '';
             res.on('data', (chunk) => { data += chunk; });
             res.on('end', () => {
+                // Validación estricta para evitar errores si la API responde HTML en vez de JSON
+                if (data.trim().startsWith('<') || res.statusCode !== 200) {
+                    console.error("⚠️ PolygonScan respondió HTML o error HTTP:", res.statusCode, data.substring(0, 100));
+                    return resolve({ 
+                        valido: false, 
+                        mensaje: '❌ La red PolygonScan está ocupada o requiere una API Key válida. Configure su POLYGONSCAN_API_KEY en el archivo .env o intente en unos segundos.' 
+                    });
+                }
+
                 try {
                     const respuesta = JSON.parse(data);
                     
