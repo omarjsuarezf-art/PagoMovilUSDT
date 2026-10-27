@@ -183,9 +183,8 @@ function calcularComisionRetiro(monto) {
     return comisionCalculada < MINIMO_COMISION_RETIRO ? MINIMO_COMISION_RETIRO : Number(comisionCalculada.toFixed(2));
 }
 
-
 // ==========================================
-// VALIDADOR AUTOMÁTICO BLOCKCHAIN (POLYGONSCAN API OFICIAL BLINDADO)
+// VALIDADOR AUTOMÁTICO BLOCKCHAIN (POLYGONSCAN V2 API BLINDADO)
 // ==========================================
 async function verificarHashPolygonEnBlockchain(txHash, montoEsperadoMinimo) {
     return new Promise((resolve) => {
@@ -201,18 +200,18 @@ async function verificarHashPolygonEnBlockchain(txHash, montoEsperadoMinimo) {
         const apiKeyConfig = process.env.POLYGONSCAN_API_KEY || '';
         const apiKeyParam = apiKeyConfig.trim() !== '' ? `&apikey=${apiKeyConfig.trim()}` : '';
 
-        const url = `https://api.polygonscan.com/api?module=proxy&action=eth_getTransactionReceipt&txhash=${cleanHash}${apiKeyParam}`;
+        // Usamos la API V2 unificada de Etherscan/PolygonScan con chainid=137 para Polygon PoS
+        const url = `https://api.etherscan.io/v2/api?chainid=137&module=proxy&action=eth_getTransactionReceipt&txhash=${cleanHash}${apiKeyParam}`;
 
         https.get(url, (res) => {
             let data = '';
             res.on('data', (chunk) => { data += chunk; });
             res.on('end', () => {
-                // Validación estricta para evitar errores si la API responde HTML en vez de JSON
                 if (data.trim().startsWith('<') || res.statusCode !== 200) {
-                    console.error("⚠️ PolygonScan respondió HTML o error HTTP:", res.statusCode, data.substring(0, 100));
+                    console.error("⚠️ PolygonScan V2 respondió HTML o error HTTP:", res.statusCode, data.substring(0, 100));
                     return resolve({ 
                         valido: false, 
-                        mensaje: '❌ La red PolygonScan está ocupada o requiere una API Key válida. Configure su POLYGONSCAN_API_KEY en el archivo .env o intente en unos segundos.' 
+                        mensaje: '❌ Error de autenticación con PolygonScan V2. Verifique su API Key en el archivo .env.' 
                     });
                 }
 
@@ -268,6 +267,7 @@ async function verificarHashPolygonEnBlockchain(txHash, montoEsperadoMinimo) {
         });
     });
 }
+
 
 function formatearNumeroWhatsapp(numero) {
     if (!numero) return null;
