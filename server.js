@@ -189,11 +189,20 @@ function calcularComisionRetiro(monto) {
 async function verificarHashPolygonEnBlockchain(txHash, montoEsperadoMinimo) {
     return new Promise((resolve) => {
         if (!txHash || txHash.trim().length < 10) {
-            return resolve({ valido: false, mensaje: '❌ Hash de transacción de Polygon inválido.' });
+            return resolve({ valido: false, mensaje: '❌ Hash de transacción de Polygon inválido o muy corto.' });
         }
 
         const cleanHash = txHash.trim();
-        const url = `https://api.polygonscan.com/api?module=proxy&action=eth_getTransactionReceipt&txhash=${cleanHash}`;
+        
+        // 1. Tomamos la wallet oficial del .env o usamos la de respaldo absoluta por seguridad en producción
+        const walletOficialConfig = process.env.PLATFORM_POLYGON_WALLET;
+        const walletOficial = (walletOficialConfig && walletOficialConfig.trim() !== '' ? walletOficialConfig : '0x0950Cd97BD1417Dc513716d3a75D470a33599Bff').toLowerCase();
+        
+        // 2. Tomamos la API Key del .env (si existe) o dejamos la consulta limpia sin ella
+        const apiKeyConfig = process.env.POLYGONSCAN_API_KEY || '';
+        const apiKeyParam = apiKeyConfig.trim() !== '' ? `&apikey=${apiKeyConfig.trim()}` : '';
+
+        const url = `https://api.polygonscan.com/api?module=proxy&action=eth_getTransactionReceipt&txhash=${cleanHash}${apiKeyParam}`;
 
         https.get(url, (res) => {
             let data = '';
@@ -209,11 +218,10 @@ async function verificarHashPolygonEnBlockchain(txHash, montoEsperadoMinimo) {
                     const receipt = respuesta.result;
                     
                     if (receipt.status !== '0x1') {
-                        return resolve({ valido: false, mensaje: '❌ La transacción en la red Polygon falló o fue revertida.' });
+                        return resolve({ valido: false, mensaje: '❌ La transacción en la red Polygon falló, fue revertida o aún no tiene confirmaciones.' });
                     }
 
-                    const contratoUSDT = (typeof POLYGON_USDT_CONTRACT !== 'undefined' ? POLYGON_USDT_CONTRACT : '0xc2132d05d31c914a87c6611c10748aeb04b58e8f').toLowerCase();
-                    const walletOficial = (typeof PLATFORM_POLYGON_WALLET !== 'undefined' ? PLATFORM_POLYGON_WALLET : '0x0950Cd97BD1417Dc513716d3a75D470a33599Bff').toLowerCase();
+                    const contratoUSDT = POLYGON_USDT_CONTRACT.toLowerCase();
                     let transferenciaValida = false;
 
                     if (receipt.logs && Array.isArray(receipt.logs)) {
@@ -237,7 +245,7 @@ async function verificarHashPolygonEnBlockchain(txHash, montoEsperadoMinimo) {
                     }
 
                     if (!transferenciaValida) {
-                        return resolve({ valido: false, mensaje: '❌ El contrato o la wallet de destino en este Hash no corresponden a la plataforma.' });
+                        return resolve({ valido: false, mensaje: '❌ El contrato o la wallet de destino en este Hash no corresponden a la billetera oficial de la plataforma.' });
                     }
 
                     return resolve({ valido: true, mensaje: '✅ Transacción verificada correctamente en Polygon.' });
@@ -248,7 +256,7 @@ async function verificarHashPolygonEnBlockchain(txHash, montoEsperadoMinimo) {
             });
         }).on('error', (err) => {
             console.error("Error de red con Polygonscan:", err.message);
-            return resolve({ valido: false, mensaje: '❌ Error de conexión con el explorador de Polygon.' });
+            return resolve({ valido: false, mensaje: '❌ Error de conexión con el explorador de Polygon. Intente de nuevo.' });
         });
     });
 }
