@@ -184,10 +184,10 @@ function calcularComisionRetiro(monto) {
 }
 
 // ==========================================
-// VALIDADOR AUTOMÁTICO BLOCKCHAIN (POLYGONSCAN V2 API BLINDADO)
+// VALIDADOR AUTOMÁTICO BLOCKCHAIN (RPC MULTINODO DE ALTA VELOCIDAD)
 // ==========================================
 async function verificarHashPolygonEnBlockchain(txHash, montoEsperadoMinimo) {
-    return new Promise((resolve) => {
+    return new Promise(async (resolve) => {
         if (!txHash || txHash.trim().length < 10) {
             return resolve({ valido: false, mensaje: '❌ Hash de transacción de Polygon inválido.' });
         }
@@ -196,6 +196,67 @@ async function verificarHashPolygonEnBlockchain(txHash, montoEsperadoMinimo) {
         const walletOficial = (process.env.PLATFORM_POLYGON_WALLET || '0x0950Cd97BD1417Dc513716d3a75D470a33599Bff').toLowerCase();
         const contratoUSDT = POLYGON_USDT_CONTRACT.toLowerCase();
 
+        // Lista de nodos RPC oficiales y públicos de respaldo para velocidad instantánea
+        const endpointsRpc = [
+            { hostname: 'polygon-rpc.com', path: '/' },
+            { hostname: 'rpc.ankr.com', path: '/polygon' }
+        ];
+
+        let receipt = null;
+
+        for (const endpoint of endpointsRpc) {
+            try {
+                receipt = await consultarNodoRpc(endpoint.hostname, endpoint.path, cleanHash);
+                if (receipt) break; // Si un nodo responde con éxito, salimos del ciclo
+            } catch (e) {
+                // Intentar con el siguiente nodo si falla el primero
+            }
+        }
+
+        if (!receipt) {
+            return resolve({ 
+                valido: false, 
+                mensaje: '❌ La transacción aún no se propaga en los nodos de la red. Intente en 10 segundos.' 
+            });
+        }
+
+        if (receipt.status !== '0x1') {
+            return resolve({ valido: false, mensaje: '❌ La transacción falló en la red Polygon.' });
+        }
+
+        let transferenciaValida = false;
+
+        if (receipt.logs && Array.isArray(receipt.logs)) {
+            receipt.logs.forEach((log) => {
+                if (log.topics && log.topics.length >= 3) {
+                    const topic0 = log.topics[0];
+                    // Evento Transfer ERC-20: Transfer(address,address,uint256)
+                    if (topic0 === '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef') {
+                        const logContrato = log.address ? log.address.toLowerCase() : '';
+                        const destinoWallet = '0x' + log.topics[2].slice(26).toLowerCase();
+
+                        if (logContrato === contratoUSDT && destinoWallet === walletOficial) {
+                            transferenciaValida = true;
+                        }
+                    }
+                }
+            });
+        }
+
+        if (!transferenciaValida) {
+            return resolve({ 
+                valido: false, 
+                mensaje: '❌ El contrato o la wallet de destino en este Hash no corresponden a la billetera oficial de la plataforma.' 
+            });
+        }
+
+        return resolve({ valido: true, mensaje: '✅ Transacción verificada correctamente en Polygon.' });
+    });
+}
+
+// Función auxiliar para consultar un nodo RPC específico por HTTPS
+function consultarNodoRpc(hostname, path, cleanHash) {
+    return new Promise((resolve, reject) => {
         const rpcData = JSON.stringify({
             jsonrpc: "2.0",
             method: "eth_getTransactionReceipt",
@@ -204,15 +265,16 @@ async function verificarHashPolygonEnBlockchain(txHash, montoEsperadoMinimo) {
         });
 
         const options = {
-            hostname: 'polygon-rpc.com',
+            hostname: hostname,
             port: 443,
-            path: '/',
+            path: path,
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'Content-Length': Buffer.byteLength(rpcData),
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
-            }
+            },
+            timeout: 5000 // Timeout de 5 segundos para no dejar colgada la pasarela
         };
 
         const req = https.request(options, (res) => {
@@ -221,60 +283,19 @@ async function verificarHashPolygonEnBlockchain(txHash, montoEsperadoMinimo) {
             res.on('end', () => {
                 try {
                     const respuesta = JSON.parse(data);
-                    
-                    // Si el nodo responde con error o resultado nulo, informamos con precisión
-                    if (!respuesta || !respuesta.result) {
-                        return resolve({ 
-                            valido: false, 
-                            mensaje: '❌ La transacción aún se está propagando en la red o el Hash es incorrecto. Intente de nuevo en unos segundos.' 
-                        });
+                    if (respuesta && respuesta.result) {
+                        resolve(respuesta.result);
+                    } else {
+                        resolve(null);
                     }
-
-                    const receipt = respuesta.result;
-                    if (receipt.status !== '0x1') {
-                        return resolve({ valido: false, mensaje: '❌ La transacción falló en la red Polygon.' });
-                    }
-
-                    let transferenciaValida = false;
-
-                    if (receipt.logs && Array.isArray(receipt.logs)) {
-                        receipt.logs.forEach((log) => {
-                            if (log.topics && log.topics.length >= 3) {
-                                const topic0 = log.topics[0];
-                                // Evento Transfer ERC-20: Transfer(address,address,uint256)
-                                if (topic0 === '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef') {
-                                    const logContrato = log.address ? log.address.toLowerCase() : '';
-                                    const destinoWallet = '0x' + log.topics[2].slice(26).toLowerCase();
-
-                                    console.log(`[BLOCKCHAIN DEBUG] Contrato: ${logContrato} | Destino: ${destinoWallet} | Oficial: ${walletOficial}`);
-
-                                    if (logContrato === contratoUSDT && destinoWallet === walletOficial) {
-                                        transferenciaValida = true;
-                                    }
-                                }
-                            }
-                        });
-                    }
-
-                    if (!transferenciaValida) {
-                        return resolve({ 
-                            valido: false, 
-                            mensaje: '❌ El contrato o la wallet de destino en este Hash no corresponden a la billetera oficial de la plataforma.' 
-                        });
-                    }
-
-                    return resolve({ valido: true, mensaje: '✅ Transacción verificada correctamente en Polygon.' });
                 } catch (e) {
-                    console.error("Error parseando RPC:", e.message);
-                    return resolve({ valido: false, mensaje: '❌ Error interno procesando la respuesta del nodo blockchain.' });
+                    resolve(null);
                 }
             });
         });
 
-        req.on('error', (err) => {
-            console.error("Error de red RPC:", err.message);
-            return resolve({ valido: false, mensaje: '❌ Error de conexión con el nodo de Polygon.' });
-        });
+        req.on('error', () => { resolve(null); });
+        req.on('timeout', () => { req.destroy(); resolve(null); });
 
         req.write(rpcData);
         req.end();
