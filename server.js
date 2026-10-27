@@ -196,7 +196,6 @@ async function verificarHashPolygonEnBlockchain(txHash, montoEsperadoMinimo) {
         const walletOficial = (process.env.PLATFORM_POLYGON_WALLET || '0x0950Cd97BD1417Dc513716d3a75D470a33599Bff').toLowerCase();
         const contratoUSDT = POLYGON_USDT_CONTRACT.toLowerCase();
 
-        // Usamos nodo RPC oficial de Polygon (Alta disponibilidad)
         const rpcData = JSON.stringify({
             jsonrpc: "2.0",
             method: "eth_getTransactionReceipt",
@@ -211,7 +210,8 @@ async function verificarHashPolygonEnBlockchain(txHash, montoEsperadoMinimo) {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Content-Length': rpcData.length
+                'Content-Length': Buffer.byteLength(rpcData),
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
             }
         };
 
@@ -221,8 +221,13 @@ async function verificarHashPolygonEnBlockchain(txHash, montoEsperadoMinimo) {
             res.on('end', () => {
                 try {
                     const respuesta = JSON.parse(data);
+                    
+                    // Si el nodo responde con error o resultado nulo, informamos con precisión
                     if (!respuesta || !respuesta.result) {
-                        return resolve({ valido: false, mensaje: '❌ La transacción aún no se refleja en la red o el Hash es incorrecto.' });
+                        return resolve({ 
+                            valido: false, 
+                            mensaje: '❌ La transacción aún se está propagando en la red o el Hash es incorrecto. Intente de nuevo en unos segundos.' 
+                        });
                     }
 
                     const receipt = respuesta.result;
@@ -240,6 +245,8 @@ async function verificarHashPolygonEnBlockchain(txHash, montoEsperadoMinimo) {
                                 if (topic0 === '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef') {
                                     const logContrato = log.address ? log.address.toLowerCase() : '';
                                     const destinoWallet = '0x' + log.topics[2].slice(26).toLowerCase();
+
+                                    console.log(`[BLOCKCHAIN DEBUG] Contrato: ${logContrato} | Destino: ${destinoWallet} | Oficial: ${walletOficial}`);
 
                                     if (logContrato === contratoUSDT && destinoWallet === walletOficial) {
                                         transferenciaValida = true;
