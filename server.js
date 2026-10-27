@@ -193,7 +193,6 @@ async function verificarHashPolygonEnBlockchain(txHash, montoEsperadoMinimo) {
         }
 
         const cleanHash = txHash.trim();
-        
         const walletOficialConfig = process.env.PLATFORM_POLYGON_WALLET;
         const walletOficial = (walletOficialConfig && walletOficialConfig.trim() !== '' ? walletOficialConfig : '0x0950Cd97BD1417Dc513716d3a75D470a33599Bff').toLowerCase();
         
@@ -206,55 +205,42 @@ async function verificarHashPolygonEnBlockchain(txHash, montoEsperadoMinimo) {
             let data = '';
             res.on('data', (chunk) => { data += chunk; });
             res.on('end', () => {
-                if (data.trim().startsWith('<') || res.statusCode !== 200) {
-                    console.error("⚠️ PolygonScan V2 respondió HTML o error HTTP:", res.statusCode, data.substring(0, 100));
-                    return resolve({ 
-                        valido: false, 
-                        mensaje: '❌ Error de autenticación con PolygonScan V2. Verifique su API Key en el archivo .env.' 
-                    });
-                }
-
                 try {
                     const respuesta = JSON.parse(data);
-                    
                     if (!respuesta || !respuesta.result) {
-                        return resolve({ valido: false, mensaje: '❌ La transacción todavía se está propagando en la red o el Hash es incorrecto.' });
+                        return resolve({ valido: false, mensaje: '❌ La transacción aún se está propagando.' });
                     }
 
                     const receipt = respuesta.result;
-                    
                     if (receipt.status !== '0x1') {
-                        return resolve({ valido: false, mensaje: '❌ La transacción en la red Polygon falló, fue revertida o aún no tiene confirmaciones.' });
+                        return resolve({ valido: false, mensaje: '❌ La transacción falló en la red.' });
                     }
 
                     const contratoUSDT = POLYGON_USDT_CONTRACT.toLowerCase();
                     let transferenciaValida = false;
 
-                    console.log(`🔍 Analizando logs para Hash: ${cleanHash}`);
+                    console.log(`🔍 [DEBUG] Analizando ${receipt.logs.length} logs para Hash: ${cleanHash}`);
 
                     if (receipt.logs && Array.isArray(receipt.logs)) {
-                        for (const log of receipt.logs) {
-                            if (
-                                log.address && 
-                                log.address.toLowerCase() === contratoUSDT &&
-                                log.topics && 
-                                log.topics[0] === '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef' &&
-                                log.topics.length >= 3
-                            ) {
-                                const topicFrom = log.topics[1];
-                                const topicTo = log.topics[2];
-                                const origenWallet = '0x' + topicFrom.slice(26).toLowerCase();
-                                const destinoWallet = '0x' + topicTo.slice(26).toLowerCase();
+                        receipt.logs.forEach((log, index) => {
+                            if (log.topics && log.topics.length >= 3) {
+                                const topic0 = log.topics[0];
+                                // Evento Transfer de ERC-20
+                                if (topic0 === '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef') {
+                                    const origenWallet = '0x' + log.topics[1].slice(26).toLowerCase();
+                                    const destinoWallet = '0x' + log.topics[2].slice(26).toLowerCase();
+                                    
+                                    console.log(`Log [${index}] -> Contrato: ${log.address.toLowerCase()}`);
+                                    console.log(`   De: ${origenWallet}`);
+                                    console.log(`   Hacia: ${destinoWallet}`);
+                                    console.log(`   Buscada: ${walletOficial}`);
 
-                                console.log(`👉 Evento Transfer detectado -> De: ${origenWallet} Hacia: ${destinoWallet}`);
-
-                                // Valida si el destino es tu wallet oficial O si el movimiento involucra el flujo de salida
-                                if (destinoWallet === walletOficial) {
-                                    transferenciaValida = true;
-                                    break;
+                                    if (log.address.toLowerCase() === contratoUSDT && destinoWallet === walletOficial) {
+                                        transferenciaValida = true;
+                                    }
                                 }
                             }
-                        }
+                        });
                     }
 
                     if (!transferenciaValida) {
@@ -266,13 +252,12 @@ async function verificarHashPolygonEnBlockchain(txHash, montoEsperadoMinimo) {
 
                     return resolve({ valido: true, mensaje: '✅ Transacción verificada correctamente en Polygon.' });
                 } catch (e) {
-                    console.error("Error analizando JSON de Polygonscan:", e.message);
-                    return resolve({ valido: false, mensaje: '❌ Error interno al procesar el recibo de la red.' });
+                    console.error("Error:", e.message);
+                    return resolve({ valido: false, mensaje: '❌ Error interno al procesar el recibo.' });
                 }
             });
         }).on('error', (err) => {
-            console.error("Error de red con Polygonscan:", err.message);
-            return resolve({ valido: false, mensaje: '❌ Error de conexión con el explorador de Polygon. Intente de nuevo.' });
+            return resolve({ valido: false, mensaje: '❌ Error de red con Polygonscan.' });
         });
     });
 }
