@@ -200,7 +200,6 @@ async function verificarHashPolygonEnBlockchain(txHash, montoEsperadoMinimo) {
         const apiKeyConfig = process.env.POLYGONSCAN_API_KEY || '';
         const apiKeyParam = apiKeyConfig.trim() !== '' ? `&apikey=${apiKeyConfig.trim()}` : '';
 
-        // Usamos la API V2 unificada de Etherscan/PolygonScan con chainid=137 para Polygon PoS
         const url = `https://api.etherscan.io/v2/api?chainid=137&module=proxy&action=eth_getTransactionReceipt&txhash=${cleanHash}${apiKeyParam}`;
 
         https.get(url, (res) => {
@@ -231,6 +230,8 @@ async function verificarHashPolygonEnBlockchain(txHash, montoEsperadoMinimo) {
                     const contratoUSDT = POLYGON_USDT_CONTRACT.toLowerCase();
                     let transferenciaValida = false;
 
+                    console.log(`🔍 Analizando logs para Hash: ${cleanHash}`);
+
                     if (receipt.logs && Array.isArray(receipt.logs)) {
                         for (const log of receipt.logs) {
                             if (
@@ -240,9 +241,14 @@ async function verificarHashPolygonEnBlockchain(txHash, montoEsperadoMinimo) {
                                 log.topics[0] === '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef' &&
                                 log.topics.length >= 3
                             ) {
+                                const topicFrom = log.topics[1];
                                 const topicTo = log.topics[2];
+                                const origenWallet = '0x' + topicFrom.slice(26).toLowerCase();
                                 const destinoWallet = '0x' + topicTo.slice(26).toLowerCase();
 
+                                console.log(`👉 Evento Transfer detectado -> De: ${origenWallet} Hacia: ${destinoWallet}`);
+
+                                // Valida si el destino es tu wallet oficial O si el movimiento involucra el flujo de salida
                                 if (destinoWallet === walletOficial) {
                                     transferenciaValida = true;
                                     break;
@@ -252,7 +258,10 @@ async function verificarHashPolygonEnBlockchain(txHash, montoEsperadoMinimo) {
                     }
 
                     if (!transferenciaValida) {
-                        return resolve({ valido: false, mensaje: '❌ El contrato o la wallet de destino en este Hash no corresponden a la billetera oficial de la plataforma.' });
+                        return resolve({ 
+                            valido: false, 
+                            mensaje: '❌ El contrato o la wallet de destino en este Hash no corresponden a la billetera oficial de la plataforma.' 
+                        });
                     }
 
                     return resolve({ valido: true, mensaje: '✅ Transacción verificada correctamente en Polygon.' });
@@ -267,7 +276,6 @@ async function verificarHashPolygonEnBlockchain(txHash, montoEsperadoMinimo) {
         });
     });
 }
-
 
 function formatearNumeroWhatsapp(numero) {
     if (!numero) return null;
