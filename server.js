@@ -215,12 +215,12 @@ async function verificarHashPolygonEnBlockchain(txHash, montoEsperadoMinimo) {
             { hostname: 'rpc.ankr.com', path: '/polygon' }
         );
 
-        let rawReceipt = null;
+        let receipt = null;
+let rawReceipt = null;
 
 for (const endpoint of endpointsRpc) {
     try {
         rawReceipt = await consultarNodoRpc(endpoint.hostname, endpoint.path, cleanHash);
-        // Si el nodo responde con el estándar JSON-RPC ({jsonrpc, id, result}), extraemos .result
         if (rawReceipt) {
             receipt = rawReceipt.result ? rawReceipt.result : rawReceipt;
             if (receipt && (receipt.status || receipt.logs)) break;
