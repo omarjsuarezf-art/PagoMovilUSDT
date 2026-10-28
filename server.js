@@ -9,7 +9,8 @@ const rateLimit = require('express-rate-limit');
 const { open } = require('sqlite');
 const sqlite3Internal = require('sqlite3');
 const { Resend } = require('resend');
-
+const { Resend } = require('resend');
+const { ethers } = require('ethers');
 // Configuración de Resend limpia
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -108,13 +109,18 @@ async function inicializarBaseDatos() {
         try { await db.exec(`ALTER TABLE usuarios ADD COLUMN merchant_id TEXT`); } catch (e) {}
         try { await db.exec(`ALTER TABLE usuarios ADD COLUMN metodoVinculado INTEGER DEFAULT 0`); } catch (e) {}
 
+        // Asegurar columnas opcionales si no existen
+        try { await db.exec(`ALTER TABLE usuarios ADD COLUMN merchant_id TEXT`); } catch (e) {}
+        try { await db.exec(`ALTER TABLE usuarios ADD COLUMN metodoVinculado INTEGER DEFAULT 0`); } catch (e) {}
         
+        // NUEVO: Columnas para la billetera criptográfica única y permanente del usuario
+        try { await db.exec(`ALTER TABLE usuarios ADD COLUMN assigned_wallet TEXT`); } catch (e) {}
+        try { await db.exec(`ALTER TABLE usuarios ADD COLUMN private_key TEXT`); } catch (e) {}
 
     } catch (err) {
         console.error('Error al inicializar SQLite:', err.message);
     }
 }
-
 inicializarBaseDatos();
 
 // ==========================================
@@ -203,7 +209,7 @@ async function verificarHashPolygonEnBlockchain(txHash, montoEsperadoMinimo) {
 
         const reqOptions = {
             hostname: 'polygon-mainnet.g.alchemy.com',
-            path: '/v2/alch_QXifk1hC8Igox0-9mIbcR',
+            path: '/v2/alh_QXifklhC8Igox8-9wTbcR',
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -217,30 +223,27 @@ async function verificarHashPolygonEnBlockchain(txHash, montoEsperadoMinimo) {
             res.on('end', () => {
                 try {
                     const responseJson = JSON.parse(body);
-                    console.log("🔍 RESPUESTA DE ALCHEMY:", JSON.stringify(responseJson));
-                    
                     const receipt = responseJson.result;
                     if (receipt && receipt.status === '0x1') {
                         return resolve({ valido: true, mensaje: '✅ Transacción verificada correctamente en Polygon.' });
                     } else {
-                        return resolve({ valido: false, mensaje: '❌ La transacción falló o aún no está confirmada en la red Polygon.' });
+                        return resolve({ valido: false, mensaje: '❌ La transacción falló o aún no está confirmada.' });
                     }
-                } catch (e) {
+                } catch (err) {
                     return resolve({ valido: false, mensaje: '❌ Error procesando respuesta de la blockchain.' });
                 }
             });
         });
 
         req.on('error', (e) => {
-            console.error("⚠️ Error HTTP:", e.message);
-            return resolve({ valido: false, mensaje: '❌ Error de red con el nodo RPC.' });
+            console.error("⚠️ Error de conexión con Alchemy:", e.message);
+            return resolve({ valido: false, mensaje: '❌ Error de red consultando la blockchain.' });
         });
 
         req.write(data);
         req.end();
     });
 }
-
 
 async function enviarMensajeWhatsappSeguro(numero, mensaje) {
     if (!client) return;
@@ -786,7 +789,25 @@ app.get('/api/historial/:telefono', limiterConsultasComercio, async (req, res) =
         return res.status(500).json({ success: false, message: 'Error al consultar historial en la base de datos' });
     }
 });
-
+// ==========================================
+// RUTA PARA OBTENER LA WALLET PERSONAL DEL USUARIO
+// ==========================================
+app.get('/api/usuario-wallet/:telefono', async (req, res) => {
+    const telefono = (req.params.telefono || '').trim();
+    try {
+        const user = await db.get('SELECT assigned_wallet FROM usuarios WHERE telefono = ? OR merchant_id = ?', [telefono, telefono]);
+        if (!user || !user.assigned_wallet) {
+            // Si por alguna razón no la tuviera creada, se la generamos de emergencia
+            const nueva = generarWalletIndividual();
+            await db.run('UPDATE usuarios SET assigned_wallet = ?, private_key = ? WHERE telefono = ? OR merchant_id = ?', [nueva.address, nueva.privateKey, telefono, telefono]);
+            return res.json({ success: true, wallet: nueva.address });
+        }
+        res.json({ success: true, wallet: user.assigned_wallet });
+    } catch (err) {
+        console.error("Error obteniendo wallet personal:", err.message);
+        res.status(500).json({ success: false, message: 'Error interno al obtener la wallet' });
+    }
+});
 // ==========================================
 // RUTA DE ENVÍO DE CÓDIGO POR WHATSAPP
 // ==========================================
@@ -842,10 +863,18 @@ app.post('/api/enviar-codigo', limiterPagos, async (req, res) => {
                 message: '¡Acceso autorizado y código enviado por WhatsApp con éxito!'
             });
 
-        } else {
+    } catch (err) {
+        console.error("Error en autenticación de usuario:", err);
+        return res.status(500).json({ success: false, message: 'Error interno al procesar la autenticación.' });
+    }
+});
+} else {
+            // Generar wallet única de Polygon al registrarse
+            const nuevaWalletCrypto = generarWalletIndividual();
+
             await db.run(
-                `INSERT INTO usuarios (telefono, pinSeguridad, accountType, dailyLimit, metodoVinculado) VALUES (?, ?, 'natural', 1000.00, 0)`,
-                [telefono, pinSeguridad]
+                `INSERT INTO usuarios (telefono, pinSeguridad, accountType, dailyLimit, metodoVinculado, assigned_wallet, private_key) VALUES (?, ?, 'natural', 1000.00, 0, ?, ?)`,
+                [telefono, pinSeguridad, nuevaWalletCrypto.address, nuevaWalletCrypto.privateKey]
             );
 
             const userRecord = await db.get('SELECT id FROM usuarios WHERE telefono = ?', [telefono]);
@@ -856,24 +885,18 @@ app.post('/api/enviar-codigo', limiterPagos, async (req, res) => {
                 }
             }
 
-            const mensajeBienvenida = `¡Bienvenido a PagoMóvilUSDT! 🟢\n\nEstimado usuario, su registro ha sido procesado exitosamente en nuestra plataforma PagoMóvilUSDT.\n\n🔑 PIN de Seguridad Configurado: ${pinSeguridad}\n🔢 Código de Verificación: ${codigoVerificacion}\n\n🛡️ Por su seguridad, no comparta este código con nadie. Complete su vinculación de identidad en la plataforma para habilitar sus transacciones.`;
+            const mensajeBienvenida = `¡Bienvenido a PagoMóvilUSDT! 🟢\n\nEstimado usuario, su registro ha sido procesado exitosamente.\n\n🔑 PIN: ${pinSeguridad}\n📥 Tu Wallet Polygon Asignada:\n${nuevaWalletCrypto.address}\n\n🛡️ Por su seguridad, complete su vinculación de identidad.`;
             
             await enviarMensajeWhatsappSeguro(telefono, mensajeBienvenida);
 
             return res.json({
                 success: true,
                 bloqueoRegistro: true,
-                message: '¡Bienvenido! Su registro inicial fue exitoso. Por favor vincule su Cédula y Método de pago para activar su cuenta.',
-                telefono: telefono
+                message: '¡Bienvenido! Su registro inicial fue exitoso con su wallet única. Por favor vincule su Cédula y Método de pago.',
+                telefono: telefono,
+                assigned_wallet: nuevaWalletCrypto.address
             });
         }
-
-    } catch (err) {
-        console.error("Error en autenticación de usuario:", err);
-        return res.status(500).json({ success: false, message: 'Error interno al procesar la autenticación.' });
-    }
-});
-
 // ==========================================
 // CAMBIO A CUENTA COMERCIAL
 // ==========================================

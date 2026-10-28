@@ -39,7 +39,7 @@
                     <span>⚡</span> Instrucciones del Sistema:
                 </p>
                 <p class="text-slate-400 leading-relaxed">
-                    Realice su transferencia de USDT y reporte el comprobante con su número de teléfono y hash único para una acreditación rápida. <b>Monto mínimo de recarga: $5.00 USDT.</b>
+                    Realice su transferencia de USDT directamente a su billetera personal asignada abajo. El sistema detectará y acreditará su saldo automáticamente. <b>Monto mínimo de recarga: $5.00 USDT.</b>
                 </p>
             </div>
 
@@ -54,18 +54,18 @@
             </div>
         </div>
 
-        <!-- Dirección de Monedero Oficial -->
+        <!-- Dirección de Monedero Personal Asignada -->
         <div class="bg-slate-900/80 p-4 rounded-xl border border-slate-700/80">
             <p class="text-xs text-slate-400 mb-2 font-medium">
-                Dirección oficial de recepción (Copia con un clic):
+                Tu dirección de recepción personal (Copia con un clic):
             </p>
             <div id="walletAddress" class="bg-slate-950 p-3 rounded-lg border border-slate-800 text-xs font-mono text-blue-400 break-all select-all font-semibold cursor-pointer hover:border-blue-500 transition" onclick="copiarDireccion()">
-                0x0950Cd97BD1417Dc513716d3a75D470a33599Bff
+                Cargando tu wallet personal...
             </div>
             <p class="text-[10px] text-slate-500 mt-1.5 text-right">Haz clic en la dirección para copiar</p>
         </div>
 
-        <!-- Formulario de Recarga -->
+        <!-- Formulario de Notificación / Registro -->
         <form id="formRecarga" class="space-y-4 pt-2 border-t border-slate-700/60">
             <div>
                 <label class="block text-sm font-medium text-slate-300 mb-1">Número de Teléfono (Tu Cuenta)</label>
@@ -73,20 +73,15 @@
             </div>
             
             <div>
-                <label class="block text-sm font-medium text-slate-300 mb-1">Monto Enviado (USDT)</label>
+                <label class="block text-sm font-medium text-slate-300 mb-1">Monto a Reportar (USDT)</label>
                 <input type="number" id="amount" step="0.01" min="5.00" placeholder="Mínimo $5.00 USDT" class="w-full px-4 py-3 bg-slate-900 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent focus:outline-none text-sm transition font-bold" required>
             </div>
 
             <!-- DESGLOSE DINÁMICO DE RECARGA -->
             <div id="desgloseRecarga"></div>
 
-            <div>
-                <label class="block text-sm font-medium text-slate-300 mb-1">Hash de la Transferencia (TXID)</label>
-                <input type="text" id="txHash" placeholder="Pega el hash de la transacción aquí..." class="w-full px-4 py-3 bg-slate-900 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent focus:outline-none text-sm transition font-mono text-xs" required>
-            </div>
-
-            <button type="submit" id="btnRecargar" class="w-full bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white font-bold py-4 rounded-xl shadow-lg transition duration-200 mt-2">
-                Verificar y Acreditar Saldo
+            <button type="submit" id="btnRecargar" class="w-full bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-bold py-4 rounded-xl shadow-lg transition duration-200 mt-2">
+                Saldo Acreditado con Éxito / Notificar Pago
             </button>
         </form>
         
@@ -113,7 +108,7 @@
                 <table class="w-full text-left text-xs">
                     <thead class="bg-slate-950 text-slate-400 uppercase text-[10px] tracking-wider">
                         <tr>
-                            <th class="p-2.5">Hash / Ref</th>
+                            <th class="p-2.5">Referencia</th>
                             <th class="p-2.5">Monto</th>
                             <th class="p-2.5 text-right">Estado</th>
                         </tr>
@@ -238,11 +233,11 @@
         const payload = {
             phoneNumber: document.getElementById('phoneNumber').value.trim(),
             amount: amount,
-            txHash: document.getElementById('txHash').value.trim()
+            txHash: "WALLET_INDIVIDUAL_AUTOMATICA" // Sin hash manual requerido por el usuario
         };
 
         btn.disabled = true;
-        btn.innerHTML = 'Verificando...';
+        btn.innerHTML = 'Procesando...';
         mensajeDiv.classList.add('hidden');
         mensajeDiv.className = 'mt-4 p-3 rounded-xl text-sm text-center hidden';
 
@@ -260,7 +255,6 @@
                 mensajeDiv.classList.add('bg-emerald-950/80', 'text-emerald-300', 'border', 'border-emerald-600/50');
                 mensajeDiv.innerHTML = `✅ ${result.message}`;
                 document.getElementById('amount').value = '';
-                document.getElementById('txHash').value = '';
                 document.getElementById('desgloseRecarga').innerHTML = '';
                 cargarHistorial();
             } else {
@@ -273,15 +267,30 @@
             mensajeDiv.innerHTML = '❌ Error de red. Intenta nuevamente.';
         } finally {
             btn.disabled = false;
-            btn.innerHTML = 'Verificar y Acreditar Saldo';
+            btn.innerHTML = 'Saldo Acreditado con Éxito / Notificar Pago';
         }
     });
 
-    window.onload = () => {
+    window.onload = async () => {
         const phone = (localStorage.getItem('userPhone') || localStorage.getItem('usuarioTelefono') || '').trim();
         if (phone) {
             document.getElementById('phoneNumber').value = phone;
             cargarHistorial();
+
+            // Consultar la wallet personal asignada en el servidor para este usuario
+            try {
+                const res = await fetch(`/api/usuario-wallet/${phone}`);
+                const data = await res.json();
+                if (data.success && data.wallet) {
+                    document.getElementById('walletAddress').innerText = data.wallet;
+                } else {
+                    document.getElementById('walletAddress').innerText = 'No se pudo cargar la wallet asignada';
+                }
+            } catch (err) {
+                console.error("Error al obtener la wallet personal:", err);
+                document.getElementById('walletAddress').innerText = 'Error de conexión con la wallet';
+            }
+
         } else {
             window.location.href = '/auth';
         }
