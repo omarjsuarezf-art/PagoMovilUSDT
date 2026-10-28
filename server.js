@@ -47,6 +47,7 @@ async function enviarCorreoResend(destino, asunto, mensajeHtml) {
     }
 }
 
+
 // ==========================================
 // CONFIGURACIÓN DE BASE DE DATOS (SQLITE ASÍNCRONO OPTIMIZADO)
 // ==========================================
@@ -106,21 +107,18 @@ async function inicializarBaseDatos() {
         `);
 
         // Asegurar columnas opcionales si no existen
-        try { await db.exec(`ALTER TABLE usuarios ADD COLUMN merchant_id TEXT`); } catch (e) {}
-        try { await db.exec(`ALTER TABLE usuarios ADD COLUMN metodoVinculado INTEGER DEFAULT 0`); } catch (e) {}
-
-        // Asegurar columnas opcionales si no existen
-        try { await db.exec(`ALTER TABLE usuarios ADD COLUMN merchant_id TEXT`); } catch (e) {}
-        try { await db.exec(`ALTER TABLE usuarios ADD COLUMN metodoVinculado INTEGER DEFAULT 0`); } catch (e) {}
+        try { await db.exec("ALTER TABLE usuarios ADD COLUMN merchant_id TEXT;"); } catch (e) {}
+        try { await db.exec("ALTER TABLE usuarios ADD COLUMN metodoVinculado INTEGER DEFAULT 0;"); } catch (e) {}
         
-        // NUEVO: Columnas para la billetera criptográfica única y permanente del usuario
-        try { await db.exec(`ALTER TABLE usuarios ADD COLUMN assigned_wallet TEXT`); } catch (e) {}
-        try { await db.exec(`ALTER TABLE usuarios ADD COLUMN private_key TEXT`); } catch (e) {}
+        // Columnas para la billetera criptográfica única y permanente del usuario
+        try { await db.exec("ALTER TABLE usuarios ADD COLUMN assigned_wallet TEXT;"); } catch (e) {}
+        try { await db.exec("ALTER TABLE usuarios ADD COLUMN private_key TEXT;"); } catch (e) {}
 
     } catch (err) {
-        console.error('Error al inicializar SQLite:', err.message);
+        console.error('❌ Error al inicializar SQLite:', err.message);
     }
 }
+
 inicializarBaseDatos();
 
 // ==========================================
