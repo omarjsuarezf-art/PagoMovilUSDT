@@ -184,7 +184,7 @@ function calcularComisionRetiro(monto) {
 }
 
 // ==========================================
-// VALIDADOR AUTOMÁTICO BLOCKCHAIN (RPC MULTINODO DE ALTA VELOCIDAD)
+// VALIDADOR AUTOMÁTICO BLOCKCHAIN (ALCHEMY RPC)
 // ==========================================
 async function verificarHashPolygonEnBlockchain(txHash, montoEsperadoMinimo) {
     return new Promise(async (resolve) => {
@@ -196,27 +196,40 @@ async function verificarHashPolygonEnBlockchain(txHash, montoEsperadoMinimo) {
         const walletOficial = (process.env.PLATFORM_POLYGON_WALLET || '0x0950Cd97BD1417Dc513716d3a75D470a33599Bff').toLowerCase();
         const contratoUSDT = POLYGON_USDT_CONTRACT.toLowerCase();
 
-        // Lista de nodos RPC oficiales y públicos de respaldo para velocidad instantánea
-        const endpointsRpc = [
+        // Extraer la URL de Alchemy del .env o usar endpoints de alta velocidad
+        const alchemyUrlEnv = process.env.POLYGON_RPC_URL || '';
+        let endpointsRpc = [];
+
+        if (alchemyUrlEnv) {
+            try {
+                const parsedUrl = new URL(alchemyUrlEnv);
+                endpointsRpc.push({ hostname: parsedUrl.hostname, path: parsedUrl.pathname + parsedUrl.search });
+            } catch (e) {
+                console.error("⚠️ URL de Alchemy en .env mal formada, usando respaldos públicos.");
+            }
+        }
+
+        // Agregar nodos públicos oficiales como respaldo secundario
+        endpointsRpc.push(
             { hostname: 'polygon-rpc.com', path: '/' },
             { hostname: 'rpc.ankr.com', path: '/polygon' }
-        ];
+        );
 
         let receipt = null;
 
         for (const endpoint of endpointsRpc) {
             try {
                 receipt = await consultarNodoRpc(endpoint.hostname, endpoint.path, cleanHash);
-                if (receipt) break; // Si un nodo responde con éxito, salimos del ciclo
+                if (receipt) break; // Si Alchemy o un nodo responde con éxito, salimos del ciclo
             } catch (e) {
-                // Intentar con el siguiente nodo si falla el primero
+                // Intentar con el siguiente endpoint si falla
             }
         }
 
         if (!receipt) {
             return resolve({ 
                 valido: false, 
-                mensaje: '❌ La transacción aún no se propaga en los nodos de la red. Intente en 10 segundos.' 
+                mensaje: '❌ La transacción no se pudo verificar en la red Polygon. Verifique el Hash.' 
             });
         }
 
@@ -250,55 +263,7 @@ async function verificarHashPolygonEnBlockchain(txHash, montoEsperadoMinimo) {
             });
         }
 
-        return resolve({ valido: true, mensaje: '✅ Transacción verificada correctamente en Polygon.' });
-    });
-}
-
-// Función auxiliar para consultar un nodo RPC específico por HTTPS
-function consultarNodoRpc(hostname, path, cleanHash) {
-    return new Promise((resolve, reject) => {
-        const rpcData = JSON.stringify({
-            jsonrpc: "2.0",
-            method: "eth_getTransactionReceipt",
-            params: [cleanHash],
-            id: 1
-        });
-
-        const options = {
-            hostname: hostname,
-            port: 443,
-            path: path,
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Content-Length': Buffer.byteLength(rpcData),
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
-            },
-            timeout: 5000 // Timeout de 5 segundos para no dejar colgada la pasarela
-        };
-
-        const req = https.request(options, (res) => {
-            let data = '';
-            res.on('data', (chunk) => { data += chunk; });
-            res.on('end', () => {
-                try {
-                    const respuesta = JSON.parse(data);
-                    if (respuesta && respuesta.result) {
-                        resolve(respuesta.result);
-                    } else {
-                        resolve(null);
-                    }
-                } catch (e) {
-                    resolve(null);
-                }
-            });
-        });
-
-        req.on('error', () => { resolve(null); });
-        req.on('timeout', () => { req.destroy(); resolve(null); });
-
-        req.write(rpcData);
-        req.end();
+        return resolve({ valido: true, mensaje: '✅ Transacción verificada correctamente en Polygon vía Alchemy.' });
     });
 }
 function formatearNumeroWhatsapp(numero) {
