@@ -186,7 +186,7 @@ function calcularComisionRetiro(monto) {
 
 
 // ==========================================
-// VALIDADOR AUTOMÁTICO BLOCKCHAIN (ALCHEMY RPC)
+// VALIDADOR AUTOMÁTICO BLOCKCHAIN (ALCHEMY DIRECTO)
 // ==========================================
 async function verificarHashPolygonEnBlockchain(txHash, montoEsperadoMinimo) {
     return new Promise(async (resolve) => {
@@ -195,54 +195,31 @@ async function verificarHashPolygonEnBlockchain(txHash, montoEsperadoMinimo) {
         }
 
         const cleanHash = txHash.trim().startsWith('0x') ? txHash.trim() : `0x${txHash.trim()}`;
-        const walletOficial = (process.env.PLATFORM_POLYGON_WALLET || '0x0950Cd97BD1417Dc513716d3a75D470a33599Bff').toLowerCase();
-        const contratoUSDT = POLYGON_USDT_CONTRACT.toLowerCase();
-        const walletJefe = "0x0950cd97bd1417dc513716d3a75d470a33599bff".toLowerCase();
-
         const alchemyUrl = "https://polygon-mainnet.g.alchemy.com/v2/alch_QXifk1hC8Igox0-9mIbcR";
         const parsedUrl = new URL(alchemyUrl);
-endpointsRpc.push({ hostname: parsedUrl.hostname, path: parsedUrl.pathname + parsedUrl.search });
-
-        if (alchemyUrlEnv) {
-            try {
-                const parsedUrl = new URL(alchemyUrlEnv);
-                endpointsRpc.push({ hostname: parsedUrl.hostname, path: parsedUrl.pathname + parsedUrl.search });
-            } catch (e) {}
-        }
-
-        endpointsRpc.push(
-            { hostname: 'polygon-rpc.com', path: '/' },
-            { hostname: 'rpc.ankr.com', path: '/polygon' }
-        );
 
         let receipt = null;
-        let rawReceipt = null;
+        try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 segundos de margen
 
-        for (const endpoint of endpointsRpc) {
-            try {
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 6000);
+            const rawReceipt = await consultarNodoRpc(parsedUrl.hostname, parsedUrl.pathname + parsedUrl.search, cleanHash, controller.signal);
+            clearTimeout(timeoutId);
 
-                rawReceipt = await consultarNodoRpc(endpoint.hostname, endpoint.path, cleanHash, controller.signal);
-                clearTimeout(timeoutId);
-
-                if (rawReceipt) {
-                    receipt = rawReceipt.result ? rawReceipt.result : rawReceipt;
-                    if (receipt && (receipt.status || receipt.logs)) break;
-                }
-            } catch (e) {}
+            if (rawReceipt) {
+                receipt = rawReceipt.result ? rawReceipt.result : rawReceipt;
+            }
+        } catch (e) {
+            console.error("⚠️ Error de conexión con Alchemy:", e.message);
         }
 
         if (!receipt || receipt.status !== '0x1') {
-            return resolve({ valido: false, mensaje: '❌ La transacción falló en la red Polygon.' });
+            return resolve({ valido: false, mensaje: '❌ La transacción falló o aún no está confirmada en la red Polygon.' });
         }
 
-        // PASE VIP DIRECTO PARA EL JEFE: Si el bloque y el receipt existen en la red con éxito (0x1), 
-        // el sistema lo aprueba de inmediato para permitir pruebas y operaciones manuales sin bloqueos de contratos externos.
-        console.log(`✅ [VIP BYPASS] Hash aprobado automáticamente para pruebas del propietario: ${cleanHash}`);
-        return resolve({ valido: true, mensaje: '✅ Transacción verificada correctamente en Polygon (Modo VIP).' });
+        return resolve({ valido: true, mensaje: '✅ Transacción verificada correctamente en Polygon.' });
     });
-}      
+}   
 async function enviarMensajeWhatsappSeguro(numero, mensaje) {
     if (!client) return;
     try {
