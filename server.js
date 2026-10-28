@@ -9,12 +9,12 @@ const rateLimit = require('express-rate-limit');
 const { open } = require('sqlite');
 const sqlite3Internal = require('sqlite3');
 const { Resend } = require('resend');
-const { Resend } = require('resend');
 const { ethers } = require('ethers');
 // Configuración de Resend limpia
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-const app = express();
+const app = express(); 
+
 
 // MAPA EN MEMORIA PARA RECUPERACIÓN DE PIN CON CÓDIGOS OTP (EXPIRAN EN 5 MINUTOS)
 const codigosRecuperacion = new Map();
