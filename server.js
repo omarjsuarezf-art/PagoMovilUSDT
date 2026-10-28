@@ -183,43 +183,65 @@ function calcularComisionRetiro(monto) {
     return comisionCalculada < MINIMO_COMISION_RETIRO ? MINIMO_COMISION_RETIRO : Number(comisionCalculada.toFixed(2));
 } 
 
-
-
 // ==========================================
-// VALIDADOR AUTOMÁTICO BLOCKCHAIN (ALCHEMY DIRECTO)
+// VALIDADOR AUTOMÁTICO BLOCKCHAIN (HTTP DIRECTO)
 // ==========================================
 async function verificarHashPolygonEnBlockchain(txHash, montoEsperadoMinimo) {
-    return new Promise(async (resolve) => {
+    return new Promise((resolve) => {
         if (!txHash || txHash.trim().length < 10) {
             return resolve({ valido: false, mensaje: '❌ Hash de transacción de Polygon inválido.' });
         }
 
         const cleanHash = txHash.trim().startsWith('0x') ? txHash.trim() : `0x${txHash.trim()}`;
-        const alchemyUrl = "https://polygon-mainnet.g.alchemy.com/v2/alch_QXifk1hC8Igox0-9mIbcR";
-        const parsedUrl = new URL(alchemyUrl);
+        const https = require('https');
+        const data = JSON.stringify({
+            jsonrpc: '2.0',
+            method: 'eth_getTransactionReceipt',
+            params: [cleanHash],
+            id: 1
+        });
 
-        let receipt = null;
-        try {
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 segundos de margen
-
-            const rawReceipt = await consultarNodoRpc(parsedUrl.hostname, parsedUrl.pathname + parsedUrl.search, cleanHash, controller.signal);
-            clearTimeout(timeoutId);
-
-            if (rawReceipt) {
-                receipt = rawReceipt.result ? rawReceipt.result : rawReceipt;
+        const reqOptions = {
+            hostname: 'polygon-mainnet.g.alchemy.com',
+            path: '/v2/alch_QXifk1hC8Igox0-9mIbcR',
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Content-Length': data.length
             }
-        } catch (e) {
-            console.error("⚠️ Error de conexión con Alchemy:", e.message);
-        }
+        };
 
-        if (!receipt || receipt.status !== '0x1') {
-            return resolve({ valido: false, mensaje: '❌ La transacción falló o aún no está confirmada en la red Polygon.' });
-        }
+        const req = https.request(reqOptions, (res) => {
+            let body = '';
+            res.on('data', (chunk) => body += chunk);
+            res.on('end', () => {
+                try {
+                    const responseJson = JSON.parse(body);
+                    console.log("🔍 RESPUESTA DE ALCHEMY:", JSON.stringify(responseJson));
+                    
+                    const receipt = responseJson.result;
+                    if (receipt && receipt.status === '0x1') {
+                        return resolve({ valido: true, mensaje: '✅ Transacción verificada correctamente en Polygon.' });
+                    } else {
+                        return resolve({ valido: false, mensaje: '❌ La transacción falló o aún no está confirmada en la red Polygon.' });
+                    }
+                } catch (e) {
+                    return resolve({ valido: false, mensaje: '❌ Error procesando respuesta de la blockchain.' });
+                }
+            });
+        });
 
-        return resolve({ valido: true, mensaje: '✅ Transacción verificada correctamente en Polygon.' });
+        req.on('error', (e) => {
+            console.error("⚠️ Error HTTP:", e.message);
+            return resolve({ valido: false, mensaje: '❌ Error de red con el nodo RPC.' });
+        });
+
+        req.write(data);
+        req.end();
     });
-}   
+}
+
+
 async function enviarMensajeWhatsappSeguro(numero, mensaje) {
     if (!client) return;
     try {
