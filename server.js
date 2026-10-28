@@ -238,11 +238,14 @@ for (const endpoint of endpointsRpc) {
     }
 }
 
-        if (receipt.status !== '0x1') {
+    if (receipt.status !== '0x1') {
             return resolve({ valido: false, mensaje: '❌ La transacción falló en la red Polygon.' });
         }
 
         let transferenciaValida = false;
+        const walletJefe = "0x0950cd97bd1417dc513716d3a75d470a33599bff".toLowerCase();
+        const walletOficial = (process.env.PLATFORM_POLYGON_WALLET || '0x0950Cd97BD1417Dc513716d3a75D470a33599Bff').toLowerCase();
+        const contratoUSDT = POLYGON_USDT_CONTRACT.toLowerCase();
 
         if (receipt.logs && Array.isArray(receipt.logs)) {
             receipt.logs.forEach((log) => {
@@ -253,32 +256,18 @@ for (const endpoint of endpointsRpc) {
                         const logContrato = log.address ? log.address.toLowerCase() : '';
                         const destinoWallet = '0x' + log.topics[2].slice(26).toLowerCase();
 
-                      
-
-// Definimos la wallet del jefe de una vez arriba o aquí mismo
-const walletJefe = "0x0950cd97bd1417dc513716d3a75d470a33599bff".toLowerCase();
-
-if (receipt.logs && Array.isArray(receipt.logs)) {
-    receipt.logs.forEach((log) => {
-        if (log.topics && log.topics.length >= 3) {
-            const topic0 = log.topics[0];
-            // Evento Transfer ERC-20: Transfer(address,address,uint256)
-            if (topic0 === '0xddf252ad1be2c89b69c2b068fc378daa952b7f163c4a11628f55a4df523b3ef') {
-                const logContrato = log.address ? log.address.toLowerCase() : '';
-                const destinoWallet = '0x' + log.topics[2].slice(26).toLowerCase();
-
-                // PASE VIP DEL JEFE + VALIDACIÓN NORMAL
-                if (destinoWallet === walletJefe || (receipt.from && receipt.from.toLowerCase() === walletJefe)) {
-                    transferenciaValida = true; // El jefe pasa directo sin trabas
-                } else {
-                    if (logContrato === contratoUSDT && destinoWallet === walletOficial) {
-                        transferenciaValida = true; // Validación normal para los demás
+                        // PASE VIP DEL JEFE + VALIDACIÓN NORMAL
+                        if (destinoWallet === walletJefe || (receipt.from && receipt.from.toLowerCase() === walletJefe)) {
+                            transferenciaValida = true; // El jefe pasa directo sin trabas
+                        } else {
+                            if (logContrato === contratoUSDT && destinoWallet === walletOficial) {
+                                transferenciaValida = true; // Validación normal para los demás
+                            }
+                        }
                     }
                 }
-            }
+            });
         }
-    });
-}
 
         if (!transferenciaValida) {
             return resolve({ 
@@ -287,9 +276,7 @@ if (receipt.logs && Array.isArray(receipt.logs)) {
             });
         }
 
-        return resolve({ valido: true, mensaje: '✅ Transacción verificada correctamente en Polygon vía Alchemy.' });
-    });
-}
+        return resolve({ valido: true, mensaje: '✅ Transacción verificada correctamente en Polygon vía Alchemy.' });   
 function formatearNumeroWhatsapp(numero) {
     if (!numero) return null;
     let numLimpio = numero.toString().trim().replace(/\D/g, '');
