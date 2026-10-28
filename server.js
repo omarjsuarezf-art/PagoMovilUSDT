@@ -220,22 +220,23 @@ let rawReceipt = null;
 
 for (const endpoint of endpointsRpc) {
     try {
-        rawReceipt = await consultarNodoRpc(endpoint.hostname, endpoint.path, cleanHash);
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 6000); // Timeout de 6 segundos por nodo
+
+        // Si consultarNodoRpc acepta un signal, se lo pasamos, o si hace un fetch interno:
+        // Asegúrate de que la petición dentro de consultarNodoRpc incluya { signal: controller.signal }
+        rawReceipt = await consultarNodoRpc(endpoint.hostname, endpoint.path, cleanHash, controller.signal);
+        
+        clearTimeout(timeoutId);
+
         if (rawReceipt) {
             receipt = rawReceipt.result ? rawReceipt.result : rawReceipt;
             if (receipt && (receipt.status || receipt.logs)) break;
         }
     } catch (e) {
-        // Intentar con el siguiente endpoint si falla
+        // Si da timeout o falla el nodo, aborta rápido y pasa al siguiente sin congelar
     }
 }
-
-        if (!receipt) {
-            return resolve({ 
-                valido: false, 
-                mensaje: '❌ La transacción no se pudo verificar en la red Polygon. Verifique el Hash.' 
-            });
-        }
 
         if (receipt.status !== '0x1') {
             return resolve({ valido: false, mensaje: '❌ La transacción falló en la red Polygon.' });
