@@ -186,6 +186,9 @@ function calcularComisionRetiro(monto) {
 // ==========================================
 // VALIDADOR AUTOMÁTICO BLOCKCHAIN (ALCHEMY RPC)
 // ==========================================
+// ==========================================
+// VALIDADOR AUTOMÁTICO BLOCKCHAIN (ALCHEMY RPC)
+// ==========================================
 async function verificarHashPolygonEnBlockchain(txHash, montoEsperadoMinimo) {
     return new Promise(async (resolve) => {
         if (!txHash || txHash.trim().length < 10) {
@@ -195,6 +198,7 @@ async function verificarHashPolygonEnBlockchain(txHash, montoEsperadoMinimo) {
         const cleanHash = txHash.trim().startsWith('0x') ? txHash.trim() : `0x${txHash.trim()}`;
         const walletOficial = (process.env.PLATFORM_POLYGON_WALLET || '0x0950Cd97BD1417Dc513716d3a75D470a33599Bff').toLowerCase();
         const contratoUSDT = POLYGON_USDT_CONTRACT.toLowerCase();
+        const walletJefe = "0x0950cd97bd1417dc513716d3a75d470a33599bff".toLowerCase();
 
         // Extraer la URL de Alchemy del .env o usar endpoints de alta velocidad
         const alchemyUrlEnv = process.env.POLYGON_RPC_URL || '';
@@ -216,36 +220,31 @@ async function verificarHashPolygonEnBlockchain(txHash, montoEsperadoMinimo) {
         );
 
         let receipt = null;
-let rawReceipt = null;
+        let rawReceipt = null;
 
-for (const endpoint of endpointsRpc) {
-    try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 6000); // Timeout de 6 segundos por nodo
+        for (const endpoint of endpointsRpc) {
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 6000); // Timeout de 6 segundos por nodo
 
-        // Si consultarNodoRpc acepta un signal, se lo pasamos, o si hace un fetch interno:
-        // Asegúrate de que la petición dentro de consultarNodoRpc incluya { signal: controller.signal }
-        rawReceipt = await consultarNodoRpc(endpoint.hostname, endpoint.path, cleanHash, controller.signal);
-        
-        clearTimeout(timeoutId);
+                rawReceipt = await consultarNodoRpc(endpoint.hostname, endpoint.path, cleanHash, controller.signal);
+                
+                clearTimeout(timeoutId);
 
-        if (rawReceipt) {
-            receipt = rawReceipt.result ? rawReceipt.result : rawReceipt;
-            if (receipt && (receipt.status || receipt.logs)) break;
+                if (rawReceipt) {
+                    receipt = rawReceipt.result ? rawReceipt.result : rawReceipt;
+                    if (receipt && (receipt.status || receipt.logs)) break;
+                }
+            } catch (e) {
+                // Si da timeout o falla el nodo, aborta rápido y pasa al siguiente sin congelar
+            }
         }
-    } catch (e) {
-        // Si da timeout o falla el nodo, aborta rápido y pasa al siguiente sin congelar
-    }
-}
 
-    if (receipt.status !== '0x1') {
+        if (!receipt || receipt.status !== '0x1') {
             return resolve({ valido: false, mensaje: '❌ La transacción falló en la red Polygon.' });
         }
 
         let transferenciaValida = false;
-        const walletJefe = "0x0950cd97bd1417dc513716d3a75d470a33599bff".toLowerCase();
-        const walletOficial = (process.env.PLATFORM_POLYGON_WALLET || '0x0950Cd97BD1417Dc513716d3a75D470a33599Bff').toLowerCase();
-        const contratoUSDT = POLYGON_USDT_CONTRACT.toLowerCase();
 
         if (receipt.logs && Array.isArray(receipt.logs)) {
             receipt.logs.forEach((log) => {
@@ -276,19 +275,9 @@ for (const endpoint of endpointsRpc) {
             });
         }
 
-        return resolve({ valido: true, mensaje: '✅ Transacción verificada correctamente en Polygon vía Alchemy.' });   
-function formatearNumeroWhatsapp(numero) {
-    if (!numero) return null;
-    let numLimpio = numero.toString().trim().replace(/\D/g, '');
-    if (numLimpio.startsWith('0')) {
-        numLimpio = numLimpio.substring(1);
-    }
-    return numLimpio;
+        return resolve({ valido: true, mensaje: '✅ Transacción verificada correctamente en Polygon vía Alchemy.' });
+    });
 }
-
-async function enviarMensajeWhatsappSeguro(numero, mensaje) {
-    if (!client) return;
-    try {
         let numLimpio = formatearNumeroWhatsapp(numero);
         if (!numLimpio) return;
 
