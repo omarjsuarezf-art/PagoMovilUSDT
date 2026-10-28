@@ -183,9 +183,7 @@ function calcularComisionRetiro(monto) {
     return comisionCalculada < MINIMO_COMISION_RETIRO ? MINIMO_COMISION_RETIRO : Number(comisionCalculada.toFixed(2));
 }
 
-// ==========================================
-// VALIDADOR AUTOMÁTICO BLOCKCHAIN (ALCHEMY RPC)
-// ==========================================
+
 // ==========================================
 // VALIDADOR AUTOMÁTICO BLOCKCHAIN (ALCHEMY RPC)
 // ==========================================
@@ -277,7 +275,10 @@ async function verificarHashPolygonEnBlockchain(txHash, montoEsperadoMinimo) {
 
         return resolve({ valido: true, mensaje: '✅ Transacción verificada correctamente en Polygon vía Alchemy.' });
     });
-}
+}       
+async function enviarMensajeWhatsappSeguro(numero, mensaje) {
+    if (!client) return;
+    try {
         let numLimpio = formatearNumeroWhatsapp(numero);
         if (!numLimpio) return;
 
