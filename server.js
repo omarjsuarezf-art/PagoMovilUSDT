@@ -199,8 +199,9 @@ async function verificarHashPolygonEnBlockchain(txHash, montoEsperadoMinimo) {
         const contratoUSDT = POLYGON_USDT_CONTRACT.toLowerCase();
         const walletJefe = "0x0950cd97bd1417dc513716d3a75d470a33599bff".toLowerCase();
 
-        const alchemyUrlEnv = process.env.POLYGON_RPC_URL || '';
-        let endpointsRpc = [];
+        const alchemyUrl = "https://polygon-mainnet.g.alchemy.com/v2/alch_QXifk1hC8Igox0-9mIbcR";
+        const parsedUrl = new URL(alchemyUrl);
+endpointsRpc.push({ hostname: parsedUrl.hostname, path: parsedUrl.pathname + parsedUrl.search });
 
         if (alchemyUrlEnv) {
             try {
