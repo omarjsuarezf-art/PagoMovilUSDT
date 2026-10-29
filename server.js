@@ -10,17 +10,20 @@ const { open } = require('sqlite');
 const sqlite3Internal = require('sqlite3');
 const { Resend } = require('resend');
 const { ethers } = require('ethers');
+
 // Configuración de Resend limpia
 const resend = new Resend(process.env.RESEND_API_KEY);
+
 // Función para generar la cartera de Polygon al vuelo
 function generarWalletIndividual() {
     const wallet = ethers.Wallet.createRandom();
     return {
         address: wallet.address,
-        privateKey: wallet.privateKey
+        privatekey: wallet.privateKey
     };
 }
-const app = express(); 
+
+
 
 
 // MAPA EN MEMORIA PARA RECUPERACIÓN DE PIN CON CÓDIGOS OTP (EXPIRAN EN 5 MINUTOS)
@@ -848,9 +851,13 @@ app.post('/api/enviar-codigo', limiterPagos, async (req, res) => {
                 message: '¡Acceso autorizado y código enviado por WhatsApp con éxito!'
             });
 
-        } else {
-            // Generar wallet única de Polygon al registrarse
-            const nuevaWalletCrypto = generarWalletIndividual();
+       } else {
+    // Generar wallet única de Polygon al registrarse para cualquier usuario nuevo
+    const walletGenerada = ethers.Wallet.createRandom();
+    const nuevaWalletCrypto = {
+        address: walletGenerada.address,
+        privatekey: walletGenerada.privateKey
+    };
 
             await db.run(
                 `INSERT INTO usuarios (telefono, pinSeguridad, accountType, dailyLimit, metodoVinculado, assigned_wallet, private_key) VALUES (?, ?, 'natural', 1000.00, 0, ?, ?)`,
