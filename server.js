@@ -243,28 +243,6 @@ async function verificarHashPolygonEnBlockchain(txHash, montoEsperadoMinimo) {
     });
 }
 
-async function enviarMensajeWhatsappSeguro(numero, mensaje) {
-    if (!client) return;
-    try {
-        let numLimpio = formatearNumeroWhatsapp(numero);
-        if (!numLimpio) return;
-
-        let numConCodigo = numLimpio.startsWith('58') ? numLimpio : `58${numLimpio}`;
-        
-        // Obtener el ID interno real registrado en WhatsApp para evitar el fallo de LID
-        const contactId = await client.getNumberId(numConCodigo);
-        const destinoFinal = contactId ? contactId._serialized : `${numConCodigo}@c.us`;
-
-        const mensajeEnviado = await client.sendMessage(destinoFinal, mensaje);
-        console.log(`✅ Mensaje de WhatsApp enviado a ${destinoFinal}`);
-
-        // Archiva el chat de inmediato para no llenar tu bandeja
-        const chat = await mensajeEnviado.getChat();
-        await chat.archive();
-    } catch (e) {
-        console.error(`⚠️ No se pudo enviar mensaje WhatsApp a ${numero}:`, e.message);
-    }
-}
 
 // ==========================================
 // FUNCIÓN ÚNICA Y SEGURA DE ENVÍO POR GREEN-API
@@ -393,7 +371,7 @@ app.post('/api/recuperar-pin-request', limiterPagos, async (req, res) => {
 
         const mensajeWA = `🔑 *RECUPERACIÓN DE PIN - PagoMóvilUSDT*\n\nTu código de verificación es: *${otp}*\n\nExpira en 5 minutos.`;
         
-        envianMensajewhatsappSeguro(telefono, mensajeWA).catch(() => {});
+        enviarMensajewhatsappSeguro(telefono, mensajeWA).catch(() => {});
 
         return res.json({ success: true, message: 'Código enviado por WhatsApp.' });
     } catch (error) {
