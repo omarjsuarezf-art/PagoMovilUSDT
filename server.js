@@ -839,11 +839,7 @@ app.post('/api/enviar-codigo', limiterPagos, async (req, res) => {
                 message: '¡Acceso autorizado y código enviado por WhatsApp con éxito!'
             });
 
-        console.error("Error en autenticación de usuario:", err);
-        return res.status(500).json({ success: false, message: 'Error interno al procesar la autenticación.' });
-    }
-
-} else {
+        } else {
             // Generar wallet única de Polygon al registrarse
             const nuevaWalletCrypto = generarWalletIndividual();
 
@@ -872,6 +868,11 @@ app.post('/api/enviar-codigo', limiterPagos, async (req, res) => {
                 assigned_wallet: nuevaWalletCrypto.address
             });
         }
+    } catch (err) {
+        console.error("Error en autenticación de usuario:", err);
+        return res.status(500).json({ success: false, message: 'Error interno al procesar la autenticación.' });
+    }
+});
 // ==========================================
 // CAMBIO A CUENTA COMERCIAL
 // ==========================================
