@@ -371,7 +371,8 @@ app.post('/api/recuperar-pin-request', limiterPagos, async (req, res) => {
 
         const mensajeWA = `🔑 *RECUPERACIÓN DE PIN - PagoMóvilUSDT*\n\nTu código de verificación es: *${otp}*\n\nExpira en 5 minutos.`;
         
-        enviarMensajewhatsappSeguro(telefono, mensajeWA).catch(() => {});
+        // Unificado con el nombre correcto de tu función segura de WhatsApp
+        enviarMensajeWhatsappSeguro(telefono, mensajeWA).catch(() => {});
 
         return res.json({ success: true, message: 'Código enviado por WhatsApp.' });
     } catch (error) {
@@ -413,6 +414,7 @@ app.post('/api/recuperar-pin-confirm', limiterPagos, async (req, res) => {
             return res.status(400).json({ success: false, message: '❌ Los últimos 4 dígitos de la cédula no coinciden.' });
         }
 
+        // Blanqueo seguro: solo actualiza el PIN, la wallet y los fondos quedan intactos
         await db.run('UPDATE usuarios SET pinSeguridad = ? WHERE id = ?', [nuevoPin, usuario.id]);
         
         codigosRecuperacion.delete(telefono);
