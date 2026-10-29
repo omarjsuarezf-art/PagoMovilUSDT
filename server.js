@@ -839,7 +839,6 @@ app.post('/api/enviar-codigo', limiterPagos, async (req, res) => {
                 message: '¡Acceso autorizado y código enviado por WhatsApp con éxito!'
             });
 
-    } catch (err) {
         console.error("Error en autenticación de usuario:", err);
         return res.status(500).json({ success: false, message: 'Error interno al procesar la autenticación.' });
     }
