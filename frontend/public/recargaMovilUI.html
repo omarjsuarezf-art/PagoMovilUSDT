@@ -234,8 +234,7 @@
 
         const payload = {
             phoneNumber: document.getElementById('phoneNumber').value.trim(),
-            amount: amount,
-            txHash: "WALLET_INDIVIDUAL_AUTOMATICA" // Sin hash manual requerido por el usuario
+            amount: amount
         };
 
         btn.disabled = true;
@@ -279,7 +278,6 @@
             document.getElementById('phoneNumber').value = phone;
             cargarHistorial();
 
-            // Consultar la wallet personal asignada en el servidor para este usuario
             try {
                 const res = await fetch(`/api/usuario-wallet/${phone}`);
                 const data = await res.json();

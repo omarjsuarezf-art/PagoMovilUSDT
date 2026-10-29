@@ -1114,39 +1114,27 @@ const procesarRetiroHandler = async (req, res) => {
     }
 };
 
-app.post('/api/procesar-retiro', limiterPagos, procesarRetiroHandler);
-app.post('/procesar-retiro', limiterPagos, procesarRetiroHandler);
+
 
 // ==========================================
-// RECARGA BLINDADA (CON VALIDACIÓN BLOCKCHAIN POLYGON REAL)
+// RECARGA DIRECTA A LA WALLET PERSONAL (SIN HASHES)
 // ==========================================
 const logicaRecargaHandler = async (req, res) => {
     let phoneNumber = (req.body.phoneNumber || req.body.telefono || req.body.phone || '').trim();
     let amount = req.body.amount || req.body.monto || req.body.cantidad || req.body.valor;
-    let txHash = (req.body.txHash || req.body.hash || req.body.referenciaHash || '').trim();
 
     const procesarConTelefono = async (telObjetivo) => {
         const montoLimpio = parseFloat(amount);
 
-        if (!amount || !txHash) {
-            return res.status(400).json({ success: false, message: 'Faltan datos (monto o hash).' });
+        if (!amount) {
+            return res.status(400).json({ success: false, message: 'El monto de recarga es obligatorio.' });
         }
 
         if (isNaN(montoLimpio) || montoLimpio < MONTO_MINIMO_RECARGA) {
             return res.status(400).json({ success: false, message: `Monto mínimo de recarga: $${MONTO_MINIMO_RECARGA.toFixed(2)} USDT.` });
         }
 
-        const resultadoBlockchain = await verificarHashPolygonEnBlockchain(txHash, montoLimpio);
-        if (!resultadoBlockchain.valido) {
-            return res.status(400).json({ success: false, error: resultadoBlockchain.mensaje });
-        }
-
         try {
-            const txExistente = await db.get('SELECT id FROM transacciones WHERE reference_hash = ?', [txHash]);
-            if (txExistente) {
-                return res.status(400).json({ success: false, error: "Esta transacción de Polygon ya fue procesada anteriormente." });
-            }
-
             const comisionAplicar = calcularComisionRecarga(montoLimpio);
             const montoNetoAcreditar = montoLimpio - comisionAplicar;
 
@@ -1177,27 +1165,30 @@ const logicaRecargaHandler = async (req, res) => {
             const referenciaGen = 'REC-' + Math.floor(100000 + Math.random() * 900000);
             const ahora = new Date().toLocaleString('es-VE', { timeZone: 'America/Caracas' });
 
+            // Actualizar balance y registrar la transacción sin depender de hashes
             await db.run('UPDATE wallets SET usdt_balance = ? WHERE id = ?', [nuevoSaldo, walletId]);
             await db.run(`
                 INSERT INTO transacciones (referencia, monto, telefonoEmisor, telefonoDestino, reference_hash, fechaHora) 
                 VALUES (?, ?, ?, ?, ?, ?)
-            `, [referenciaGen, montoLimpio, 'POLYGON_CHAIN', telReal, txHash, ahora]);
+            `, [referenciaGen, montoLimpio, 'DIRECTO_WALLET', telReal, referenciaGen, ahora]);
+            
             await db.run(
                 'INSERT INTO comisiones (tipo, monto, referencia, fechaHora) VALUES (?, ?, ?, ?)',
                 ['binance', comisionAplicar, referenciaGen, ahora]
             );
 
-            await enviarMensajeWhatsappSeguro(telReal, `¡RECARGA EXITOSA (POLYGON)! 📥\nRecibido: $${montoLimpio.toFixed(2)}\nAcreditado: $${montoNetoAcreditar.toFixed(2)}`);
+            await enviarMensajeWhatsappSeguro(telReal, `¡RECARGA ACREDITADA CON ÉXITO! 📥\nMonto: $${montoLimpio.toFixed(2)}\nAcreditado: $${montoNetoAcreditar.toFixed(2)}\nRef: ${referenciaGen}`);
 
             res.json({ 
                 success: true, 
-                message: `¡Recarga de $${montoLimpio.toFixed(2)} USDT validada en Polygon! Acreditados $${montoNetoAcreditar.toFixed(2)}. Ref: ${referenciaGen}`,
+                message: `¡Recarga de $${montoLimpio.toFixed(2)} USDT procesada! Acreditados $${montoNetoAcreditar.toFixed(2)}. Ref: ${referenciaGen}`,
                 montoAcreditado: montoNetoAcreditar.toFixed(2),
                 comisionAplicada: comisionAplicar.toFixed(2),
                 referencia: referenciaGen
             });
         } catch (err) {
-            return res.status(500).json({ success: false, error: "Error procesando recarga en blockchain" });
+            console.error("Error en recarga directa:", err.message);
+            return res.status(500).json({ success: false, error: "Error procesando recarga en la base de datos" });
         }
     };
 
@@ -1212,8 +1203,6 @@ const logicaRecargaHandler = async (req, res) => {
 
 app.post('/api/recargar', limiterPagos, logicaRecargaHandler);
 app.post('/recargar', limiterPagos, logicaRecargaHandler);
-app.post('/api/recargar-hash', limiterPagos, logicaRecargaHandler);
-app.post('/api/verificar-recarga-hash', limiterPagos, logicaRecargaHandler);
 
 // ==========================================
 // ENVÍO DE PAGO
