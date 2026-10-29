@@ -987,7 +987,7 @@ app.post('/api/upgrade-account', limiterPagos, async (req, res) => {
 
 
 // ==========================================
-// PROCESAMIENTO DE RETIROS DIRECTOS
+// PROCESAMIENTO DE RETIROS DIRECTOS (BLINDADO CON POLYGON + ETHERS.JS)
 // ==========================================
 const procesarRetiroHandler = async (req, res) => {
     const { plataforma, destino, monto, pinSeguridad } = req.body;
@@ -1005,6 +1005,7 @@ const procesarRetiroHandler = async (req, res) => {
 
     const ejecutarRetiro = async (telUsuario) => {
         try {
+            // 1. Buscar usuario y su clave privada de Polygon almacenada en SQLite
             const usuario = await db.get('SELECT * FROM usuarios WHERE telefono = ? OR merchant_id = ?', [telUsuario, telUsuario]);
             if (!usuario) return res.status(404).json({ success: false, message: 'Usuario no encontrado.' });
 
@@ -1012,36 +1013,90 @@ const procesarRetiroHandler = async (req, res) => {
                 return res.status(401).json({ success: false, message: '❌ PIN de seguridad incorrecto.' });
             }
 
+            // 2. Verificar saldo disponible en la tabla wallets
             const wallet = await db.get('SELECT * FROM wallets WHERE user_id = ?', [usuario.id]);
             if (!wallet || wallet.usdt_balance < montoNum) {
-                return res.status(400).json({ success: false, message: '❌ Saldo insuficiente.' });
+                return res.status(400).json({ success: false, message: '❌ Saldo insuficiente en tu monedero.' });
             }
 
+            const montoNetoRetiro = montoNum - comisionAplicar;
+            let hashBlockchain = null;
+
+            // 3. EVALUAR SI EL RETIRO ES ON-CHAIN (Polygon) O INTERNO/EXCHANGE
+            const esRetiroPolygon = (plataforma && plataforma.toLowerCase().includes('polygon')) || destino.trim().startsWith('0x');
+
+            if (esRetiroPolygon) {
+                if (!usuario.private_key) {
+                    return res.status(400).json({ success: false, message: '❌ Error crítico: El usuario no posee una wallet criptográfica asignada.' });
+                }
+
+                console.log(`🚀 Iniciando transferencia real en Polygon hacia ${destino} por $${montoNetoRetiro} USDT...`);
+
+                try {
+                    // Conexión oficial al proveedor RPC de Polygon (Alchemy)
+                    const provider = new ethers.JsonRpcProvider('https://polygon-mainnet.g.alchemy.com/v2/alh_QXifklhC8Igox8-9wTbcR');
+                    const userWallet = new ethers.Wallet(usuario.private_key, provider);
+
+                    // Contrato oficial de USDT en la red Polygon
+                    const usdtContractAddress = '0xc2132d05d31c914a87c6611c10748aeb04b58e2f';
+                    const abiUSDT = ["function transfer(to address, value uint256) public returns (bool)"];
+                    const usdtContract = new ethers.Contract(usdtContractAddress, abiUSDT, userWallet);
+
+                    // USDT maneja 6 decimales exactos en Polygon
+                    const montoWei = ethers.parseUnits(montoNetoRetiro.toFixed(6), 6);
+
+                    // Disparar la transacción en firme en la blockchain
+                    const tx = await usdtContract.transfer(destino.trim(), montoWei);
+                    console.log(`✅ Transacción enviada a la blockchain. Hash: ${tx.hash}`);
+
+                    // Esperar confirmación del bloque
+                    const receipt = await tx.wait();
+                    hashBlockchain = receipt.hash;
+
+                } catch (errorBlockchain) {
+                    console.error("❌ Error ejecutando ethers.js en Polygon:", errorBlockchain.message);
+                    return res.status(500).json({ 
+                        success: false, 
+                        message: `❌ Error en la red Polygon al procesar el retiro: ${errorBlockchain.message}` 
+                    });
+                }
+            }
+
+            // 4. ACTUALIZACIÓN ATÓMICA EN BASE DE DATOS (SQLite)
             const nuevoSaldo = wallet.usdt_balance - montoNum;
             const refRetiro = 'RET-' + Math.floor(100000 + Math.random() * 900000);
             const ahora = new Date().toLocaleString('es-VE', { timeZone: 'America/Caracas' });
 
             await db.run('UPDATE wallets SET usdt_balance = ? WHERE id = ?', [nuevoSaldo, wallet.id]);
+            
             await db.run(
                 'INSERT INTO transacciones (referencia, monto, telefonoEmisor, telefonoDestino, reference_hash, fechaHora) VALUES (?, ?, ?, ?, ?, ?)',
-                [refRetiro, montoNum, usuario.telefono, `${(plataforma || 'EXT').toUpperCase()}:${destino}`, refRetiro, ahora]
+                [refRetiro, montoNum, usuario.telefono, `${(plataforma || 'EXT').toUpperCase()}:${destino}`, hashBlockchain || refRetiro, ahora]
             );
+            
             await db.run(
                 'INSERT INTO comisiones (tipo, monto, referencia, fechaHora) VALUES (?, ?, ?, ?)',
                 ['binance', comisionAplicar, refRetiro, ahora]
             );
 
-            await enviarMensajeWhatsappSeguro(usuario.telefono, `¡RETIRO PROCESADO! 📤\nMonto: $${montoNum.toFixed(2)} USDT\nRef: ${refRetiro}`);
+            // 5. Notificación por WhatsApp del éxito de la salida
+            await enviarMensajeWhatsappSeguro(
+                usuario.telefono, 
+                `¡RETIRO PROCESADO CON ÉXITO! 📤\nMonto: $${montoNum.toFixed(2)} USDT\nNeto enviado: $${montoNetoRetiro.toFixed(2)}\nRef: ${refRetiro}${hashBlockchain ? `\nHash: ${hashBlockchain}` : ''}`
+            );
 
             return res.json({
                 success: true,
-                message: `¡Retiro de $${montoNum.toFixed(2)} USDT procesado con éxito! Ref: ${refRetiro}`,
+                message: `¡Retiro de $${montoNum.toFixed(2)} USDT procesado exitosamente!`,
                 nuevoSaldo: nuevoSaldo.toFixed(2),
                 comisionAplicada: comisionAplicar.toFixed(2),
-                referencia: refRetiro
+                referencia: refRetiro,
+                txHash: hashBlockchain
             });
+
         } catch (err) {
-            return res.status(500).json({ success: false, message: 'Error procesando el retiro.' });
+            console.error("❌ Error general en procesarRetiroHandler:", err.message);
+            return res.status(500).json({ success: false, message: 'Error interno procesando el retiro en el servidor.' });
         }
     };
 

@@ -49,7 +49,7 @@
                     </div>
                     <h2 class="text-sm font-bold text-white">Completa tu Registro de Usuario</h2>
                     <p class="text-[11px] text-slate-400 leading-snug">
-                        Para habilitar las funciones de pago, recarga y retiros, debes vincular tu cédula y tu plataforma o red cripto de preferencia.
+                        Para habilitar las funciones de pago, recarga y retiros, debes vincular tu cédula y tu billetera oficial en red Polygon.
                     </p>
                 </div>
 
@@ -60,21 +60,15 @@
                     </div>
 
                     <div>
-                        <label class="block text-[11px] text-slate-400 mb-1">Método / Exchange de Preferencia</label>
+                        <label class="block text-[11px] text-slate-400 mb-1">Red de Destino</label>
                         <select id="regMetodo" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500">
-                            <option value="binance">Binance Pay (Pay ID / Email / Teléfono)</option>
-                            <option value="airtm">AirTM (Correo electrónico)</option>
-                            <option value="bybit">Bybit UID / Email</option>
-                            <option value="okx">OKX (UID / Email / Teléfono)</option>
-                            <option value="trc20">Wallet USDT (Red TRC20 - Tron)</option>
-                            <option value="bep20">Wallet USDT (Red BEP20 - BSC)</option>
-                            <option value="polygon">Wallet USDT (Red Polygon)</option>
+                            <option value="polygon">Wallet USDT (Red Polygon - 0x...)</option>
                         </select>
                     </div>
 
                     <div>
-                        <label class="block text-[11px] text-slate-400 mb-1">Correo Electrónico, UID o Cuenta Destino</label>
-                        <input type="text" id="regCuentaDestino" placeholder="Ej: correo@binance.com o 0x..." required class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500 font-mono">
+                        <label class="block text-[11px] text-slate-400 mb-1">Dirección de Billetera (Debe empezar por 0x)</label>
+                        <input type="text" id="regCuentaDestino" placeholder="Ej: 0x71C... (Tu dirección de Polygon)" required class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500 font-mono">
                     </div>
 
                     <button type="submit" id="btnGuardarRegistro" class="w-full bg-amber-500 hover:bg-amber-600 text-slate-950 font-black py-2.5 rounded-xl transition text-xs cursor-pointer flex items-center justify-center gap-2 shadow-lg shadow-amber-500/10">
@@ -158,36 +152,25 @@
                     </form>
                 </div>
 
-                <!-- SECCIÓN RETIRAR A EXCHANGE / BILLETERA -->
+                <!-- SECCIÓN RETIRAR A BILLETERA POLYGON (DIRECTO Y SEGURO) -->
                 <div id="seccionRetiro" class="hidden bg-slate-900/80 border border-slate-800 rounded-xl p-4 space-y-3">
-                    <h2 class="text-xs font-bold text-emerald-400 uppercase tracking-wide">Retirar USDT / Cripto</h2>
+                    <h2 class="text-xs font-bold text-emerald-400 uppercase tracking-wide">Retirar USDT / Red Polygon</h2>
                     
                     <!-- BANNER VISUAL DE ADVERTENCIA PARA RETIROS POLYGON -->
                     <div class="bg-amber-950/40 border border-amber-500/40 p-2.5 rounded-xl space-y-1">
                         <div class="flex items-center gap-1.5 text-amber-400 text-[11px] font-bold">
-                            <i class="fa-solid fa-triangle-exclamation"></i> Verificación de Dirección:
+                            <i class="fa-solid fa-triangle-exclamation"></i> Retiro Directo a Blockchain:
                         </div>
                         <p class="text-[10px] text-slate-300 leading-snug">
-                            Si seleccionas <strong>Wallet USDT (Red Polygon)</strong> para retirar a MetaMask, Phantom o Trust Wallet, tu dirección <strong>DEBE empezar por 0x</strong>. Evita usar direcciones de Tron (T...) o Solana.
+                            Tus fondos se enviarán directo a tu billetera personal (MetaMask, OKX o Trust Wallet) en la red Polygon. Tu dirección <strong>DEBE empezar obligatoriamente por 0x</strong>.
                         </p>
                     </div>
 
                     <form id="formRetiro" onsubmit="procesarRetiro(event)" class="space-y-3">
+                        <input type="hidden" id="tipoExchange" value="polygon">
                         <div>
-                            <label class="block text-[11px] text-slate-400 mb-1">Seleccionar Destino / Plataforma</label>
-                            <select id="tipoExchange" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500">
-                                <option value="binance">Binance Pay (Pay ID / Email / Teléfono)</option>
-                                <option value="airtm">AirTM (Correo electrónico)</option>
-                                <option value="bybit">Bybit UID / Email</option>
-                                <option value="okx">OKX (UID / Email / Teléfono)</option>
-                                <option value="trc20">Wallet USDT (Red TRC20 - Tron)</option>
-                                <option value="bep20">Wallet USDT (Red BEP20 - BSC)</option>
-                                <option value="polygon">Wallet USDT (Red Polygon)</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-[11px] text-slate-400 mb-1">Dirección / UID / Correo de Destino</label>
-                            <input type="text" id="destinoRetiro" placeholder="Ej: correo@binance.com o 0x..." required class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 font-mono">
+                            <label class="block text-[11px] text-slate-400 mb-1">Dirección de Billetera Destino</label>
+                            <input type="text" id="destinoRetiro" placeholder="Ej: 0x71C... (Tu dirección de Polygon)" required class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 font-mono">
                         </div>
                         <div>
                             <label class="block text-[11px] text-slate-400 mb-1">Monto a Retirar (USDT)</label>
@@ -299,7 +282,7 @@
         }
 
         // =========================================================================
-        // SEGURIDAD INTELIGENTE: TOLERANCIA DE SEGUNDO PLANO (PARA IR A BINANCE Y VOLVER)
+        // SEGURIDAD INTELIGENTE: TOLERANCIA DE SEGUNDO PLANO (PARA IR A LA WALLET Y VOLVER)
         // =========================================================================
         let tiempoOcultoInicio = null;
         const TOLERANCIA_SEGUNDO_PLANO = 3 * 60 * 1000; // 3 Minutos de gracia
@@ -426,7 +409,7 @@
             }
         }
 
-        // VINCULAR DATOS OBLIGATORIOS (CÉDULA Y CORREO/DESTINO)
+        // VINCULAR DATOS OBLIGATORIOS (CÉDULA Y WALLET POLYGON)
         async function vincularDatosObligatorios(e) {
             e.preventDefault();
             const telefono = obtenerTelefonoActivo();
@@ -438,6 +421,11 @@
             const cedulaTitular = document.getElementById('regCedula').value.trim();
             const metodo = document.getElementById('regMetodo').value;
             const cuentaDestino = document.getElementById('regCuentaDestino').value.trim();
+
+            if (!cuentaDestino.toLowerCase().startsWith('0x') || cuentaDestino.length < 40) {
+                alert("❌ DIRECCIÓN INVÁLIDA:\n\nLa dirección de tu billetera en red Polygon DEBE empezar obligatoriamente por '0x'.");
+                return;
+            }
 
             const btn = document.getElementById('btnGuardarRegistro');
             btn.disabled = true;
@@ -496,7 +484,7 @@
                         
                         const badge = document.getElementById('badgeAccountType');
                         badge.className = "inline-block px-2.5 py-1 rounded-md text-[11px] font-bold tracking-wide uppercase bg-rose-500/20 text-rose-300 border border-rose-500/30";
-                        badge.innerText = "REGISTRO INCOMPLETO (PENDIENTE CÉDULA Y MÉTODO)";
+                        badge.innerText = "REGISTRO INCOMPLETO (PENDIENTE CÉDULA Y WALLET)";
                         return;
                     } else {
                         if (seccionRegistro) seccionRegistro.classList.add('hidden');
@@ -530,7 +518,6 @@
 
                         if (typeof QRCode === 'function') {
                             try {
-                                // 1. Generamos el QR base en Nivel H (Alta tolerancia a fallos de hasta 30%)
                                 new QRCode(container, {
                                     text: payloadQr,
                                     width: 176,
@@ -540,7 +527,6 @@
                                     correctLevel: QRCode.CorrectLevel.H
                                 });
 
-                                // 2. Inyección limpia y sin marcos molestos (Solo el círculo verde y su emblema flotando puro)
                                 setTimeout(() => {
                                     if (!container.querySelector('.logo-flotante-qr')) {
                                         const logoWrapper = document.createElement('div');
@@ -573,7 +559,7 @@
                         badge.className = "inline-block px-2.5 py-1 rounded-md text-[11px] font-bold tracking-wide uppercase bg-blue-500/20 text-blue-300 border border-blue-500/30";
                         badge.innerText = `CUENTA NATURAL (LÍMITE $${data.dailyLimit || 1000} USDT)`;
                         
-                        if (seccionUpgrade) seccionUpgrade.classList.remove('hidden'); // Botón de upgrade visible en cuenta natural
+                        if (seccionUpgrade) seccionUpgrade.classList.remove('hidden');
                         if (seccionQr) seccionQr.classList.add('hidden');
                         if (seccionHistorial) seccionHistorial.classList.add('hidden');
                         
@@ -594,9 +580,6 @@
             container.innerHTML = `<img src="${fallbackUrl}" alt="QR Comercio" class="w-full h-full object-contain rounded-lg" />`;
         }
 
-        // =========================================================================
-        // FUNCIÓN INTELIGENTE: DESCARGA LIMPIA EN PC Y CARTEL CON LOGO PURO
-        // =========================================================================
         function descargarCartelComercialQR() {
             if (!merchantIdActual) {
                 return alert("⚠️ El ID de comercio aún no está listo.");
@@ -636,7 +619,6 @@
             imgQR.onload = function() {
                 ctx.drawImage(imgQR, 150, 185, 300, 300);
 
-                // Cargamos el logo real en el cartel descargable limpio sin cajas blancas
                 const logoCartel = new Image();
                 logoCartel.crossOrigin = "anonymous";
                 logoCartel.src = '/logo.png';
@@ -644,10 +626,7 @@
                 logoCartel.onload = function() {
                     const lSize = 75;
                     const lPos = (canvas.width - lSize) / 2;
-                    
-                    // Dibujo directo del logo sin fondos cuadrados ni marcos
                     ctx.drawImage(logoCartel, lPos, 295, lSize, lSize);
-
                     finalizarCartel(canvas);
                 };
 
@@ -817,7 +796,7 @@
             }
         }
 
-        // PROCESAR RETIRO CON FILTRO ESTRICTO DE DIRECCIONES POLYGON (0x)
+        // PROCESAR RETIRO EXCLUSIVO A WALLET POLYGON (0x)
         async function procesarRetiro(e) {
             e.preventDefault();
             const plataforma = document.getElementById('tipoExchange').value;
@@ -827,11 +806,9 @@
 
             if (!destino || !monto || monto <= 0) return alert('⚠️ Revisa los datos del retiro.');
 
-            if (plataforma === 'polygon') {
-                if (!destino.toLowerCase().startsWith('0x') || destino.length < 40) {
-                    alert("❌ DIRECCIÓN INVÁLIDA:\n\nPara retirar a la Red Polygon (MetaMask, Phantom, Trust Wallet) la dirección DEBE empezar obligatoriamente por '0x'. Por favor verifica tu wallet.");
-                    return;
-                }
+            if (!destino.toLowerCase().startsWith('0x') || destino.length < 40) {
+                alert("❌ DIRECCIÓN INVÁLIDA:\n\nLa dirección de destino en la Red Polygon (MetaMask, OKX, Trust Wallet) DEBE empezar obligatoriamente por '0x'.");
+                return;
             }
 
             const pinSeguridad = prompt("🔒 PIN de Seguridad (4 dígitos):");
@@ -889,7 +866,6 @@
             }
         }
 
-        // CIERRE DE SESIÓN ESTRICTO Y DEFINITIVO (EXPLÍCITO POR BOTÓN O SEGURIDAD)
         function cerrarSesion() {
             localStorage.removeItem('userPhone');
             localStorage.removeItem('telefonoUsuario');
