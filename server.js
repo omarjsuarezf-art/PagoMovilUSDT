@@ -23,9 +23,7 @@ function generarWalletIndividual() {
     };
 }
 
-
-
-
+const app = express();
 // MAPA EN MEMORIA PARA RECUPERACIÓN DE PIN CON CÓDIGOS OTP (EXPIRAN EN 5 MINUTOS)
 const codigosRecuperacion = new Map();
 
