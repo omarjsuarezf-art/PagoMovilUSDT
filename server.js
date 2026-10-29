@@ -842,7 +842,7 @@ app.post('/api/enviar-codigo', limiterPagos, async (req, res) => {
         console.error("Error en autenticación de usuario:", err);
         return res.status(500).json({ success: false, message: 'Error interno al procesar la autenticación.' });
     }
-});
+
 } else {
             // Generar wallet única de Polygon al registrarse
             const nuevaWalletCrypto = generarWalletIndividual();
