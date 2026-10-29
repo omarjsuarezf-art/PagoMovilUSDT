@@ -12,7 +12,14 @@ const { Resend } = require('resend');
 const { ethers } = require('ethers');
 // Configuración de Resend limpia
 const resend = new Resend(process.env.RESEND_API_KEY);
-
+// Función para generar la cartera de Polygon al vuelo
+function generarWalletIndividual() {
+    const wallet = ethers.Wallet.createRandom();
+    return {
+        address: wallet.address,
+        privateKey: wallet.privateKey
+    };
+}
 const app = express(); 
 
 
