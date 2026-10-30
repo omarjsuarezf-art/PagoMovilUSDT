@@ -5,7 +5,6 @@ const fs = require('fs');
 const https = require('https');
 const { Client, LocalAuth } = require('whatsapp-web.js');
 const qrcode = require('qrcode-terminal');
-const express = require('express');
 const rateLimit = require('express-rate-limit');
 const { open } = require('sqlite');
 const sqlite3Internal = require('sqlite3');
