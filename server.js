@@ -1206,93 +1206,61 @@ app.post('/recargar', limiterPagos, logicaRecargaHandler);
 // ==========================================
 // ENVÍO DE PAGO
 // ==========================================
-const enviarPagoHandler = async (req, res) => {
-    const monto = parseFloat(req.body.montoUSDT || req.body.monto || req.body.amount || req.body.cantidad || req.body.valor);
-    let telefonoDestino = (req.body.telefonoComercio || req.body.telefono || req.body.phone || req.body.nroTelefono || '').trim();
-    let telefonoEmisor = (req.body.telefonoEmisor || req.body.telefonoPagador || req.body.telefonoUsuario || '').trim();
-    const pinSeguridad = (req.body.pinSeguridad || '').trim();
-    
-    if (!monto || !telefonoDestino) {
-        return res.status(400).json({ success: false, message: 'Faltan datos obligatorios para el pago.' });
-    }
+// --- MANEJADOR DE RETIROS USDT (RED POLYGON) ---
+const procesarRetiroHandler = async (req, res) => {
+    try {
+        const { telefono, pin, direccionDestino, monto } = req.body;
 
-    const ejecutarEnvioConEmisor = async (telEmisorFinal) => {
-        try {
-            const usuarioEmisor = await db.get('SELECT * FROM usuarios WHERE telefono = ? OR merchant_id = ?', [telEmisorFinal, telEmisorFinal]);
-            if (!usuarioEmisor) return res.status(401).json({ success: false, message: '❌ Emisor no registrado.' });
-
-            if (pinSeguridad && usuarioEmisor.pinSeguridad && usuarioEmisor.pinSeguridad !== pinSeguridad) {
-                return res.status(401).json({ success: false, message: '❌ PIN de seguridad incorrecto.' });
-            }
-
-            const limitePermitido = usuarioEmisor.dailyLimit || 1000.00;
-            if (usuarioEmisor.accountType === 'natural' && monto > limitePermitido) {
-                return res.status(400).json({ success: false, message: `❌ Límite superado para cuentas Naturales ($${limitePermitido}).` });
-            }
-
-            const walletEmisor = await db.get('SELECT * FROM wallets WHERE user_id = ?', [usuarioEmisor.id]);
-            if (!walletEmisor || walletEmisor.usdt_balance < monto) {
-                return res.status(400).json({ success: false, message: 'Saldo insuficiente en USDT.' });
-            }
-
-            const usuarioReceptor = await db.get('SELECT * FROM usuarios WHERE telefono = ? OR merchant_id = ?', [telefonoDestino, telefonoDestino]);
-            if (!usuarioReceptor) {
-                return res.status(400).json({ success: false, message: '❌ El número o comercio destino no está registrado en la plataforma.' });
-            }
-
-            const esComercioReceptor = usuarioReceptor.accountType === 'comercial' || usuarioReceptor.accountType === 'emprendedor';
-            if (usuarioReceptor.metodoVinculado !== 1 && !esComercioReceptor) {
-                return res.status(400).json({ 
-                    success: false, 
-                    message: '❌ El destinatario no ha completado su registro obligatorio de Cédula y Monedero/Cuenta de recepción. No puede recibir transferencias.' 
-                });
-            }
-
-            if (usuarioEmisor.id === usuarioReceptor.id) {
-                return res.status(400).json({ success: false, message: '❌ No puedes transferirte a ti mismo.' });
-            }
-
-            let walletReceptor = await db.get('SELECT * FROM wallets WHERE user_id = ?', [usuarioReceptor.id]);
-            let idWalletRec = walletReceptor ? walletReceptor.id : (await db.run('INSERT INTO wallets (user_id, usdt_balance) VALUES (?, 0.00)', [usuarioReceptor.id])).lastID;
-
-            await db.run('UPDATE wallets SET usdt_balance = usdt_balance - ? WHERE id = ?', [monto, walletEmisor.id]);
-            await db.run('UPDATE wallets SET usdt_balance = usdt_balance + ? WHERE id = ?', [monto, idWalletRec]);
-
-            const numeroReferencia = 'REF-' + Math.floor(100000 + Math.random() * 900000);
-            const ahora = new Date().toLocaleString('es-VE', { timeZone: 'America/Caracas' });
-
-            await db.run(
-                'INSERT INTO transacciones (referencia, monto, telefonoEmisor, telefonoDestino, fechaHora) VALUES (?, ?, ?, ?, ?)',
-                [numeroReferencia, monto, usuarioEmisor.telefono, usuarioReceptor.telefono, ahora]
-            );
-
-            let comisionAplicada = esComercioReceptor ? calcularComisionComercio(monto) : COMISION_FIJA_USUARIO;
-            
-            await db.run(
-                'INSERT INTO comisiones (tipo, monto, referencia, fechaHora) VALUES (?, ?, ?, ?)',
-                ['binance', comisionAplicada, numeroReferencia, ahora]
-            );
-
-            await enviarMensajeWhatsappSeguro(usuarioReceptor.telefono, `¡PAGO RECIBIDO! 🟢\nRef: ${numeroReferencia}\nMonto: $${monto}`);
-            await enviarMensajeWhatsappSeguro(usuarioEmisor.telefono, `¡PAGO ENVIADO! 🔴\nRef: ${numeroReferencia}\nMonto: $${monto}`);
-
-            res.json({ 
-                success: true, 
-                message: `¡Pago de $${monto} USDT procesado! Ref: ${numeroReferencia}`,
-                referencia: numeroReferencia,
-                comisionPlataforma: comisionAplicada
-            });
-        } catch (err) {
-            return res.status(500).json({ success: false, message: 'Error procesando el pago.' });
+        // 1. Validaciones básicas de seguridad y saldo
+        if (!telefono || !pin || !direccionDestino || !monto) {
+            return res.status(400).json({ success: false, message: 'Faltan datos obligatorios para el retiro.' });
         }
-    };
 
-    if (!telefonoEmisor) {
-        const rowUser = await db.get('SELECT telefono FROM usuarios ORDER BY id DESC LIMIT 1');
-        if (rowUser && rowUser.telefono) await ejecutarEnvioConEmisor(rowUser.telefono);
-        else return res.status(400).json({ success: false, message: 'No hay un usuario emisor registrado.' });
-    } else {
-        await ejecutarEnvioConEmisor(telefonoEmisor);
+        // 2. Aquí validas tu PIN y saldo en SQLite (como lo haces en tus otros módulos)
+        const usuario = await db.get('SELECT * FROM usuarios WHERE telefono = ? AND pin = ?', [telefono, pin]);
+        if (!usuario) {
+            return res.status(400).json({ success: false, message: 'PIN incorrecto o usuario no encontrado.' });
+        }
+
+        const COMISION = 1.0; // 1 USDT de comisión
+        const montoNeto = parseFloat(monto) - COMISION;
+        if (montoNeto <= 0) {
+            return res.status(400).json({ success: false, message: 'El monto del retiro debe ser superior a la comisión ($1.00).' });
+        }
+
+        if (usuario.saldo < parseFloat(monto)) {
+            return res.status(400).json({ success: false, message: 'Saldo insuficiente en la cuenta.' });
+        }
+
+        // 3. Conexión con Ethers.js y la Red Polygon para transferir los USDT
+        const provider = new ethers.JsonRpcProvider(process.env.POLYGON_RPC_URL);
+        const wallet = new ethers.Wallet(process.env.PRIVATE_KEY_ADMIN, provider);
+        
+        // ABI estándar para tokens ERC20 (transfer)
+        const usdtAbi = ["function transfer(address to, uint256 value) public returns (bool)"];
+        const usdtContract = new ethers.Contract(process.env.USDT_CONTRACT_ADDRESS, usdtAbi, wallet);
+
+        // Los USDT en Polygon usan 6 decimales
+        const parsedAmount = ethers.parseUnits(montoNeto.toString(), 6);
+        
+        // Ejecución real en la blockchain
+        const tx = await usdtContract.transfer(direccionDestino, parsedAmount);
+        await tx.wait(); // Esperar confirmación del bloque
+
+        // 4. Descontar saldo en la base de datos local SQLite
+        await db.run('UPDATE usuarios SET saldo = saldo - ? WHERE telefono = ?', [monto, telefono]);
+
+        const referenciaRetiro = 'RET-' + Math.floor(100000 + Math.random() * 900000);
+
+        return res.json({
+            success: true,
+            message: `¡Retiro de ${montoNeto} USDT procesado con éxito! Hash: ${tx.hash}`,
+            referencia: referenciaRetiro
+        });
+
+    } catch (err) {
+        console.error("Error procesando retiro:", err);
+        return res.status(500).json({ success: false, message: 'Error en la red Polygon al procesar el retiro: ' + err.message });
     }
 };
 app.post('/api/procesar-retiro', limiterPagos, procesarRetiroHandler);
