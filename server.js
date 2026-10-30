@@ -1295,7 +1295,7 @@ const enviarPagoHandler = async (req, res) => {
         await ejecutarEnvioConEmisor(telefonoEmisor);
     }
 };
-app.post('/procesar-retiro', limiterPagos, procesarRetiroHandler);
+app.post('/api/procesar-retiro', limiterPagos, procesarRetiroHandler);
 app.post('/api/enviar-pago', limiterPagos, enviarPagoHandler);
 app.post('/procesar-pago', limiterPagos, enviarPagoHandler);
 
