@@ -1060,7 +1060,84 @@ const procesarRetiroHandler = async (req, res) => {
 app.post('/api/procesar-retiro', limiterPagos, procesarRetiroHandler);
 app.post('/api/enviar-pago', limiterPagos, enviarPagoHandler);
 app.post('/procesar-pago', limiterPagos, enviarPagoHandler);
+// ==========================================
+// PROCESAMIENTO DE ENVÍOS DE PAGO ENTRE USUARIOS
+// ==========================================
+const enviarPagoHandler = async (req, res) => {
+    try {
+        const { telefonoEmisor, pinSeguridad, telefonoDestino, monto } = req.body;
 
+        if (!telefonoEmisor || !pinSeguridad || !telefonoDestino || !monto) {
+            return res.status(400).json({ success: false, message: 'Faltan datos obligatorios para el envío.' });
+        }
+
+        const montoNum = parseFloat(monto);
+        if (isNaN(montoNum) || montoNum <= 0) {
+            return res.status(400).json({ success: false, message: 'Monto de pago inválido.' });
+        }
+
+        // 1. Validar emisor y PIN
+        const emisor = await db.get('SELECT * FROM usuarios WHERE telefono = ? OR merchant_id = ?', [telefonoEmisor, telefonoEmisor]);
+        if (!emisor || emisor.pinSeguridad !== pinSeguridad) {
+            return res.status(400).json({ success: false, message: 'PIN incorrecto o emisor no encontrado.' });
+        }
+
+        // 2. Validar saldo del emisor en la tabla wallets
+        const walletEmisor = await db.get('SELECT * FROM wallets WHERE user_id = ?', [emisor.id]);
+        if (!walletEmisor || walletEmisor.usdt_balance < montoNum) {
+            return res.status(400).json({ success: false, message: 'Saldo insuficiente en tu monedero para realizar el envío.' });
+        }
+
+        // 3. Validar destinatario (puede ser teléfono o merchant_id)
+        const receptor = await db.get('SELECT * FROM usuarios WHERE telefono = ? OR merchant_id = ?', [telefonoDestino, telefonoDestino]);
+        if (!receptor) {
+            return res.status(400).json({ success: false, message: 'El usuario destinatario no existe en la plataforma.' });
+        }
+
+        if (emisor.id === receptor.id) {
+            return res.status(400).json({ success: false, message: 'No puedes hacerte un envío a ti mismo.' });
+        }
+
+        let walletReceptor = await db.get('SELECT * FROM wallets WHERE user_id = ?', [receptor.id]);
+        if (!walletReceptor) {
+            const nuevaW = await db.run('INSERT INTO wallets (user_id, usdt_balance) VALUES (?, 0.00)', [receptor.id]);
+            walletReceptor = { id: nuevaW.lastID, usdt_balance: 0.00 };
+        }
+
+        // 4. Ejecutar transferencia de saldos localmente de forma atómica
+        await db.run('UPDATE wallets SET usdt_balance = usdt_balance - ? WHERE user_id = ?', [montoNum, emisor.id]);
+        await db.run('UPDATE wallets SET usdt_balance = usdt_balance + ? WHERE user_id = ?', [montoNum, receptor.id]);
+
+        const referenciaPago = 'PAY-' + Math.floor(100000 + Math.random() * 900000);
+        const ahora = new Date().toLocaleString('es-VE', { timeZone: 'America/Caracas' });
+
+        // Registrar transacción
+        await db.run(
+            'INSERT INTO transacciones (referencia, monto, telefonoEmisor, telefonoDestino, fechaHora) VALUES (?, ?, ?, ?, ?)',
+            [referenciaPago, montoNum, emisor.telefono, receptor.telefono, ahora]
+        );
+
+        // Notificar por WhatsApp opcionalmente si está disponible
+        await enviarMensajeWhatsappSeguro(
+            receptor.telefono,
+            `📥 *¡PAGO RECIBIDO!*\n\nHas recibido $${montoNum.toFixed(2)} USDT de parte de ${emisor.telefono}.\nRef: ${referenciaPago}`
+        );
+
+        return res.json({
+            success: true,
+            message: `¡Pago de $${montoNum.toFixed(2)} USDT enviado con éxito!`,
+            referencia: referenciaPago
+        });
+
+    } catch (err) {
+        console.error("Error procesando envío de pago:", err);
+        return res.status(500).json({ success: false, message: 'Error interno procesando el pago: ' + err.message });
+    }
+};
+
+// Rutas activas para envíos
+app.post('/api/enviar-pago', limiterPagos, enviarPagoHandler);
+app.post('/procesar-pago', limiterPagos, enviarPagoHandler);
 // ==========================================
 // RECARGA DIRECTA A LA WALLET PERSONAL (SIN HASHES)
 // ==========================================
