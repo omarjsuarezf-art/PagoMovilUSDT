@@ -1157,11 +1157,7 @@ const logicaRecargaHandler = async (req, res) => {
         await procesarConTelefono(phoneNumber);
     }
 };
-app.post('/api/enviar-pago', limiterPagos, enviarPagoHandler);
-app.post('/procesar-pago', limiterPagos, enviarPagoHandler);
-app.post('/api/procesar-retiro', limiterPagos, procesarRetiroHandler);
-app.post('/api/recargar', limiterPagos, logicaRecargaHandler);
-app.post('/recargar', limiterPagos, logicaRecargaHandler);
+
 // ==========================================
 // PROCESAMIENTO DE RETIROS DIRECTOS (BLINDADO CON POLYGON + ETHERS.JS)
 // ==========================================
@@ -1391,7 +1387,11 @@ const logicaRecargaHandler = async (req, res) => {
     }
 };
 
-
+app.post('/api/enviar-pago', limiterPagos, enviarPagoHandler);
+app.post('/procesar-pago', limiterPagos, enviarPagoHandler);
+app.post('/api/procesar-retiro', limiterPagos, procesarRetiroHandler);
+app.post('/api/recargar', limiterPagos, logicaRecargaHandler);
+app.post('/recargar', limiterPagos, logicaRecargaHandler);
 
 // ==========================================
 // MANTENIMIENTO AUTOMÁTICO
