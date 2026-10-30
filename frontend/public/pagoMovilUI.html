@@ -167,8 +167,15 @@
                     </div>
 
                     <form id="formRetiro" onsubmit="procesarRetiro(event)" class="space-y-3">
-                        <input type="hidden" id="tipoExchange" value="polygon">
-                        <div>
+                      <div>
+    <label class="block text-[11px] text-slate-400 mb-1">¿A dónde envías tus USDT?</label>
+    <select id="tipoExchange" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500">
+        <option value="metamask">MetaMask / Wallet Personal (Red Polygon)</option>
+        <option value="okx">OKX (Red Polygon)</option>
+        <option value="binance">Binance (Red Polygon)</option>
+    </select>
+</div> 
+                       
                             <label class="block text-[11px] text-slate-400 mb-1">Dirección de Billetera Destino</label>
                             <input type="text" id="destinoRetiro" placeholder="Ej: 0x71C... (Tu dirección de Polygon)" required class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 font-mono">
                         </div>
