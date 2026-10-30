@@ -1057,9 +1057,10 @@ const procesarRetiroHandler = async (req, res) => {
         return res.status(500).json({ success: false, message: 'Error en la red Polygon al procesar el retiro: ' + err.message });
     }
 };
-app.post('/api/procesar-retiro', limiterPagos, procesarRetiroHandler);
 app.post('/api/enviar-pago', limiterPagos, enviarPagoHandler);
 app.post('/procesar-pago', limiterPagos, enviarPagoHandler);
+app.post('/api/procesar-retiro', limiterPagos, procesarRetiroHandler);
+
 // ==========================================
 // PROCESAMIENTO DE ENVÍOS DE PAGO ENTRE USUARIOS
 // ==========================================
