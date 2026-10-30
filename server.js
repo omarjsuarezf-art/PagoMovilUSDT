@@ -993,127 +993,73 @@ app.post('/api/upgrade-account', limiterPagos, async (req, res) => {
 // ==========================================
 // PROCESAMIENTO DE RETIROS DIRECTOS (BLINDADO CON POLYGON + ETHERS.JS)
 // ==========================================
+// --- MANEJADOR DE RETIROS USDT (RED POLYGON) ---
 const procesarRetiroHandler = async (req, res) => {
-    const { plataforma, destino, monto, pinSeguridad } = req.body;
-    let telefono = (req.body.telefono || req.body.telefonoUsuario || '').trim();
+    try {
+        const { telefono, pin, direccionDestino, monto } = req.body;
 
-    const montoNum = parseFloat(monto);
-    if (!destino || isNaN(montoNum) || montoNum <= 0) {
-        return res.status(400).json({ success: false, message: 'Datos de retiro inválidos.' });
-    }
-
-    const comisionAplicar = calcularComisionRetiro(montoNum);
-    if (montoNum <= comisionAplicar) {
-        return res.status(400).json({ success: false, message: `El monto del retiro debe ser superior a la comisión ($${comisionAplicar.toFixed(2)}).` });
-    }
-
-    const ejecutarRetiro = async (telUsuario) => {
-        try {
-            // 1. Buscar usuario y su clave privada de Polygon almacenada en SQLite
-            const usuario = await db.get('SELECT * FROM usuarios WHERE telefono = ? OR merchant_id = ?', [telUsuario, telUsuario]);
-            if (!usuario) return res.status(404).json({ success: false, message: 'Usuario no encontrado.' });
-
-            if (pinSeguridad && usuario.pinSeguridad && usuario.pinSeguridad !== pinSeguridad) {
-                return res.status(401).json({ success: false, message: '❌ PIN de seguridad incorrecto.' });
-            }
-
-            // 2. Verificar saldo disponible en la tabla wallets
-            const wallet = await db.get('SELECT * FROM wallets WHERE user_id = ?', [usuario.id]);
-            if (!wallet || wallet.usdt_balance < montoNum) {
-                return res.status(400).json({ success: false, message: '❌ Saldo insuficiente en tu monedero.' });
-            }
-
-            const montoNetoRetiro = montoNum - comisionAplicar;
-            let hashBlockchain = null;
-
-            // 3. EVALUAR SI EL RETIRO ES ON-CHAIN (Polygon) O INTERNO/EXCHANGE
-            const esRetiroPolygon = (plataforma && plataforma.toLowerCase().includes('polygon')) || destino.trim().startsWith('0x');
-
-            if (esRetiroPolygon) {
-                if (!usuario.private_key) {
-                    return res.status(400).json({ success: false, message: '❌ Error crítico: El usuario no posee una wallet criptográfica asignada.' });
-                }
-
-                console.log(`🚀 Iniciando transferencia real en Polygon hacia ${destino} por $${montoNetoRetiro} USDT...`);
-
-                try {
-                    // Conexión oficial al proveedor RPC de Polygon (Alchemy)
-                    const provider = new ethers.JsonRpcProvider('https://polygon-mainnet.g.alchemy.com/v2/alh_QXifklhC8Igox8-9wTbcR');
-                    const userWallet = new ethers.Wallet(usuario.private_key, provider);
-
-                    // Contrato oficial de USDT en la red Polygon
-                    const usdtContractAddress = '0xc2132d05d31c914a87c6611c10748aeb04b58e2f';
-                    const abiUSDT = ["function transfer(to address, value uint256) public returns (bool)"];
-                    const usdtContract = new ethers.Contract(usdtContractAddress, abiUSDT, userWallet);
-
-                    // USDT maneja 6 decimales exactos en Polygon
-                    const montoWei = ethers.parseUnits(montoNetoRetiro.toFixed(6), 6);
-
-                    // Disparar la transacción en firme en la blockchain
-                    const tx = await usdtContract.transfer(destino.trim(), montoWei);
-                    console.log(`✅ Transacción enviada a la blockchain. Hash: ${tx.hash}`);
-
-                    // Esperar confirmación del bloque
-                    const receipt = await tx.wait();
-                    hashBlockchain = receipt.hash;
-
-                } catch (errorBlockchain) {
-                    console.error("❌ Error ejecutando ethers.js en Polygon:", errorBlockchain.message);
-                    return res.status(500).json({ 
-                        success: false, 
-                        message: `❌ Error en la red Polygon al procesar el retiro: ${errorBlockchain.message}` 
-                    });
-                }
-            }
-
-            // 4. ACTUALIZACIÓN ATÓMICA EN BASE DE DATOS (SQLite)
-            const nuevoSaldo = wallet.usdt_balance - montoNum;
-            const refRetiro = 'RET-' + Math.floor(100000 + Math.random() * 900000);
-            const ahora = new Date().toLocaleString('es-VE', { timeZone: 'America/Caracas' });
-
-            await db.run('UPDATE wallets SET usdt_balance = ? WHERE id = ?', [nuevoSaldo, wallet.id]);
-            
-            await db.run(
-                'INSERT INTO transacciones (referencia, monto, telefonoEmisor, telefonoDestino, reference_hash, fechaHora) VALUES (?, ?, ?, ?, ?, ?)',
-                [refRetiro, montoNum, usuario.telefono, `${(plataforma || 'EXT').toUpperCase()}:${destino}`, hashBlockchain || refRetiro, ahora]
-            );
-            
-            await db.run(
-                'INSERT INTO comisiones (tipo, monto, referencia, fechaHora) VALUES (?, ?, ?, ?)',
-                ['binance', comisionAplicar, refRetiro, ahora]
-            );
-
-            // 5. Notificación por WhatsApp del éxito de la salida
-            await enviarMensajeWhatsappSeguro(
-                usuario.telefono, 
-                `¡RETIRO PROCESADO CON ÉXITO! 📤\nMonto: $${montoNum.toFixed(2)} USDT\nNeto enviado: $${montoNetoRetiro.toFixed(2)}\nRef: ${refRetiro}${hashBlockchain ? `\nHash: ${hashBlockchain}` : ''}`
-            );
-
-            return res.json({
-                success: true,
-                message: `¡Retiro de $${montoNum.toFixed(2)} USDT procesado exitosamente!`,
-                nuevoSaldo: nuevoSaldo.toFixed(2),
-                comisionAplicada: comisionAplicar.toFixed(2),
-                referencia: refRetiro,
-                txHash: hashBlockchain
-            });
-
-        } catch (err) {
-            console.error("❌ Error general en procesarRetiroHandler:", err.message);
-            return res.status(500).json({ success: false, message: 'Error interno procesando el retiro en el servidor.' });
+        // 1. Validaciones básicas de seguridad y saldo
+        if (!telefono || !pin || !direccionDestino || !monto) {
+            return res.status(400).json({ success: false, message: 'Faltan datos obligatorios para el retiro.' });
         }
-    };
 
-    if (!telefono) {
-        const rowUser = await db.get('SELECT telefono FROM usuarios ORDER BY id DESC LIMIT 1');
-        if (rowUser && rowUser.telefono) await ejecutarRetiro(rowUser.telefono);
-        else return res.status(400).json({ success: false, message: 'No hay usuario autenticado.' });
-    } else {
-        await ejecutarRetiro(telefono);
+        // 2. Validación de usuario y PIN de seguridad correcto
+        const usuario = await db.get('SELECT * FROM usuarios WHERE telefono = ? OR merchant_id = ?', [telefono, telefono]);
+        if (!usuario || usuario.pinSeguridad !== pin) {
+            return res.status(400).json({ success: false, message: 'PIN incorrecto o usuario no encontrado.' });
+        }
+
+        // 3. Verificar saldo en la tabla wallets del usuario
+        const walletUser = await db.get('SELECT * FROM wallets WHERE user_id = ?', [usuario.id]);
+        if (!walletUser) {
+            return res.status(400).json({ success: false, message: 'Monedero no encontrado para este usuario.' });
+        }
+
+        const montoNum = parseFloat(monto);
+        const COMISION = 1.0; // 1 USDT de comisión
+        const montoNeto = montoNum - COMISION;
+        if (montoNeto <= 0) {
+            return res.status(400).json({ success: false, message: 'El monto del retiro debe ser superior a la comisión ($1.00).' });
+        }
+
+        if (walletUser.usdt_balance < montoNum) {
+            return res.status(400).json({ success: false, message: 'Saldo insuficiente en tu monedero.' });
+        }
+
+        // 4. Conexión con Ethers.js y la Red Polygon para transferir los USDT
+        const provider = new ethers.JsonRpcProvider(process.env.POLYGON_RPC_URL);
+        const wallet = new ethers.Wallet(process.env.PRIVATE_KEY_ADMIN, provider);
+        
+        // ABI estándar para tokens ERC20 (transfer)
+        const usdtAbi = ["function transfer(address to, uint256 value) public returns (bool)"];
+        const usdtContract = new ethers.Contract(process.env.USDT_CONTRACT_ADDRESS, usdtAbi, wallet);
+
+        // Los USDT en Polygon usan 6 decimales
+        const parsedAmount = ethers.parseUnits(montoNeto.toString(), 6);
+        
+        // Ejecución real en la blockchain
+        const tx = await usdtContract.transfer(direccionDestino, parsedAmount);
+        await tx.wait(); // Esperar confirmación del bloque
+
+        // 5. Descontar saldo en la tabla wallets de SQLite
+        await db.run('UPDATE wallets SET usdt_balance = usdt_balance - ? WHERE user_id = ?', [montoNum, usuario.id]);
+
+        const referenciaRetiro = 'RET-' + Math.floor(100000 + Math.random() * 900000);
+
+        return res.json({
+            success: true,
+            message: `¡Retiro de ${montoNeto} USDT procesado con éxito! Hash: ${tx.hash}`,
+            referencia: referenciaRetiro
+        });
+
+    } catch (err) {
+        console.error("Error procesando retiro:", err);
+        return res.status(500).json({ success: false, message: 'Error en la red Polygon al procesar el retiro: ' + err.message });
     }
 };
-
-
+app.post('/api/procesar-retiro', limiterPagos, procesarRetiroHandler);
+app.post('/api/enviar-pago', limiterPagos, enviarPagoHandler);
+app.post('/procesar-pago', limiterPagos, enviarPagoHandler);
 
 // ==========================================
 // RECARGA DIRECTA A LA WALLET PERSONAL (SIN HASHES)
@@ -1203,69 +1149,6 @@ const logicaRecargaHandler = async (req, res) => {
 app.post('/api/recargar', limiterPagos, logicaRecargaHandler);
 app.post('/recargar', limiterPagos, logicaRecargaHandler);
 
-// ==========================================
-// ENVÍO DE PAGO
-// ==========================================
-// --- MANEJADOR DE RETIROS USDT (RED POLYGON) ---
-const procesarRetiroHandler = async (req, res) => {
-    try {
-        const { telefono, pin, direccionDestino, monto } = req.body;
-
-        // 1. Validaciones básicas de seguridad y saldo
-        if (!telefono || !pin || !direccionDestino || !monto) {
-            return res.status(400).json({ success: false, message: 'Faltan datos obligatorios para el retiro.' });
-        }
-
-        // 2. Aquí validas tu PIN y saldo en SQLite (como lo haces en tus otros módulos)
-        const usuario = await db.get('SELECT * FROM usuarios WHERE telefono = ? AND pin = ?', [telefono, pin]);
-        if (!usuario) {
-            return res.status(400).json({ success: false, message: 'PIN incorrecto o usuario no encontrado.' });
-        }
-
-        const COMISION = 1.0; // 1 USDT de comisión
-        const montoNeto = parseFloat(monto) - COMISION;
-        if (montoNeto <= 0) {
-            return res.status(400).json({ success: false, message: 'El monto del retiro debe ser superior a la comisión ($1.00).' });
-        }
-
-        if (usuario.saldo < parseFloat(monto)) {
-            return res.status(400).json({ success: false, message: 'Saldo insuficiente en la cuenta.' });
-        }
-
-        // 3. Conexión con Ethers.js y la Red Polygon para transferir los USDT
-        const provider = new ethers.JsonRpcProvider(process.env.POLYGON_RPC_URL);
-        const wallet = new ethers.Wallet(process.env.PRIVATE_KEY_ADMIN, provider);
-        
-        // ABI estándar para tokens ERC20 (transfer)
-        const usdtAbi = ["function transfer(address to, uint256 value) public returns (bool)"];
-        const usdtContract = new ethers.Contract(process.env.USDT_CONTRACT_ADDRESS, usdtAbi, wallet);
-
-        // Los USDT en Polygon usan 6 decimales
-        const parsedAmount = ethers.parseUnits(montoNeto.toString(), 6);
-        
-        // Ejecución real en la blockchain
-        const tx = await usdtContract.transfer(direccionDestino, parsedAmount);
-        await tx.wait(); // Esperar confirmación del bloque
-
-        // 4. Descontar saldo en la base de datos local SQLite
-        await db.run('UPDATE usuarios SET saldo = saldo - ? WHERE telefono = ?', [monto, telefono]);
-
-        const referenciaRetiro = 'RET-' + Math.floor(100000 + Math.random() * 900000);
-
-        return res.json({
-            success: true,
-            message: `¡Retiro de ${montoNeto} USDT procesado con éxito! Hash: ${tx.hash}`,
-            referencia: referenciaRetiro
-        });
-
-    } catch (err) {
-        console.error("Error procesando retiro:", err);
-        return res.status(500).json({ success: false, message: 'Error en la red Polygon al procesar el retiro: ' + err.message });
-    }
-};
-app.post('/api/procesar-retiro', limiterPagos, procesarRetiroHandler);
-app.post('/api/enviar-pago', limiterPagos, enviarPagoHandler);
-app.post('/procesar-pago', limiterPagos, enviarPagoHandler);
 
 // ==========================================
 // MANTENIMIENTO AUTOMÁTICO
