@@ -990,39 +990,33 @@ app.post('/api/upgrade-account', limiterPagos, async (req, res) => {
 });
 
 // ==========================================
-// PROCESAMIENTO DE RETIROS DIRECTOS (BLINDADO CON POLYGON + ETHERS.JS)
+// PROCESAR RETIRO DESDE LA WALLET INDIVIDUAL
 // ==========================================
-// --- MANEJADOR DE RETIROS USDT (RED POLYGON) ---
-const procesarRetiroHandler = async (req, res) => {
+async function procesarRetiroHandler(req, res) {
     try {
-        let { telefono, pin, direccionDestino, monto } = req.body;
+        const { telefono, pin, direccionDestino, monto } = req.body;
 
-        // Si el frontend no manda el teléfono, rescatamos limpiamente el último usuario activo
-        if (!telefono) {
-            const rowUser = await db.get('SELECT telefono FROM usuarios ORDER BY id DESC LIMIT 1');
-            if (rowUser && rowUser.telefono) {
-                telefono = rowUser.telefono;
-            }
-        }
-
-        // Si el frontend no manda el PIN pero la interfaz lo requiere, permitimos buscar el usuario por teléfono para validar
-        // 1. Validaciones básicas de campos esenciales (solo destino y monto son estrictos si el usuario ya está en sesión)
-        if (!direccionDestino || !monto) {
+        // 1. Validar que vengan los datos obligatorios
+        if (!telefono || !direccionDestino || !monto) {
             return res.status(400).json({ success: false, message: 'Faltan datos obligatorios para el retiro (dirección o monto).' });
         }
 
-        // 2. Validación de usuario en la base de datos
-        const usuario = await db.get('SELECT * FROM usuarios WHERE telefono = ? OR merchant_id = ?', [telefono, telefono]);
+        // 2. Buscar al usuario y su llave privada individual en SQLite
+        const usuario = await db.get('SELECT * FROM usuarios WHERE telefono = ?', [telefono]);
         if (!usuario) {
             return res.status(400).json({ success: false, message: 'Usuario no encontrado en la plataforma.' });
         }
 
-        // Si el formulario envió un PIN, lo validamos; si viene vacío temporalmente en esta prueba, dejamos pasar o validamos según prefieras
         if (pin && usuario.pinSeguridad && usuario.pinSeguridad !== pin) {
             return res.status(400).json({ success: false, message: 'PIN incorrecto.' });
         }
 
-        // 3. Verificar saldo en la tabla wallets del usuario
+        // Validar que el usuario posea su llave privada individual asignada
+        if (!usuario.private_key) {
+            return res.status(400).json({ success: false, message: 'El usuario no tiene una cartera independiente configurada.' });
+        }
+
+        // 3. Verificar saldo en el monedero del usuario
         const walletUser = await db.get('SELECT * FROM wallets WHERE user_id = ?', [usuario.id]);
         if (!walletUser) {
             return res.status(400).json({ success: false, message: 'Monedero no encontrado para este usuario.' });
@@ -1039,22 +1033,19 @@ const procesarRetiroHandler = async (req, res) => {
             return res.status(400).json({ success: false, message: 'Saldo insuficiente en tu monedero.' });
         }
 
-        // 4. Conexión con Ethers.js y la Red Polygon para transferir los USDT
+        // 4. Conexión con Ethers.js usando la LLAVE PRIVADA INDIVIDUAL del usuario
         const provider = new ethers.JsonRpcProvider(process.env.POLYGON_RPC_URL);
-        const wallet = new ethers.Wallet(process.env.PRIVATE_KEY_ADMIN, provider);
+        const wallet = new ethers.Wallet(usuario.private_key, provider);
         
-        // ABI estándar para tokens ERC20 (transfer)
         const usdtAbi = ["function transfer(address to, uint256 value) public returns (bool)"];
         const usdtContract = new ethers.Contract(process.env.USDT_CONTRACT_ADDRESS, usdtAbi, wallet);
 
-        // Los USDT en Polygon usan 6 decimales
         const parsedAmount = ethers.parseUnits(montoNeto.toString(), 6);
         
-        // Ejecución real en la blockchain
         const tx = await usdtContract.transfer(direccionDestino, parsedAmount);
-        await tx.wait(); // Esperar confirmación del bloque
+        await tx.wait(); // Esperar confirmación en la red Polygon
 
-        // 5. Descontar saldo en la tabla wallets de SQLite
+        // 5. Descontar saldo en la base de datos
         await db.run('UPDATE wallets SET usdt_balance = usdt_balance - ? WHERE user_id = ?', [montoNum, usuario.id]);
 
         const referenciaRetiro = 'RET-' + Math.floor(100000 + Math.random() * 900000);
@@ -1065,11 +1056,11 @@ const procesarRetiroHandler = async (req, res) => {
             referencia: referenciaRetiro
         });
 
-    } catch (err) {
-        console.error("Error procesando retiro:", err);
-        return res.status(500).json({ success: false, message: 'Error en la red Polygon al procesar el retiro: ' + err.message });
+    } catch (error) {
+        console.error("Error en procesarRetiroHandler:", error);
+        return res.status(500).json({ success: false, message: `Error en la red Polygon al procesar el retiro: ${error.message}` });
     }
-};
+}
 
 // ==========================================
 // PROCESAMIENTO DE ENVÍOS DE PAGO ENTRE USUARIOS
