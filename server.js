@@ -989,18 +989,25 @@ app.post('/api/upgrade-account', limiterPagos, async (req, res) => {
     }
 });
 
-
 // ==========================================
 // PROCESAMIENTO DE RETIROS DIRECTOS (BLINDADO CON POLYGON + ETHERS.JS)
 // ==========================================
 // --- MANEJADOR DE RETIROS USDT (RED POLYGON) ---
 const procesarRetiroHandler = async (req, res) => {
     try {
-        const { telefono, pin, direccionDestino, monto } = req.body;
+        let { telefono, pin, direccionDestino, monto } = req.body;
+
+        // Si el frontend no manda el teléfono pero hay un usuario activo, lo rescatamos limpiamente
+        if (!telefono) {
+            const rowUser = await db.get('SELECT telefono FROM usuarios ORDER BY id DESC LIMIT 1');
+            if (rowUser && rowUser.telefono) {
+                telefono = rowUser.telefono;
+            }
+        }
 
         // 1. Validaciones básicas de seguridad y saldo
         if (!telefono || !pin || !direccionDestino || !monto) {
-            return res.status(400).json({ success: false, message: 'Faltan datos obligatorios para el retiro.' });
+            return res.status(400).json({ success: false, message: 'Faltan datos obligatorios para el retiro (teléfono, PIN, destino o monto).' });
         }
 
         // 2. Validación de usuario y PIN de seguridad correcto
