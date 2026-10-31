@@ -167,15 +167,16 @@
                     </div>
 
                     <form id="formRetiro" onsubmit="procesarRetiro(event)" class="space-y-3">
-                      <div>
-    <label class="block text-[11px] text-slate-400 mb-1">¿A dónde envías tus USDT?</label>
-    <select id="tipoExchange" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500">
-        <option value="metamask">MetaMask / Wallet Personal (Red Polygon)</option>
-        <option value="okx">OKX (Red Polygon)</option>
-        <option value="binance">Binance (Red Polygon)</option>
-    </select>
-</div> 
+                        <div>
+                            <label class="block text-[11px] text-slate-400 mb-1">¿A dónde envías tus USDT?</label>
+                            <select id="tipoExchange" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500">
+                                <option value="metamask">MetaMask / Wallet Personal (Red Polygon)</option>
+                                <option value="okx">OKX (Red Polygon)</option>
+                                <option value="binance">Binance (Red Polygon)</option>
+                            </select>
+                        </div> 
                        
+                        <div>
                             <label class="block text-[11px] text-slate-400 mb-1">Dirección de Billetera Destino</label>
                             <input type="text" id="destinoRetiro" placeholder="Ej: 0x71C... (Tu dirección de Polygon)" required class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 font-mono">
                         </div>
@@ -807,13 +808,13 @@
         async function procesarRetiro(e) {
             e.preventDefault();
             const plataforma = document.getElementById('tipoExchange').value;
-            const destino = document.getElementById('destinoRetiro').value.trim();
+            const direccionDestino = document.getElementById('destinoRetiro').value.trim();
             const monto = parseFloat(document.getElementById('montoRetiro').value);
             const telefono = obtenerTelefonoActivo();
 
-            if (!destino || !monto || monto <= 0) return alert('⚠️ Revisa los datos del retiro.');
+            if (!direccionDestino || !monto || monto <= 0) return alert('⚠️ Revisa los datos del retiro.');
 
-            if (!destino.toLowerCase().startsWith('0x') || destino.length < 40) {
+            if (!direccionDestino.toLowerCase().startsWith('0x') || direccionDestino.length < 40) {
                 alert("❌ DIRECCIÓN INVÁLIDA:\n\nLa dirección de destino en la Red Polygon (MetaMask, OKX, Trust Wallet) DEBE empezar obligatoriamente por '0x'.");
                 return;
             }
@@ -825,7 +826,13 @@
                 const res = await fetch('/api/procesar-retiro', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ plataforma, destino, monto, pinSeguridad: pinSeguridad.trim(), telefono })
+                    body: JSON.stringify({ 
+                        plataforma, 
+                        direccionDestino, 
+                        monto, 
+                        pin: pinSeguridad.trim(), 
+                        telefono 
+                    })
                 });
 
                 const data = await res.json();
